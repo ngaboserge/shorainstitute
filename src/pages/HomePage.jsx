@@ -325,7 +325,7 @@ const HomePage = () => {
                 
                 <div className="seminar-author">
                   <img 
-                    src="https://i.pravatar.cc/60?img=33" 
+                    src="/src/assets/alex-ntale.jpg" 
                     alt="Alex Ntale"
                     className="author-img"
                   />

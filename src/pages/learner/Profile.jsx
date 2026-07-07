@@ -18,7 +18,7 @@ const Profile = () => {
             <div className="profile-main">
               <div className="card">
                 <div className="profile-header">
-                  <img src="https://i.pravatar.cc/120?img=5" alt="Profile" className="profile-avatar" />
+                  <img src="/src/assets/alex-ntale.jpg" alt="Profile" className="profile-avatar" />
                   <div className="profile-info">
                     <h2>Alex Ntale</h2>
                     <p>Learner since January 2025</p>
