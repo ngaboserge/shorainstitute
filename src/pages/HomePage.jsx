@@ -325,7 +325,7 @@ const HomePage = () => {
                 
                 <div className="seminar-author">
                   <img 
-                    src="/src/assets/alex-ntale.jpg" 
+                    src="/alex-ntale.jpg" 
                     alt="Alex Ntale"
                     className="author-img"
                   />

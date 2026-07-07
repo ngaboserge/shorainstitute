@@ -36,7 +36,7 @@ const SeminarRegistration = () => {
             <span><MapPin size={16} /> Live on Zoom</span>
           </div>
           <div className="speaker-info">
-            <img src="/src/assets/alex-ntale.jpg" alt="Alex Ntale" />
+            <img src="/alex-ntale.jpg" alt="Alex Ntale" />
             <div>
               <div className="speaker-name">Alex Ntale</div>
               <div className="speaker-title">CEO, SHORA Institute</div>

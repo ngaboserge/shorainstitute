@@ -55,7 +55,7 @@ const Profile = () => {
                 <div className="profile-header-content">
                   <div className="profile-avatar-section">
                     <img 
-                      src="/src/assets/alex-ntale.jpg" 
+                      src="/alex-ntale.jpg" 
                       alt="Alex Ntale" 
                       className="profile-avatar-large"
                     />
@@ -225,7 +225,7 @@ const Profile = () => {
                 </button>
                 <div className="preview-content">
                   <div className="preview-avatar">
-                    <img src="/src/assets/alex-ntale.jpg" alt="Alex Ntale" />
+                    <img src="/alex-ntale.jpg" alt="Alex Ntale" />
                   </div>
                   <h4 className="preview-name">Alex Ntale</h4>
                   <p className="preview-title">Senior Finance & Investment Consultant</p>
