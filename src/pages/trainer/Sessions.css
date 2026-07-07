@@ -1,0 +1,390 @@
+/* Trainer Sessions Styles */
+
+.sessions-tabs {
+  display: flex;
+  gap: 12px;
+  background: white;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+}
+
+.sessions-tabs .tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sessions-tabs .tab:hover {
+  background: #f5f7fa;
+  color: #0B4F9F;
+}
+
+.sessions-tabs .tab.active {
+  background: linear-gradient(135deg, #0B4F9F, #1976D2);
+  color: white;
+}
+
+.sessions-tabs .tab-count.warning {
+  background: #f44336;
+  color: white;
+}
+
+/* Sessions Grid */
+.sessions-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 24px;
+}
+
+.sessions-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Session Card */
+.session-card {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.3s;
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.session-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
+.session-card.featured {
+  border-color: #FDB714;
+  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
+}
+
+.featured-badge {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #FDB714, #f39c12);
+  color: white;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(253, 183, 20, 0.3);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.session-type-badge {
+  padding: 6px 14px;
+  background: #e3f2fd;
+  color: #0B4F9F;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.session-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.session-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.session-detail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.session-detail svg {
+  color: #0B4F9F;
+  flex-shrink: 0;
+}
+
+.session-progress {
+  margin-bottom: 20px;
+}
+
+.session-progress .progress-bar {
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.session-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #81c784);
+  border-radius: 5px;
+  transition: width 0.3s;
+}
+
+.session-progress .progress-text {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.session-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.session-audience {
+  font-size: 13px;
+  color: #666;
+  font-weight: 600;
+}
+
+.session-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Calendar Card */
+.calendar-card {
+  padding: 20px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendar-month {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  padding: 8px 0;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  color: #1a1a1a;
+}
+
+.calendar-day:hover {
+  background: #f5f7fa;
+}
+
+.calendar-day.today {
+  background: #0B4F9F;
+  color: white;
+  font-weight: 700;
+}
+
+.calendar-day.has-event {
+  background: #fff9e6;
+  font-weight: 600;
+}
+
+.event-dot {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.event-dot.seminar {
+  background: #FDB714;
+}
+
+.event-dot.masterclass {
+  background: #0B4F9F;
+}
+
+.event-dot.multiple {
+  background: #f44336;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.seminar {
+  background: #FDB714;
+}
+
+.legend-dot.multiple {
+  background: #f44336;
+}
+
+/* Availability */
+.availability-btn {
+  margin: 16px 0;
+}
+
+.availability-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.availability-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.availability-item svg {
+  color: #0B4F9F;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.availability-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.availability-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* Expert Card */
+.expert-card {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #0B4F9F;
+}
+
+.expert-banner {
+  position: relative;
+  height: 160px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+
+.expert-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.expert-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  color: white;
+}
+
+.expert-content h4 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (max-width: 1400px) {
+  .sessions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sessions-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  
+  .session-details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .session-footer {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .session-actions {
+    flex-direction: column;
+  }
+}

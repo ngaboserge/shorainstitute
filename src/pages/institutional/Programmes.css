@@ -1,0 +1,278 @@
+.programmes-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid #e0e0e0;
+  margin: 24px 0;
+  background: white;
+  padding: 0 24px;
+  border-radius: 8px 8px 0 0;
+}
+
+.programmes-tabs .tab {
+  padding: 14px 20px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.programmes-tabs .tab:hover {
+  color: #0B4F9F;
+}
+
+.programmes-tabs .tab.active {
+  color: #0B4F9F;
+  border-bottom-color: #0B4F9F;
+}
+
+.programmes-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 24px;
+}
+
+.programmes-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.programmes-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.programme-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.progress-cell-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar-small {
+  width: 80px;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-small .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0B4F9F, #1976D2);
+  transition: width 0.3s ease;
+}
+
+.progress-text-small {
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  min-width: 35px;
+}
+
+.session-date-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.completion-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #0B4F9F;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.cohort-calendar {
+  display: flex;
+  gap: 24px;
+  padding: 20px 0;
+  overflow-x: auto;
+}
+
+.cohort-milestone {
+  min-width: 140px;
+  text-align: center;
+}
+
+.milestone-date {
+  position: relative;
+  background: #f5f7fa;
+  border-radius: 12px;
+  padding: 16px 12px;
+  margin-bottom: 12px;
+  border: 2px solid #e0e0e0;
+}
+
+.date-month {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0B4F9F;
+  letter-spacing: 0.5px;
+}
+
+.date-day {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.milestone-indicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 20px;
+}
+
+.milestone-info {
+  text-align: center;
+}
+
+.milestone-programme {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.milestone-subtitle {
+  font-size: 11px;
+  color: #666;
+}
+
+.milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.milestone-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.milestone-item:hover {
+  background: #e8f1fa;
+}
+
+.milestone-date-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 56px;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.milestone-date-badge .date-month {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0B4F9F;
+  letter-spacing: 0.5px;
+}
+
+.milestone-date-badge .date-day-large {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.milestone-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.milestone-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.milestone-desc {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.milestone-time {
+  font-size: 11px;
+  color: #999;
+}
+
+.link-text-small {
+  font-size: 12px;
+  color: #0B4F9F;
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.link-text-small:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1400px) {
+  .programmes-content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .programmes-sidebar {
+    grid-template-columns: repeat(2, 1fr);
+    display: grid;
+  }
+}
+
+@media (max-width: 768px) {
+  .programmes-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  
+  .programmes-tabs .tab {
+    white-space: nowrap;
+  }
+  
+  .programmes-sidebar {
+    grid-template-columns: 1fr;
+  }
+  
+  .cohort-calendar {
+    padding: 16px 0;
+  }
+}

@@ -1,0 +1,283 @@
+/* Browse Filters */
+.browse-filters {
+  margin-bottom: 24px;
+}
+
+.search-bar {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.search-bar svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0B4F9F;
+  box-shadow: 0 0 0 3px rgba(11, 79, 159, 0.1);
+}
+
+.filter-row {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-select {
+  padding: 10px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #0B4F9F;
+}
+
+/* Category Pills */
+.category-pills {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  background: white;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pill:hover {
+  border-color: #0B4F9F;
+  color: #0B4F9F;
+}
+
+.pill.active {
+  background: #0B4F9F;
+  border-color: #0B4F9F;
+  color: white;
+}
+
+/* Results Info */
+.results-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.results-info p {
+  font-size: 14px;
+  color: #666;
+}
+
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+/* Browse Grid */
+.browse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.browse-course-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.browse-course-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.course-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+}
+
+.course-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.course-category-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(11, 79, 159, 0.9);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.course-level-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: white;
+  color: #0B4F9F;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.free-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: #4caf50;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.course-card-content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.course-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0B4F9F;
+  line-height: 1.3;
+  min-height: 42px;
+}
+
+.course-instructor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.instructor-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.instructor-name-small {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.instructor-role-small {
+  font-size: 12px;
+  color: #666;
+}
+
+.course-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.rating-reviews {
+  font-size: 13px;
+  color: #666;
+}
+
+.course-stats-row {
+  display: flex;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.stat-item-small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.stat-item-small svg {
+  color: #0B4F9F;
+  flex-shrink: 0;
+}
+
+.course-card-footer {
+  padding: 0 16px 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .browse-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-row {
+    flex-direction: column;
+  }
+  
+  .category-pills {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 8px;
+  }
+}

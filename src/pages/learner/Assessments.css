@@ -1,0 +1,378 @@
+/* Assessments Page Styles */
+
+.stat-subtext {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.assessments-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+}
+
+/* Featured Assessment */
+.featured-assessment {
+  background: linear-gradient(135deg, #fff9e6 0%, #ffeaa7 100%);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  border: 2px solid #FDB714;
+  margin-bottom: 32px;
+}
+
+.featured-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #FDB714;
+  color: #1a1a1a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+
+.featured-assessment h3 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.featured-meta {
+  margin-bottom: 16px;
+}
+
+.course-link {
+  font-size: 13px;
+  color: #0B4F9F;
+  font-weight: 600;
+}
+
+.featured-description {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.featured-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+
+.detail-item {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* Assessment Table */
+.assessment-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.assessment-table th {
+  text-align: left;
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+  border-bottom: 2px solid #f0f0f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.assessment-table td {
+  padding: 20px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.assessment-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.assessment-type {
+  font-size: 12px;
+  color: #999;
+}
+
+.course-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #e3f2fd;
+  color: #0B4F9F;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.due-date {
+  font-size: 14px;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.days-left {
+  font-size: 12px;
+  color: #666;
+}
+
+.days-left.urgent {
+  color: #f44336;
+  font-weight: 700;
+}
+
+.status-pending {
+  background: #fff9e6;
+  color: #FDB714;
+}
+
+.status-in-progress {
+  background: #e3f2fd;
+  color: #0B4F9F;
+}
+
+.status-not-started {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.table-footer p {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Feedback */
+.feedback-item {
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.feedback-item:last-child {
+  margin-bottom: 0;
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.feedback-header img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.feedback-info {
+  flex: 1;
+}
+
+.feedback-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.feedback-meta {
+  font-size: 12px;
+  color: #999;
+}
+
+.feedback-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  padding-left: 52px;
+}
+
+/* Performance Chart */
+.card-subtitle {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 24px;
+}
+
+.performance-chart {
+  margin-bottom: 24px;
+}
+
+.chart-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 150px;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.chart-bar-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chart-bar {
+  width: 100%;
+  background: #f0f0f0;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  min-height: 20px;
+}
+
+.bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(180deg, #0B4F9F 0%, #003B73 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.bar-label {
+  font-size: 11px;
+  color: #999;
+  margin-top: 8px;
+  transform: rotate(-45deg);
+  white-space: nowrap;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.performance-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.summary-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.trend-up {
+  color: #4caf50;
+}
+
+/* Expert Card */
+.expert-card {
+  text-align: center;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.expert-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.expert-card h4 {
+  margin-bottom: 12px;
+}
+
+.expert-card p {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .assessments-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .featured-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .assessment-table {
+    font-size: 13px;
+  }
+  
+  .assessment-table th,
+  .assessment-table td {
+    padding: 12px 8px;
+  }
+  
+  .chart-bars {
+    height: 120px;
+  }
+}

@@ -1,0 +1,633 @@
+.seminars-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.seminars-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.seminars-stat-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.seminars-stat-icon.blue {
+  background: #E3F2FD;
+  color: #0B4F9F;
+}
+
+.seminars-stat-icon.yellow {
+  background: #FFF8E1;
+  color: #FDB714;
+}
+
+.seminars-stat-icon.green {
+  background: #E8F5E9;
+  color: #4CAF50;
+}
+
+.seminars-stat-icon.orange {
+  background: #FFF3E0;
+  color: #FFA726;
+}
+
+.seminars-stat-content {
+  flex: 1;
+}
+
+.seminars-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.seminars-stat-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.seminars-stat-meta {
+  font-size: 12px;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.seminars-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.seminars-main-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.calendar-card {
+  padding: 24px;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.calendar-nav-btn {
+  width: 32px;
+  height: 32px;
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-nav-btn:hover {
+  border-color: #0B4F9F;
+  color: #0B4F9F;
+}
+
+.calendar-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.calendar-today-btn {
+  padding: 6px 16px;
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #0B4F9F;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-today-btn:hover {
+  background: #F8FAFC;
+  border-color: #0B4F9F;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  padding: 8px 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-day:hover {
+  background: #F8FAFC;
+}
+
+.calendar-day.today {
+  background: #0B4F9F;
+  color: white;
+  font-weight: 600;
+}
+
+.calendar-day.has-event {
+  background: #E3F2FD;
+}
+
+.day-number {
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.calendar-day.today .day-number {
+  color: white;
+}
+
+.event-dot {
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: #0B4F9F;
+  border-radius: 50%;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #E0E0E0;
+}
+
+.legend-item-cal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.legend-dot-cal {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot-cal.live {
+  background: #0B4F9F;
+}
+
+.legend-dot-cal.custom {
+  background: #FDB714;
+}
+
+.section-header-seminars {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title-seminars {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.view-all-link-seminars {
+  color: #0B4F9F;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.view-all-link-seminars:hover {
+  text-decoration: underline;
+}
+
+.featured-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.featured-session-item {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.featured-session-item:hover {
+  background: #EEF6FF;
+  transform: translateX(4px);
+}
+
+.session-date-badge {
+  background: #0B4F9F;
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.session-month {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.session-day {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.session-details {
+  flex: 1;
+}
+
+.session-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #E3F2FD;
+  color: #0B4F9F;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.session-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.session-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-session-primary {
+  padding: 8px 16px;
+  background: #0B4F9F;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-session-primary:hover {
+  background: #003B73;
+}
+
+.btn-session-secondary {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-session-secondary:hover {
+  border-color: #0B4F9F;
+  color: #0B4F9F;
+}
+
+.seminars-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.quick-actions-seminars {
+  padding: 20px;
+}
+
+.sidebar-title-seminars {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.quick-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-action-btn:hover {
+  background: #F8FAFC;
+  border-color: #0B4F9F;
+  color: #0B4F9F;
+  transform: translateX(4px);
+}
+
+.registered-sessions-list,
+.custom-sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.registered-session-item,
+.custom-session-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 8px;
+}
+
+.registered-session-icon,
+.custom-session-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.registered-session-info,
+.custom-session-info {
+  flex: 1;
+}
+
+.registered-session-title,
+.custom-session-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.registered-session-date,
+.custom-session-date {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.custom-session-requestor {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.session-status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.session-status-badge.registered {
+  background: #E8F5E9;
+  color: #4CAF50;
+}
+
+.session-status-badge.discussion {
+  background: #FFF8E1;
+  color: #F57C00;
+}
+
+.session-status-badge.pending {
+  background: #F5F5F5;
+  color: #666;
+}
+
+.session-status-badge.recorded {
+  background: #E3F2FD;
+  color: #0B4F9F;
+}
+
+.seminars-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.attendance-list,
+.recommended-experts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.attendance-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 8px;
+}
+
+.attendance-icon {
+  width: 32px;
+  height: 32px;
+  background: #E8F5E9;
+  color: #4CAF50;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.attendance-info {
+  flex: 1;
+}
+
+.attendance-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.attendance-date {
+  font-size: 12px;
+  color: #666;
+}
+
+.attendance-completion {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0B4F9F;
+  margin-right: 12px;
+}
+
+.btn-view-certificate {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #0B4F9F;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-view-certificate:hover {
+  border-color: #0B4F9F;
+  background: #F8FAFC;
+}
+
+.expert-session-item {
+  padding: 16px;
+  background: #F8FAFC;
+  border-radius: 8px;
+}
+
+.expert-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #FFF8E1;
+  color: #F57C00;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.expert-session-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.expert-session-expert {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.expert-session-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+@media (max-width: 1200px) {
+  .seminars-content-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .seminars-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .seminars-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .featured-session-item {
+    flex-direction: column;
+    align-items: start;
+  }
+  
+  .session-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+  
+  .btn-session-primary,
+  .btn-session-secondary {
+    width: 100%;
+  }
+}

@@ -1,0 +1,151 @@
+/* Certificates Page */
+
+.certificates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.certificate-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+
+.certificate-preview {
+  position: relative;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8f1fa 100%);
+  padding: 40px;
+  text-align: center;
+}
+
+.cert-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.cert-frame {
+  background: white;
+  border: 3px solid #0B4F9F;
+  border-radius: 12px;
+  padding: 40px 20px;
+}
+
+.cert-logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0B4F9F;
+  margin-bottom: 20px;
+}
+
+.cert-frame h3 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0B4F9F;
+  margin-bottom: 4px;
+}
+
+.cert-frame p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.cert-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.cert-course {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.cert-date {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 24px;
+}
+
+.cert-sig {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sig-line {
+  width: 150px;
+  height: 2px;
+  background: #0B4F9F;
+  margin-bottom: 8px;
+}
+
+.sig-name {
+  font-size: 12px;
+  color: #666;
+}
+
+.certificate-info {
+  padding: 24px;
+}
+
+.certificate-info h4 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.certificate-info p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.verification-id {
+  font-size: 12px;
+  color: #999;
+  font-family: monospace;
+  margin-bottom: 16px;
+}
+
+.cert-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.eligibility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.eligibility-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 10px;
+}
+
+.eligibility-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.eligibility-status {
+  font-size: 13px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .certificates-grid {
+    grid-template-columns: 1fr;
+  }
+}

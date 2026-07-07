@@ -1,0 +1,229 @@
+/* Seminar Registration Page */
+
+.registration-page {
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+.registration-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.breadcrumb {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.breadcrumb a {
+  color: #0B4F9F;
+  text-decoration: none;
+}
+
+.registration-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+}
+
+.seminar-header-card {
+  background: linear-gradient(135deg, #0B4F9F 0%, #003B73 100%);
+  border-radius: 20px;
+  padding: 40px;
+  color: white;
+  margin-bottom: 32px;
+}
+
+.live-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  background: #f44336;
+  color: white;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+.seminar-header-card h1 {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.seminar-meta {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+
+.seminar-meta svg {
+  margin-right: 6px;
+}
+
+.speaker-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 12px;
+}
+
+.speaker-info img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+}
+
+.speaker-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.speaker-title {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.registration-form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.phone-input {
+  display: flex;
+  gap: 12px;
+}
+
+.phone-input select {
+  width: 120px;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.checkbox-group input {
+  width: auto;
+  margin-top: 4px;
+}
+
+.checkbox-group label {
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.info-notice {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #e3f2fd;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.info-notice svg {
+  flex-shrink: 0;
+  color: #0B4F9F;
+}
+
+.registration-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.seats-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+
+.seats-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.seats-count {
+  font-size: 32px;
+  font-weight: 700;
+  color: #f44336;
+  margin-bottom: 8px;
+}
+
+.certificate-card {
+  background: linear-gradient(135deg, #fff9e6 0%, #ffeaa7 100%);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  border: 2px solid #FDB714;
+}
+
+.certificate-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.benefits-list li {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.benefits-list li:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 1024px) {
+  .registration-grid {
+    grid-template-columns: 1fr;
+  }
+}
