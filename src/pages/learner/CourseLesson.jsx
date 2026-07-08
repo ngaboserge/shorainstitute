@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Check, Lock, BookOpen, FileText, Video, MessageSquare, ThumbsUp, Flag } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Check, Lock, BookOpen, FileText, Video, MessageSquare, Play, BarChart3, Scale, Target } from 'lucide-react'
 import './CourseLesson.css'
 
 const CourseLesson = () => {
@@ -103,7 +103,9 @@ const CourseLesson = () => {
                   <div className="lesson-duration">{lesson.duration}</div>
                 </div>
                 {isCurrent && (
-                  <div className="playing-indicator">▶</div>
+                  <div className="playing-indicator">
+                    <Play size={12} fill="currentColor" />
+                  </div>
                 )}
               </Link>
             )
@@ -117,7 +119,9 @@ const CourseLesson = () => {
         <div className="video-container">
           <div className="video-player">
             <div className="video-placeholder">
-              <div className="play-button-large">▶</div>
+              <div className="play-button-large">
+                <Play size={64} fill="white" stroke="white" />
+              </div>
               <div className="video-overlay-text">
                 <h2>{currentLesson.title}</h2>
                 <p>Lesson {currentLessonNumber} of {course.totalLessons}</p>
@@ -181,27 +185,33 @@ const CourseLesson = () => {
 
                 <h4>What You'll Learn</h4>
                 <ul className="learning-objectives">
-                  <li>✓ The concept of diversification and why it matters</li>
-                  <li>✓ Different types of diversification strategies</li>
-                  <li>✓ How to spread risk across asset classes</li>
-                  <li>✓ Common diversification mistakes to avoid</li>
-                  <li>✓ Building a diversified portfolio for your goals</li>
+                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> The concept of diversification and why it matters</li>
+                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Different types of diversification strategies</li>
+                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> How to spread risk across asset classes</li>
+                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Common diversification mistakes to avoid</li>
+                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Building a diversified portfolio for your goals</li>
                 </ul>
 
                 <h4>Key Concepts</h4>
                 <div className="key-concepts-grid">
                   <div className="concept-card">
-                    <div className="concept-icon">📊</div>
+                    <div className="concept-icon">
+                      <BarChart3 size={32} color="#0B4F9F" />
+                    </div>
                     <div className="concept-title">Asset Allocation</div>
                     <p>Distributing investments across different asset classes</p>
                   </div>
                   <div className="concept-card">
-                    <div className="concept-icon">⚖️</div>
+                    <div className="concept-icon">
+                      <Scale size={32} color="#0B4F9F" />
+                    </div>
                     <div className="concept-title">Risk Management</div>
                     <p>Reducing portfolio volatility through diversification</p>
                   </div>
                   <div className="concept-card">
-                    <div className="concept-icon">🎯</div>
+                    <div className="concept-icon">
+                      <Target size={32} color="#0B4F9F" />
+                    </div>
                     <div className="concept-title">Portfolio Balance</div>
                     <p>Maintaining optimal mix of investments</p>
                   </div>
