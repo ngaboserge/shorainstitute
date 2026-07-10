@@ -1,125 +1,130 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Search, Filter, Star, Clock, Users, BookOpen } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import './BrowseCourses.css'
 
 const BrowseCourses = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('All Courses')
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const courses = [
-    {
-      id: 1,
-      image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=400',
-      category: 'Financial Foundations',
-      badge: 'Beginner',
-      title: 'Financial Freedom: Begin with a Plan',
-      instructor: 'Alex Ntale',
-      instructorRole: 'SHORA Institute',
-      rating: 4.8,
-      reviews: 1245,
-      duration: '2h 12m',
-      lessons: 8,
-      enrolled: 12453,
-      price: 'Free',
-      isFree: true
-    },
-    {
-      id: 2,
-      image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400',
-      category: 'Investing',
-      badge: 'Intermediate',
-      title: 'Investing Essentials: Grow Your Wealth',
-      instructor: 'Linda Umutoni',
-      instructorRole: 'SHORA Institute',
-      rating: 4.7,
-      reviews: 982,
-      duration: '3h 15m',
-      lessons: 12,
-      enrolled: 8934,
-      price: 'Enroll',
-      isFree: false
-    },
-    {
-      id: 3,
-      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400',
-      category: 'Personal Wealth',
-      badge: 'Beginner',
-      title: 'Budgeting & Saving That Actually Works',
-      instructor: 'Emmanuel Habimana',
-      instructorRole: 'SHORA Institute',
-      rating: 4.6,
-      reviews: 763,
-      duration: '1h 30m',
-      lessons: 6,
-      enrolled: 15632,
-      price: 'Enroll',
-      isFree: false
-    },
-    {
-      id: 4,
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400',
-      category: 'SME Finance',
-      badge: 'Intermediate',
-      title: 'Cash Flow Management for Small Businesses',
-      instructor: 'Claudine Mukamana',
-      instructorRole: 'Invited Expert',
-      rating: 4.8,
-      reviews: 654,
-      duration: '2h 30m',
-      lessons: 10,
-      enrolled: 5421,
-      price: 'Enroll',
-      isFree: false
-    },
-    {
-      id: 5,
-      image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400',
-      category: 'Capital Markets',
-      badge: 'Intermediate',
-      title: 'Introduction to the Rwanda Stock Market',
-      instructor: 'Isaac Twizere',
-      instructorRole: 'Invited Expert',
-      rating: 4.6,
-      reviews: 438,
-      duration: '2h 45m',
-      lessons: 11,
-      enrolled: 3254,
-      price: 'Enroll',
-      isFree: false
-    },
-    {
-      id: 6,
-      image: 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=400',
-      category: 'Institutional',
-      badge: 'Advanced',
-      title: 'Treasury Management for Institutions',
-      instructor: 'SHORA Faculty',
-      instructorRole: 'SHORA Institute',
-      rating: 4.9,
-      reviews: 321,
-      duration: '3h 30m',
-      lessons: 14,
-      enrolled: 1876,
-      price: 'Enroll',
-      isFree: false
+  useEffect(() => {
+    loadPublishedCourses()
+  }, [])
+
+  const loadPublishedCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setCourses(data || [])
+    } catch (error) {
+      console.error('Error loading courses:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const categories = [
     'All Courses',
-    'Financial Foundations',
-    'Investing',
-    'Personal Wealth',
-    'SME Finance',
-    'Capital Markets',
-    'Tax & Compliance'
+    'Finance & Investment',
+    'Business & Entrepreneurship',
+    'Technology & Programming',
+    'Marketing & Sales',
+    'Personal Development',
+    'Design & Creative',
+    'Health & Wellness',
+    'Language Learning',
+    'Academic',
+    'Other'
   ]
 
-  const filteredCourses = selectedCategory === 'All Courses' 
-    ? courses 
-    : courses.filter(c => c.category === selectedCategory)
+  const filteredCourses = courses.filter(course => {
+    const matchesCategory = selectedCategory === 'All Courses' || course.category === selectedCategory
+    const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         course.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         course.instructor_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0m'
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
+  }
+
+  const formatPrice = (price, currency) => {
+    if (price === 0) return 'Free'
+    const symbols = { RWF: 'FRw', USD: '$', EUR: '€' }
+    return `${symbols[currency] || currency} ${price.toLocaleString()}`
+  }
+
+  const handleEnroll = async (courseId) => {
+    if (!user) {
+      navigate('/auth/learner/login')
+      return
+    }
+
+    // Check if already enrolled
+    const { data: existingEnrollment } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId)
+      .single()
+
+    if (existingEnrollment) {
+      navigate(`/learner/courses`)
+      return
+    }
+
+    // Create enrollment
+    try {
+      const { error } = await supabase
+        .from('enrollments')
+        .insert({
+          user_id: user.id,
+          course_id: courseId,
+          payment_status: 'free',
+          enrolled_at: new Date().toISOString()
+        })
+
+      if (error) throw error
+
+      // Update enrollment count
+      await supabase.rpc('increment_enrollment_count', { course_id: courseId })
+
+      navigate(`/learner/courses`)
+    } catch (error) {
+      console.error('Error enrolling:', error)
+      alert('Failed to enroll. Please try again.')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="learner" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading courses...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-layout">
@@ -139,6 +144,8 @@ const BrowseCourses = () => {
                 type="text" 
                 placeholder="Search courses by title, topic, or instructor..." 
                 className="search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             
@@ -195,66 +202,100 @@ const BrowseCourses = () => {
           </div>
 
           {/* Courses Grid */}
-          <div className="browse-grid">
-            {filteredCourses.map((course) => (
-              <div key={course.id} className="browse-course-card">
-                <div className="course-image-wrapper">
-                  <img src={course.image} alt={course.title} className="course-img" />
-                  <div className="course-category-badge">{course.category}</div>
-                  <div className="course-level-badge">{course.badge}</div>
-                  {course.isFree && <div className="free-badge">FREE</div>}
-                </div>
-                
-                <div className="course-card-content">
-                  <h3 className="course-card-title">{course.title}</h3>
+          {filteredCourses.length === 0 ? (
+            <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <BookOpen size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
+              <h3 style={{ color: '#666', marginBottom: '8px' }}>No courses found</h3>
+              <p style={{ color: '#999' }}>
+                {searchQuery ? 'Try adjusting your search' : 'No published courses available yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="browse-grid">
+              {filteredCourses.map((course) => (
+                <div key={course.id} className="browse-course-card">
+                  <div className="course-image-wrapper">
+                    {course.thumbnail_url ? (
+                      <img src={course.thumbnail_url} alt={course.title} className="course-img" />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '200px',
+                        background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '48px'
+                      }}>
+                        <BookOpen size={48} />
+                      </div>
+                    )}
+                    <div className="course-category-badge">{course.category}</div>
+                    <div className="course-level-badge">{course.level}</div>
+                    {course.price === 0 && <div className="free-badge">FREE</div>}
+                  </div>
                   
-                  <div className="course-instructor-row">
-                    <img 
-                      src={`https://i.pravatar.cc/40?img=${course.id}`} 
-                      alt={course.instructor}
-                      className="instructor-thumb"
-                    />
-                    <div>
-                      <div className="instructor-name-small">{course.instructor}</div>
-                      <div className="instructor-role-small">{course.instructorRole}</div>
+                  <div className="course-card-content">
+                    <h3 className="course-card-title">{course.title}</h3>
+                    
+                    <div className="course-instructor-row">
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }}>
+                        {course.instructor_name?.charAt(0) || 'T'}
+                      </div>
+                      <div>
+                        <div className="instructor-name-small">{course.instructor_name || 'Instructor'}</div>
+                        <div className="instructor-role-small">SHORA Institute</div>
+                      </div>
+                    </div>
+                    
+                    <div className="course-meta-row">
+                      <div className="rating-display">
+                        <Star size={14} fill="#FDB714" stroke="#FDB714" />
+                        <span className="rating-number">{course.rating || 0}</span>
+                        <span className="rating-reviews">({course.review_count || 0})</span>
+                      </div>
+                    </div>
+                    
+                    <div className="course-stats-row">
+                      <div className="stat-item-small">
+                        <Clock size={14} />
+                        <span>{formatDuration(course.total_duration_seconds)}</span>
+                      </div>
+                      <div className="stat-item-small">
+                        <BookOpen size={14} />
+                        <span>{course.total_lessons || 0} lessons</span>
+                      </div>
+                      <div className="stat-item-small">
+                        <Users size={14} />
+                        <span>{(course.enrollment_count || 0).toLocaleString()} enrolled</span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="course-meta-row">
-                    <div className="rating-display">
-                      <Star size={14} fill="#FDB714" stroke="#FDB714" />
-                      <span className="rating-number">{course.rating}</span>
-                      <span className="rating-reviews">({course.reviews})</span>
-                    </div>
-                  </div>
-                  
-                  <div className="course-stats-row">
-                    <div className="stat-item-small">
-                      <Clock size={14} />
-                      <span>{course.duration}</span>
-                    </div>
-                    <div className="stat-item-small">
-                      <BookOpen size={14} />
-                      <span>{course.lessons} lessons</span>
-                    </div>
-                    <div className="stat-item-small">
-                      <Users size={14} />
-                      <span>{course.enrolled.toLocaleString()} enrolled</span>
-                    </div>
+                  <div className="course-card-footer">
+                    <button
+                      onClick={() => handleEnroll(course.id)}
+                      className={`btn ${course.price === 0 ? 'btn-warning' : 'btn-primary'} btn-full`}
+                    >
+                      {course.price === 0 ? 'Enroll Free' : formatPrice(course.price, course.currency)}
+                    </button>
                   </div>
                 </div>
-                
-                <div className="course-card-footer">
-                  <Link 
-                    to={`/learner/courses/${course.id}/lesson/1`}
-                    className={`btn ${course.isFree ? 'btn-warning' : 'btn-primary'} btn-full`}
-                  >
-                    {course.price}
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

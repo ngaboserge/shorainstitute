@@ -1,10 +1,62 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 import { Calendar, BookOpen, Users, Star, ChevronRight, MessageSquare, Upload, Shield, TrendingUp, CheckCircle, FileText, HelpCircle } from 'lucide-react'
 import './Dashboard.css'
 
 const Dashboard = () => {
+  const navigate = useNavigate()
+  const { user, profile } = useAuth()
+  const [stats, setStats] = useState({
+    coursesCount: 0,
+    totalLearners: 0,
+    averageRating: 0,
+    publishedCourses: 0
+  })
+  const [recentCourses, setRecentCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user?.id) {
+      loadDashboardData()
+    }
+  }, [user?.id])
+
+  const loadDashboardData = async () => {
+    try {
+      // Load courses with stats
+      const { data: courses, error: coursesError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('instructor_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (coursesError) throw coursesError
+
+      // Calculate stats
+      const publishedCourses = courses?.filter(c => c.status === 'published') || []
+      const totalLearners = courses?.reduce((sum, c) => sum + (c.enrollment_count || 0), 0) || 0
+      const avgRating = courses?.length > 0
+        ? (courses.reduce((sum, c) => sum + (c.rating || 0), 0) / courses.length).toFixed(1)
+        : 0
+
+      setStats({
+        coursesCount: courses?.length || 0,
+        totalLearners,
+        averageRating: avgRating,
+        publishedCourses: publishedCourses.length
+      })
+
+      setRecentCourses(courses?.slice(0, 3) || [])
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
   const nextSeminar = {
     title: 'Capital Markets Outlook & Investment Strategies',
     date: 'Wed, May 14, 2025',
@@ -43,18 +95,31 @@ const Dashboard = () => {
     { question: 'How can SMEs improve cash flow forecasting accuracy?', author: 'Phyllis M.', date: 'May 10, 2025', course: 'SME Finance' },
   ]
 
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="trainer" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-layout">
       <Sidebar type="trainer" />
       <div className="main-content">
         <Header 
-          title="Welcome back, Alex."
+          title={`Welcome back, ${profile?.full_name || 'Trainer'}.`}
           subtitle="Trainer Portal Dashboard"
           actions={
             <div className="trainer-badge">
               <Shield size={18} style={{color: '#FDB714'}} />
-              <span>INVITED TRAINER</span>
-              <span className="member-since">Member since Jan 2023</span>
+              <span>TRAINER</span>
+              <span className="member-since">Member since {new Date(profile?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
             </div>
           }
         />
@@ -67,9 +132,9 @@ const Dashboard = () => {
                 <Calendar size={24} />
               </div>
               <div>
-                <div className="stat-label">Upcoming Sessions</div>
-                <div className="stat-value-large">3</div>
-                <a href="#" className="stat-link">View schedule →</a>
+                <div className="stat-label">Total Courses</div>
+                <div className="stat-value-large">{stats.coursesCount}</div>
+                <a href="/trainer/courses" className="stat-link">Manage courses →</a>
               </div>
             </div>
 
@@ -79,8 +144,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <div className="stat-label">Published Courses</div>
-                <div className="stat-value-large">5</div>
-                <a href="#" className="stat-link">Manage courses →</a>
+                <div className="stat-value-large">{stats.publishedCourses}</div>
+                <a href="/trainer/courses" className="stat-link">View published →</a>
               </div>
             </div>
 
@@ -90,8 +155,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <div className="stat-label">Total Learners</div>
-                <div className="stat-value-large">3,245</div>
-                <div className="stat-trend">↑ 18% vs last 30 days</div>
+                <div className="stat-value-large">{stats.totalLearners.toLocaleString()}</div>
+                <div className="stat-trend">{stats.totalLearners === 0 ? 'Create your first course' : 'Across all courses'}</div>
               </div>
             </div>
 
@@ -101,8 +166,8 @@ const Dashboard = () => {
               </div>
               <div>
                 <div className="stat-label">Average Rating</div>
-                <div className="stat-value-large">4.8/5</div>
-                <a href="#" className="stat-link">View feedback →</a>
+                <div className="stat-value-large">{stats.averageRating}/5</div>
+                <a href="/trainer/analytics" className="stat-link">View feedback →</a>
               </div>
             </div>
           </div>
@@ -111,105 +176,65 @@ const Dashboard = () => {
           <div className="trainer-dashboard-grid">
             {/* Left Column */}
             <div className="trainer-main-column">
-              {/* Next Live Seminar */}
-              <div className="card">
-                <h3 className="card-title">Next Live Seminar</h3>
-                <div className="next-seminar-card">
-                  <div className="seminar-badge live-badge">LIVE</div>
-                  <div className="seminar-image">
-                    <img src={nextSeminar.image} alt={nextSeminar.title} />
-                  </div>
-                  <div className="seminar-content">
-                    <h4 className="seminar-title">{nextSeminar.title}</h4>
-                    <div className="seminar-meta">
-                      <div className="meta-item">
-                        <Calendar size={16} />
-                        <span>Wed, May 14, 2025</span>
-                      </div>
-                      <div className="meta-item">
-                        <span>⏰</span>
-                        <span>6:05 PM - 7:30 PM (EAT)</span>
-                      </div>
-                      <div className="meta-item">
-                        <span>📍</span>
-                        <span>Live on Zoom</span>
-                      </div>
-                      <div className="meta-item-group">
-                        <div className="avatar-stack">
-                          <img src="https://i.pravatar.cc/32?img=1" alt="" />
-                          <img src="https://i.pravatar.cc/32?img=2" alt="" />
-                          <img src="https://i.pravatar.cc/32?img=3" alt="" />
-                          <img src="https://i.pravatar.cc/32?img=4" alt="" />
-                        </div>
-                        <span>{nextSeminar.registered} registered</span>
-                      </div>
-                    </div>
-                    <button className="btn btn-warning btn-lg">View Details</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Schedule Overview */}
+              {/* Your Courses */}
               <div className="card">
                 <div className="card-header-flex">
-                  <h3 className="card-title">Schedule Overview</h3>
-                  <a href="/trainer/sessions" className="link-text">View all →</a>
+                  <h3 className="card-title">Your Recent Courses</h3>
+                  <a href="/trainer/courses" className="link-text">View all →</a>
                 </div>
-                <div className="schedule-calendar-mini">
-                  <div className="calendar-nav">
-                    <button className="btn-icon">‹</button>
-                    <h4>May 2025</h4>
-                    <button className="btn-icon">›</button>
+                
+                {recentCourses.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center' }}>
+                    <BookOpen size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                    <h4 style={{ color: '#666', marginBottom: '8px' }}>No courses yet</h4>
+                    <p style={{ color: '#999', marginBottom: '24px' }}>Create your first course to start teaching</p>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => navigate('/trainer/create-course')}
+                    >
+                      Create Your First Course
+                    </button>
                   </div>
-                  <div className="calendar-grid-mini">
-                    <div className="calendar-header">SUN</div>
-                    <div className="calendar-header">MON</div>
-                    <div className="calendar-header">TUE</div>
-                    <div className="calendar-header">WED</div>
-                    <div className="calendar-header">THU</div>
-                    <div className="calendar-header">FRI</div>
-                    <div className="calendar-header">SAT</div>
-                    
-                    {[...Array(31)].map((_, i) => {
-                      const day = i + 1
-                      const hasSession = [14, 21, 27].includes(day)
-                      const isToday = day === 14
-                      return (
-                        <div key={i} className={`calendar-day ${hasSession ? 'has-session' : ''} ${isToday ? 'today' : ''}`}>
-                          {day}
+                ) : (
+                  <div className="courses-list-simple">
+                    {recentCourses.map((course) => (
+                      <div key={course.id} className="course-item-simple">
+                        <div className="course-thumbnail-small">
+                          {course.thumbnail_url ? (
+                            <img src={course.thumbnail_url} alt={course.title} />
+                          ) : (
+                            <div style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              background: '#f0f0f0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <BookOpen size={24} color="#999" />
+                            </div>
+                          )}
                         </div>
-                      )
-                    })}
-                  </div>
-                  <div className="calendar-legend">
-                    <div className="legend-item"><span className="dot session-dot"></span> Session</div>
-                    <div className="legend-item"><span className="dot multiple-dot"></span> Multiple Sessions</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Proposal Approvals */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3 className="card-title">Proposal Approvals</h3>
-                  <a href="/trainer/proposals" className="link-text">View all →</a>
-                </div>
-                <div className="proposals-list">
-                  {proposalApprovals.map((proposal, idx) => (
-                    <div key={idx} className="proposal-item">
-                      <div className="proposal-icon">
-                        📄
+                        <div className="course-info-simple">
+                          <h4>{course.title}</h4>
+                          <div className="course-meta-simple">
+                            <span className={`badge ${course.status === 'published' ? 'success' : course.status === 'draft' ? 'neutral' : 'warning'}`}>
+                              {course.status}
+                            </span>
+                            <span>{course.total_lessons || 0} lessons</span>
+                            <span>{course.enrollment_count || 0} students</span>
+                          </div>
+                        </div>
+                        <button 
+                          className="btn btn-sm btn-outline"
+                          onClick={() => navigate(`/trainer/courses/${course.id}/manage-lessons`)}
+                        >
+                          Manage
+                        </button>
                       </div>
-                      <div className="proposal-details">
-                        <div className="proposal-title">{proposal.title}</div>
-                        <div className="proposal-subtitle">{proposal.subtitle} • {proposal.date}</div>
-                      </div>
-                      <span className={`badge ${proposal.status === 'Approval' ? 'success' : proposal.status === 'Under Review' ? 'warning' : 'neutral'}`}>
-                        {proposal.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -219,87 +244,104 @@ const Dashboard = () => {
               <div className="card">
                 <h3 className="card-title">Quick Actions</h3>
                 <div className="quick-actions-grid">
-                  <button className="quick-action-card">
+                  <button 
+                    className="quick-action-card"
+                    onClick={() => navigate('/trainer/create-course')}
+                  >
                     <div className="action-icon blue">
-                      <Calendar size={20} />
-                    </div>
-                    <div className="action-text">Create New Seminar</div>
-                  </button>
-                  <button className="quick-action-card">
-                    <div className="action-icon yellow">
                       <BookOpen size={20} />
                     </div>
-                    <div className="action-text">Submit Course Proposal</div>
+                    <div className="action-text">Create New Course</div>
                   </button>
-                  <button className="quick-action-card">
+                  <button 
+                    className="quick-action-card"
+                    onClick={() => navigate('/trainer/courses')}
+                  >
+                    <div className="action-icon yellow">
+                      <FileText size={20} />
+                    </div>
+                    <div className="action-text">Manage Courses</div>
+                  </button>
+                  <button 
+                    className="quick-action-card"
+                    onClick={() => navigate('/trainer/analytics')}
+                  >
                     <div className="action-icon green">
-                      <Upload size={20} />
+                      <TrendingUp size={20} />
                     </div>
-                    <div className="action-text">Upload Course Materials</div>
+                    <div className="action-text">View Analytics</div>
                   </button>
-                  <button className="quick-action-card">
+                  <button 
+                    className="quick-action-card"
+                    onClick={() => navigate('/trainer/profile')}
+                  >
                     <div className="action-icon orange">
-                      <MessageSquare size={20} />
+                      <Users size={20} />
                     </div>
-                    <div className="action-text">View Learner Feedback</div>
+                    <div className="action-text">Edit Profile</div>
                   </button>
                 </div>
               </div>
 
-              {/* Recent Learner Questions */}
+              {/* Getting Started Guide */}
               <div className="card">
-                <div className="card-header-flex">
-                  <h3 className="card-title">Recent Learner Questions</h3>
-                  <a href="/trainer/qa" className="link-text">View all →</a>
-                </div>
-                <div className="questions-list">
-                  {recentQuestions.map((q, idx) => (
-                    <div key={idx} className="question-item">
-                      <div className="question-icon">
-                        <HelpCircle size={20} color="#ff9800" />
-                      </div>
-                      <div className="question-content">
-                        <div className="question-text">{q.question}</div>
-                        <div className="question-meta">
-                          <span>{q.author}</span>
-                          <span>•</span>
-                          <span>{q.date}</span>
-                        </div>
-                        <div className="question-course">{q.course}</div>
-                      </div>
-                      <button className="btn btn-sm btn-secondary">Go to Learner Q&A →</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3 className="card-title">Recent Activity</h3>
-                  <a href="#" className="link-text">View all →</a>
-                </div>
+                <h3 className="card-title">Getting Started</h3>
                 <div className="activity-list-compact">
-                  {recentActivity.map((activity, idx) => (
-                    <div key={idx} className="activity-item-compact">
-                      <div className="activity-icon-small">{getActivityIcon(activity.icon)}</div>
-                      <div className="activity-details-compact">
-                        <div className="activity-text-small">{activity.text}</div>
-                        <div className="activity-time-small">{activity.time}</div>
+                  <div className="activity-item-compact">
+                    <div className="activity-icon-small">
+                      <CheckCircle size={18} color={stats.coursesCount > 0 ? '#4caf50' : '#ccc'} />
+                    </div>
+                    <div className="activity-details-compact">
+                      <div className="activity-text-small">Create your first course</div>
+                      <div className="activity-time-small">
+                        {stats.coursesCount > 0 ? 'Completed ✓' : 'Click "Create New Course" above'}
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="activity-item-compact">
+                    <div className="activity-icon-small">
+                      <CheckCircle size={18} color={stats.publishedCourses > 0 ? '#4caf50' : '#ccc'} />
+                    </div>
+                    <div className="activity-details-compact">
+                      <div className="activity-text-small">Add lessons and videos</div>
+                      <div className="activity-time-small">
+                        {stats.publishedCourses > 0 ? 'Completed ✓' : 'Add content to your course'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="activity-item-compact">
+                    <div className="activity-icon-small">
+                      <CheckCircle size={18} color={stats.publishedCourses > 0 ? '#4caf50' : '#ccc'} />
+                    </div>
+                    <div className="activity-details-compact">
+                      <div className="activity-text-small">Publish your course</div>
+                      <div className="activity-time-small">
+                        {stats.publishedCourses > 0 ? 'Completed ✓' : 'Make it available to students'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="activity-item-compact">
+                    <div className="activity-icon-small">
+                      <CheckCircle size={18} color={stats.totalLearners > 0 ? '#4caf50' : '#ccc'} />
+                    </div>
+                    <div className="activity-details-compact">
+                      <div className="activity-text-small">Get your first student</div>
+                      <div className="activity-time-small">
+                        {stats.totalLearners > 0 ? `${stats.totalLearners} students enrolled ✓` : 'Share your course'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Compliance Reminder */}
+              {/* Trainer Resources */}
               <div className="card reminder-card">
                 <div className="reminder-icon">
                   <Shield size={24} />
                 </div>
-                <h4 className="reminder-title">Compliance Reminder</h4>
-                <p className="reminder-text">All content must remain educational and informational only. Content cannot promise or guarantee specific results, income, or tax advice.</p>
-                <a href="#" className="link-text">Review Content Guidelines →</a>
+                <h4 className="reminder-title">Trainer Resources</h4>
+                <p className="reminder-text">Need help creating your course? Check out our trainer guide and video tutorials.</p>
+                <a href="/trainer/resources" className="link-text">View Resources →</a>
               </div>
             </div>
           </div>

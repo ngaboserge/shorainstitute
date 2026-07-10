@@ -1,91 +1,138 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Play, Clock, Award, TrendingUp, BookOpen, Target, Calendar, ChevronRight, Star, Users } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 import './Dashboard.css'
 
 const Dashboard = () => {
-  const currentCourse = {
-    title: 'Investing Essentials: Grow Your Wealth',
-    progress: 65,
-    lastLesson: 'Lesson 7: Diversification Strategies',
-    nextLesson: 'Lesson 8: Risk Management Basics',
-    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400',
-    instructor: 'Linda Umutoni',
-    totalLessons: 12,
-    completedLessons: 8
+  const { user, profile } = useAuth()
+  const [stats, setStats] = useState({
+    enrolledCourses: 0,
+    certificatesEarned: 0,
+    learningHours: 0,
+    learningStreak: 0
+  })
+  const [currentCourse, setCurrentCourse] = useState(null)
+  const [recommendedCourses, setRecommendedCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user) {
+      loadDashboardData()
+    }
+  }, [user])
+
+  const loadDashboardData = async () => {
+    try {
+      // Load enrolled courses
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('enrollments')
+        .select(`
+          *,
+          courses (
+            id,
+            title,
+            thumbnail_url,
+            instructor_name,
+            total_lessons,
+            total_duration_seconds
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('last_accessed_at', { ascending: false })
+
+      if (enrollError) throw enrollError
+
+      // Calculate stats
+      const enrolledCount = enrollments?.length || 0
+      const completedCount = enrollments?.filter(e => e.progress_percentage >= 100).length || 0
+      const totalHours = enrollments?.reduce((sum, e) => sum + (e.courses?.total_duration_seconds || 0), 0) / 3600
+
+      setStats({
+        enrolledCourses: enrolledCount,
+        certificatesEarned: completedCount,
+        learningHours: Math.round(totalHours * 10) / 10,
+        learningStreak: 0 // TODO: Calculate based on activity
+      })
+
+      // Set current course (most recent in-progress)
+      const inProgress = enrollments?.find(e => e.progress_percentage > 0 && e.progress_percentage < 100)
+      if (inProgress) {
+        // Load lessons for current course
+        const { data: lessons } = await supabase
+          .from('lessons')
+          .select('id, title, order_number')
+          .eq('course_id', inProgress.course_id)
+          .order('order_number')
+
+        const totalLessons = lessons?.length || 0
+        const completedLessons = Math.floor((inProgress.progress_percentage / 100) * totalLessons)
+        const nextLesson = lessons?.find(l => l.order_number > completedLessons)
+
+        setCurrentCourse({
+          id: inProgress.course_id,
+          title: inProgress.courses.title,
+          progress: Math.round(inProgress.progress_percentage),
+          image: inProgress.courses.thumbnail_url,
+          instructor: inProgress.courses.instructor_name,
+          totalLessons: totalLessons,
+          completedLessons: completedLessons,
+          nextLesson: nextLesson || lessons?.[0],
+          lastLesson: lessons?.[completedLessons - 1]
+        })
+      }
+
+      // Load recommended courses (published courses not enrolled in)
+      const enrolledIds = enrollments?.map(e => e.course_id) || []
+      const { data: recommended } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('status', 'published')
+        .not('id', 'in', `(${enrolledIds.join(',') || 'null'})`)
+        .limit(3)
+
+      setRecommendedCourses(recommended || [])
+
+    } catch (error) {
+      console.error('Error loading dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const upcomingSeminars = [
-    {
-      id: 1,
-      title: 'Building Your Investment Portfolio',
-      date: 'Tue, July 8',
-      time: '6:00 PM - 7:30 PM',
-      instructor: 'Alex Ntale',
-      status: 'Registered'
-    },
-    {
-      id: 2,
-      title: 'Tax Planning for Personal Wealth',
-      date: 'Thu, July 10',
-      time: '6:00 PM - 7:30 PM',
-      instructor: 'Emmanuel Habimana',
-      status: 'Available'
-    }
-  ]
-
-  const learningPathway = {
-    name: 'Build Financial Foundations',
-    progress: 40,
-    totalCourses: 5,
-    completedCourses: 2
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0m'
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
   }
 
-  const recentActivity = [
-    { type: 'completed', text: 'Completed Lesson 7 in Investing Essentials', time: '2 hours ago' },
-    { type: 'certificate', text: 'Earned certificate: Financial Foundations', time: 'Yesterday' },
-    { type: 'joined', text: 'Joined live seminar: Building Wealth', time: '2 days ago' },
-    { type: 'started', text: 'Started course: Investment Strategies', time: '3 days ago' }
-  ]
+  const upcomingSeminars = []
+  const learningPathway = null
+  const recentActivity = []
 
-  const recommendedCourses = [
-    {
-      id: 1,
-      title: 'Understanding Bonds & Fixed Income',
-      image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=300',
-      instructor: 'Franklin Nkubito',
-      rating: 4.7,
-      duration: '2h 10m',
-      level: 'Intermediate'
-    },
-    {
-      id: 2,
-      title: 'Real Estate Investment Basics',
-      image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=300',
-      instructor: 'Claudine Mukamana',
-      rating: 4.6,
-      duration: '2h 45m',
-      level: 'Beginner'
-    },
-    {
-      id: 3,
-      title: 'Retirement Planning 101',
-      image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300',
-      instructor: 'Jennifer Kamanzi',
-      rating: 4.8,
-      duration: '2h 30m',
-      level: 'Beginner'
-    }
-  ]
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="learner" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading your dashboard...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-layout">
       <Sidebar type="learner" />
       <div className="main-content">
         <Header 
-          title="Welcome back, Alex." 
+          title={`Welcome back, ${profile?.full_name?.split(' ')[0] || 'Learner'}.`}
           subtitle="Keep learning. Keep growing. Build lasting wealth."
         />
         <div className="content-wrapper learner-dashboard">
@@ -96,8 +143,8 @@ const Dashboard = () => {
                 <BookOpen size={24} color="#0B4F9F" />
               </div>
               <div className="stat-content">
-                <div className="stat-label">Courses in Progress</div>
-                <div className="stat-value">3</div>
+                <div className="stat-label">Courses Enrolled</div>
+                <div className="stat-value">{stats.enrolledCourses}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -106,7 +153,7 @@ const Dashboard = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Certificates Earned</div>
-                <div className="stat-value">2</div>
+                <div className="stat-value">{stats.certificatesEarned}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -115,7 +162,7 @@ const Dashboard = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Learning Hours</div>
-                <div className="stat-value">24.5</div>
+                <div className="stat-value">{stats.learningHours}</div>
               </div>
             </div>
             <div className="stat-card">
@@ -124,7 +171,7 @@ const Dashboard = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Learning Streak</div>
-                <div className="stat-value">7 days</div>
+                <div className="stat-value">{stats.learningStreak} days</div>
               </div>
             </div>
           </div>
@@ -134,177 +181,159 @@ const Dashboard = () => {
             {/* Left Column */}
             <div className="dashboard-left">
               {/* Continue Learning Card */}
-              <div className="card continue-learning-card">
-                <div className="card-header-flex">
-                  <h3>Continue Where You Left Off</h3>
-                </div>
-                <div className="course-resume">
-                  <div className="course-resume-image">
-                    <img src={currentCourse.image} alt={currentCourse.title} />
-                    <div className="play-overlay">
-                      <button className="btn-play-large">
-                        <Play size={32} fill="white" />
-                      </button>
-                    </div>
+              {currentCourse ? (
+                <div className="card continue-learning-card">
+                  <div className="card-header-flex">
+                    <h3>Continue Where You Left Off</h3>
                   </div>
-                  <div className="course-resume-content">
-                    <div className="course-category">IN PROGRESS</div>
-                    <h4 className="course-resume-title">{currentCourse.title}</h4>
-                    <div className="course-instructor-small">
-                      <img src="https://i.pravatar.cc/32?img=1" alt={currentCourse.instructor} />
-                      <span>{currentCourse.instructor}</span>
-                    </div>
-                    <div className="progress-section">
-                      <div className="progress-header">
-                        <span className="progress-label">Your Progress</span>
-                        <span className="progress-percent">{currentCourse.progress}% complete</span>
-                      </div>
-                      <div className="progress-bar-large">
-                        <div className="progress-fill" style={{width: `${currentCourse.progress}%`}}></div>
-                      </div>
-                      <div className="lessons-info">
-                        {currentCourse.completedLessons} of {currentCourse.totalLessons} lessons completed
-                      </div>
-                    </div>
-                    <div className="next-lesson-info">
-                      <div className="next-lesson-label">NEXT LESSON</div>
-                      <div className="next-lesson-title">{currentCourse.nextLesson}</div>
-                    </div>
-                    <Link to={`/learner/courses/${1}/lesson/${8}`} className="btn btn-primary btn-full">
-                      Continue Learning →
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Learning Pathway Card */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3>Your Learning Pathway</h3>
-                  <Link to="/learner/pathway" className="link-text">View Details →</Link>
-                </div>
-                <div className="pathway-progress-card">
-                  <div className="pathway-header">
-                    <div className="pathway-icon-large">🏆</div>
-                    <div className="pathway-info">
-                      <h4 className="pathway-name-large">{learningPathway.name}</h4>
-                      <div className="pathway-meta-large">
-                        {learningPathway.completedCourses} of {learningPathway.totalCourses} courses completed
-                      </div>
-                    </div>
-                  </div>
-                  <div className="progress-section">
-                    <div className="progress-header">
-                      <span className="progress-label">Pathway Progress</span>
-                      <span className="progress-percent">{learningPathway.progress}%</span>
-                    </div>
-                    <div className="progress-bar-large">
-                      <div className="progress-fill" style={{width: `${learningPathway.progress}%`}}></div>
-                    </div>
-                  </div>
-                  <Link to="/learner/pathway" className="btn btn-secondary btn-full">
-                    Continue Pathway
-                  </Link>
-                </div>
-              </div>
-
-              {/* Recommended Courses */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3>Recommended For You</h3>
-                  <Link to="/courses" className="link-text">Browse All →</Link>
-                </div>
-                <div className="recommended-grid">
-                  {recommendedCourses.map((course) => (
-                    <div key={course.id} className="recommended-course-card">
-                      <div className="recommended-image">
-                        <img src={course.image} alt={course.title} />
-                        <div className="level-badge">{course.level}</div>
-                      </div>
-                      <div className="recommended-content">
-                        <h4 className="recommended-title">{course.title}</h4>
-                        <div className="recommended-instructor">
-                          <img src={`https://i.pravatar.cc/24?img=${course.id}`} alt={course.instructor} />
-                          <span>{course.instructor}</span>
+                  <div className="course-resume">
+                    <div className="course-resume-image">
+                      {currentCourse.image ? (
+                        <img src={currentCourse.image} alt={currentCourse.title} />
+                      ) : (
+                        <div style={{
+                          width: '100%',
+                          height: '200px',
+                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <BookOpen size={48} color="white" />
                         </div>
-                        <div className="recommended-meta">
-                          <div className="rating-small">
-                            <Star size={12} fill="#FDB714" stroke="#FDB714" />
-                            <span>{course.rating}</span>
-                          </div>
-                          <div className="duration-small">
-                            <Clock size={12} />
-                            <span>{course.duration}</span>
-                          </div>
-                        </div>
-                        <button className="btn btn-secondary btn-sm btn-full">
-                          Enroll Now
+                      )}
+                      <div className="play-overlay">
+                        <button className="btn-play-large">
+                          <Play size={32} fill="white" />
                         </button>
                       </div>
                     </div>
-                  ))}
+                    <div className="course-resume-content">
+                      <div className="course-category">IN PROGRESS</div>
+                      <h4 className="course-resume-title">{currentCourse.title}</h4>
+                      <div className="course-instructor-small">
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '14px',
+                          fontWeight: '600'
+                        }}>
+                          {currentCourse.instructor?.charAt(0) || 'T'}
+                        </div>
+                        <span>{currentCourse.instructor || 'Instructor'}</span>
+                      </div>
+                      <div className="progress-section">
+                        <div className="progress-header">
+                          <span className="progress-label">Your Progress</span>
+                          <span className="progress-percent">{currentCourse.progress}% complete</span>
+                        </div>
+                        <div className="progress-bar-large">
+                          <div className="progress-fill" style={{width: `${currentCourse.progress}%`}}></div>
+                        </div>
+                        <div className="lessons-info">
+                          {currentCourse.completedLessons} of {currentCourse.totalLessons} lessons completed
+                        </div>
+                      </div>
+                      <div className="next-lesson-info">
+                        <div className="next-lesson-label">NEXT LESSON</div>
+                        <div className="next-lesson-title">{currentCourse.nextLesson?.title || 'Start first lesson'}</div>
+                      </div>
+                      <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson?.id}`} className="btn btn-primary btn-full">
+                        Continue Learning →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="card">
+                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <BookOpen size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
+                    <h3 style={{ color: '#666', marginBottom: '8px' }}>No courses in progress</h3>
+                    <p style={{ color: '#999', marginBottom: '24px' }}>Start learning by enrolling in a course</p>
+                    <Link to="/learner/browse" className="btn btn-primary">
+                      Browse Courses
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+
+
+              {/* Recommended Courses */}
+              {recommendedCourses.length > 0 && (
+                <div className="card">
+                  <div className="card-header-flex">
+                    <h3>Recommended For You</h3>
+                    <Link to="/learner/browse" className="link-text">Browse All →</Link>
+                  </div>
+                  <div className="recommended-grid">
+                    {recommendedCourses.map((course) => (
+                      <div key={course.id} className="recommended-course-card">
+                        <div className="recommended-image">
+                          {course.thumbnail_url ? (
+                            <img src={course.thumbnail_url} alt={course.title} />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '150px',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <BookOpen size={32} color="white" />
+                            </div>
+                          )}
+                          <div className="level-badge">{course.level}</div>
+                        </div>
+                        <div className="recommended-content">
+                          <h4 className="recommended-title">{course.title}</h4>
+                          <div className="recommended-instructor">
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {course.instructor_name?.charAt(0) || 'T'}
+                            </div>
+                            <span>{course.instructor_name || 'Instructor'}</span>
+                          </div>
+                          <div className="recommended-meta">
+                            <div className="rating-small">
+                              <Star size={12} fill="#FDB714" stroke="#FDB714" />
+                              <span>{course.rating || 0}</span>
+                            </div>
+                            <div className="duration-small">
+                              <Clock size={12} />
+                              <span>{formatDuration(course.total_duration_seconds)}</span>
+                            </div>
+                          </div>
+                          <Link to="/learner/browse" className="btn btn-secondary btn-sm btn-full">
+                            Enroll Now
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column */}
             <div className="dashboard-right">
-              {/* Upcoming Seminars */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3>Upcoming Live Seminars</h3>
-                  <Link to="/learner/seminars" className="link-text">View All →</Link>
-                </div>
-                <div className="seminars-list">
-                  {upcomingSeminars.map((seminar) => (
-                    <div key={seminar.id} className="seminar-item">
-                      <div className="seminar-date-badge">
-                        <div className="date-day">8</div>
-                        <div className="date-month">JUL</div>
-                      </div>
-                      <div className="seminar-details">
-                        <h4 className="seminar-title">{seminar.title}</h4>
-                        <div className="seminar-time">
-                          <Calendar size={14} />
-                          <span>{seminar.date} • {seminar.time}</span>
-                        </div>
-                        <div className="seminar-instructor-small">
-                          <img src="https://i.pravatar.cc/24?img=5" alt={seminar.instructor} />
-                          <span>{seminar.instructor}</span>
-                        </div>
-                        {seminar.status === 'Registered' ? (
-                          <div className="status-badge status-success">✓ Registered</div>
-                        ) : (
-                          <button className="btn btn-secondary btn-sm">Register</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="card">
-                <div className="card-header-flex">
-                  <h3>Recent Activity</h3>
-                </div>
-                <div className="activity-list">
-                  {recentActivity.map((activity, idx) => (
-                    <div key={idx} className="activity-item">
-                      <div className={`activity-icon activity-${activity.type}`}>
-                        {activity.type === 'completed' && '✓'}
-                        {activity.type === 'certificate' && '🏆'}
-                        {activity.type === 'joined' && '👥'}
-                        {activity.type === 'started' && '▶'}
-                      </div>
-                      <div className="activity-content">
-                        <div className="activity-text">{activity.text}</div>
-                        <div className="activity-time">{activity.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {/* Quick Actions */}
               <div className="card">

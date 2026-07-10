@@ -1,5 +1,6 @@
 import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 import { 
   LayoutDashboard, 
   Users, 
@@ -11,12 +12,20 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  Search
+  Search,
+  User
 } from 'lucide-react'
 import './Sidebar.css'
 
 const Sidebar = ({ type = 'institutional' }) => {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, profile, signOut } = useAuth()
+
+  const handleLogout = async () => {
+    await signOut()
+    navigate('/auth/trainer/login')
+  }
   
   const institutionalMenuItems = [
     { path: '/institutional/overview', icon: LayoutDashboard, label: 'Overview' },
@@ -117,26 +126,95 @@ const Sidebar = ({ type = 'institutional' }) => {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="account-manager">
-          <div className="manager-label">Your Account Manager</div>
-          <div className="manager-card">
-            <img 
-              src="https://i.pravatar.cc/150?img=33" 
-              alt="Eric Mugisha" 
-              className="manager-avatar"
-            />
-            <div className="manager-info">
-              <div className="manager-name">Eric Mugisha</div>
-              <div className="manager-contact">+250 788 123 456</div>
-              <div className="manager-email">eric.mugisha@shora.rw</div>
+        {type === 'trainer' && profile && (
+          <div className="account-manager">
+            <div className="manager-label">Your Profile</div>
+            <div className="manager-card">
+              <div className="manager-avatar" style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: '600'
+              }}>
+                {profile.full_name?.charAt(0) || 'T'}
+              </div>
+              <div className="manager-info">
+                <div className="manager-name">{profile.full_name || 'Trainer'}</div>
+                <div className="manager-contact">{user?.email || ''}</div>
+                <div className="manager-email" style={{ fontSize: '11px', color: '#FDB714' }}>
+                  {profile.role === 'trainer' ? '✓ Verified Trainer' : profile.role}
+                </div>
+              </div>
             </div>
+            <button 
+              className="btn btn-secondary btn-sm contact-btn"
+              onClick={() => navigate('/trainer/profile')}
+            >
+              <User size={16} /> Edit Profile
+            </button>
           </div>
-          <button className="btn btn-secondary btn-sm contact-btn">
-            <span>📧</span> Contact Eric
-          </button>
-        </div>
+        )}
 
-        <button className="logout-btn">
+        {type === 'institutional' && (
+          <div className="account-manager">
+            <div className="manager-label">Your Account Manager</div>
+            <div className="manager-card">
+              <img 
+                src="https://i.pravatar.cc/150?img=33" 
+                alt="Eric Mugisha" 
+                className="manager-avatar"
+              />
+              <div className="manager-info">
+                <div className="manager-name">Eric Mugisha</div>
+                <div className="manager-contact">+250 788 123 456</div>
+                <div className="manager-email">eric.mugisha@shora.rw</div>
+              </div>
+            </div>
+            <button className="btn btn-secondary btn-sm contact-btn">
+              <span>📧</span> Contact Eric
+            </button>
+          </div>
+        )}
+
+        {type === 'learner' && profile && (
+          <div className="account-manager">
+            <div className="manager-label">Your Profile</div>
+            <div className="manager-card">
+              <div className="manager-avatar" style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: '600'
+              }}>
+                {profile.full_name?.charAt(0) || 'L'}
+              </div>
+              <div className="manager-info">
+                <div className="manager-name">{profile.full_name || 'Learner'}</div>
+                <div className="manager-contact">{user?.email || ''}</div>
+              </div>
+            </div>
+            <button 
+              className="btn btn-secondary btn-sm contact-btn"
+              onClick={() => navigate('/learner/profile')}
+            >
+              <User size={16} /> Edit Profile
+            </button>
+          </div>
+        )}
+
+        <button className="logout-btn" onClick={handleLogout}>
           <LogOut size={20} />
           <span>Log out</span>
         </button>

@@ -1,36 +1,174 @@
-import React, { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Check, Lock, BookOpen, FileText, Video, MessageSquare, Play, BarChart3, Scale, Target } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Check, Lock, BookOpen, FileText, MessageSquare, Play, BarChart3, Scale, Target } from 'lucide-react'
+import VideoPlayer from '../../components/VideoPlayer'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import './CourseLesson.css'
 
 const CourseLesson = () => {
   const { id, lessonId } = useParams()
-  const [completedLessons, setCompletedLessons] = useState([1, 2, 3, 4, 5, 6, 7])
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  
+  // State
+  const [course, setCourse] = useState(null)
+  const [lessons, setLessons] = useState([])
+  const [currentLesson, setCurrentLesson] = useState(null)
+  const [completedLessons, setCompletedLessons] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
+  const [isEnrolled, setIsEnrolled] = useState(false)
 
-  const course = {
-    id: 1,
-    title: 'Investing Essentials: Grow Your Wealth',
-    instructor: 'Linda Umutoni',
-    totalLessons: 12
+  // Load all data
+  useEffect(() => {
+    if (user) {
+      loadAllData()
+    }
+  }, [id, lessonId, user])
+
+  const loadAllData = async () => {
+    setLoading(true)
+    
+    try {
+      // Check if user is enrolled
+      const { data: enrollment, error: enrollError } = await supabase
+        .from('enrollments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('course_id', id)
+        .maybeSingle()
+
+      if (enrollError) throw enrollError
+
+      if (!enrollment) {
+        setIsEnrolled(false)
+        setLoading(false)
+        return
+      }
+
+      setIsEnrolled(true)
+
+      // Update last_accessed_at
+      await supabase
+        .from('enrollments')
+        .update({ last_accessed_at: new Date().toISOString() })
+        .eq('id', enrollment.id)
+      
+      // Load course
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', id)
+        .single()
+      
+      if (courseError) throw courseError
+      setCourse(courseData)
+      
+      // Load all lessons for sidebar
+      const { data: lessonsData, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('course_id', id)
+        .order('order_number')
+      
+      if (lessonsError) throw lessonsError
+      setLessons(lessonsData || [])
+      
+      // Load current lesson
+      const { data: lessonData, error: lessonError } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('id', lessonId)
+        .single()
+      
+      if (lessonError) throw lessonError
+      setCurrentLesson(lessonData)
+      
+      // Load completed lessons
+      const { data: progressData } = await supabase
+        .from('lesson_progress')
+        .select('lesson_id')
+        .eq('user_id', user.id)
+        .eq('course_id', id)
+        .eq('completed', true)
+      
+      setCompletedLessons(progressData?.map(p => p.lesson_id) || [])
+      
+      // Calculate progress
+      const totalLessons = lessonsData?.length || 0
+      const completedCount = progressData?.length || 0
+      const progressPercentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0
+      
+      setProgress({
+        completed: completedCount,
+        total: totalLessons,
+        percentage: progressPercentage
+      })
+      
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const lessons = [
-    { id: 1, title: 'Introduction to Investing', duration: '10:25', type: 'video' },
-    { id: 2, title: 'Understanding Risk & Return', duration: '12:30', type: 'video' },
-    { id: 3, title: 'Types of Investment Assets', duration: '15:20', type: 'video' },
-    { id: 4, title: 'Reading Financial Statements', duration: '18:45', type: 'video' },
-    { id: 5, title: 'Portfolio Construction Basics', duration: '14:10', type: 'video' },
-    { id: 6, title: 'Asset Allocation Strategies', duration: '16:55', type: 'video' },
-    { id: 7, title: 'Diversification Strategies', duration: '13:40', type: 'video' },
-    { id: 8, title: 'Risk Management Basics', duration: '17:20', type: 'video' },
-    { id: 9, title: 'Investment Research Methods', duration: '19:30', type: 'video' },
-    { id: 10, title: 'Market Analysis Fundamentals', duration: '16:15', type: 'video' },
-    { id: 11, title: 'Building Your First Portfolio', duration: '22:40', type: 'video' },
-    { id: 12, title: 'Course Summary & Next Steps', duration: '11:25', type: 'video' }
-  ]
+  // Handle lesson completion
+  const handleLessonComplete = () => {
+    console.log('✅ Lesson completed! Refreshing data...')
+    loadAllData() // Refresh to show updated progress
+  }
 
-  const currentLesson = lessons[parseInt(lessonId) - 1]
-  const currentLessonNumber = parseInt(lessonId)
+  // Format duration from seconds to MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="lesson-layout">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Loading lesson...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state - Not enrolled
+  if (!loading && !isEnrolled) {
+    return (
+      <div className="lesson-layout">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <BookOpen size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
+          <h3 style={{ color: '#666', marginBottom: '8px' }}>You are not enrolled in this course</h3>
+          <p style={{ color: '#999', marginBottom: '24px' }}>Enroll in this course to access its lessons</p>
+          <Link to="/learner/browse" className="btn btn-primary">
+            Browse Courses
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (!course || !currentLesson) {
+    return (
+      <div className="lesson-layout">
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <p>Lesson not found</p>
+          <Link to="/learner/courses" className="btn btn-primary" style={{ marginTop: '20px' }}>
+            Back to Courses
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  const currentLessonNumber = lessons.findIndex(l => l.id === lessonId) + 1
 
   const resources = [
     { name: 'Lesson Slides (PDF)', type: 'PDF', size: '2.4 MB' },
@@ -54,22 +192,35 @@ const CourseLesson = () => {
           </Link>
           <h3 className="course-title-sidebar">{course.title}</h3>
           <div className="course-instructor-sidebar">
-            <img src="https://i.pravatar.cc/32?img=1" alt={course.instructor} />
-            <span>{course.instructor}</span>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {course.instructor_name?.charAt(0) || 'T'}
+            </div>
+            <span>{course.instructor_name || 'Instructor'}</span>
           </div>
           <div className="course-progress-sidebar">
             <div className="progress-label">
               <span>Your Progress</span>
-              <span>{Math.round((completedLessons.length / course.totalLessons) * 100)}%</span>
+              <span>{progress.percentage}%</span>
             </div>
             <div className="progress-bar-sidebar">
               <div 
                 className="progress-fill" 
-                style={{width: `${(completedLessons.length / course.totalLessons) * 100}%`}}
+                style={{width: `${progress.percentage}%`}}
               ></div>
             </div>
             <div className="progress-text-small">
-              {completedLessons.length} of {course.totalLessons} lessons complete
+              {progress.completed} of {progress.total} lessons complete
             </div>
           </div>
         </div>
@@ -78,8 +229,8 @@ const CourseLesson = () => {
           <h4 className="lessons-header">Course Content</h4>
           {lessons.map((lesson) => {
             const isCompleted = completedLessons.includes(lesson.id)
-            const isCurrent = lesson.id === currentLessonNumber
-            const isLocked = lesson.id > currentLessonNumber + 1
+            const isCurrent = lesson.id === lessonId
+            const isLocked = false // All lessons accessible for now
 
             return (
               <Link
@@ -95,12 +246,12 @@ const CourseLesson = () => {
                   ) : isLocked ? (
                     <Lock size={16} />
                   ) : (
-                    <span>{lesson.id}</span>
+                    <span>{lesson.order_number}</span>
                   )}
                 </div>
                 <div className="lesson-info">
                   <div className="lesson-title-small">{lesson.title}</div>
-                  <div className="lesson-duration">{lesson.duration}</div>
+                  <div className="lesson-duration">{formatDuration(lesson.duration_seconds)}</div>
                 </div>
                 {isCurrent && (
                   <div className="playing-indicator">
@@ -117,22 +268,20 @@ const CourseLesson = () => {
       <div className="lesson-main">
         {/* Video Player */}
         <div className="video-container">
-          <div className="video-player">
-            <div className="video-placeholder">
-              <div className="play-button-large">
-                <Play size={64} fill="white" stroke="white" />
-              </div>
-              <div className="video-overlay-text">
-                <h2>{currentLesson.title}</h2>
-                <p>Lesson {currentLessonNumber} of {course.totalLessons}</p>
-              </div>
-            </div>
-          </div>
+          <VideoPlayer
+            lesson={currentLesson}
+            userId={user?.id}
+            courseId={id}
+            onProgress={(percent) => {
+              console.log('Progress:', Math.round(percent) + '%')
+            }}
+            onComplete={handleLessonComplete}
+          />
           
           {/* Lesson Navigation */}
           <div className="lesson-navigation-bar">
             <Link
-              to={currentLessonNumber > 1 ? `/learner/courses/${id}/lesson/${currentLessonNumber - 1}` : '#'}
+              to={currentLessonNumber > 1 ? `/learner/courses/${id}/lesson/${lessons[currentLessonNumber - 2].id}` : '#'}
               className={`nav-btn ${currentLessonNumber === 1 ? 'disabled' : ''}`}
             >
               <ChevronLeft size={20} />
@@ -145,8 +294,8 @@ const CourseLesson = () => {
             </button>
 
             <Link
-              to={currentLessonNumber < course.totalLessons ? `/learner/courses/${id}/lesson/${currentLessonNumber + 1}` : '#'}
-              className={`nav-btn ${currentLessonNumber === course.totalLessons ? 'disabled' : ''}`}
+              to={currentLessonNumber < lessons.length ? `/learner/courses/${id}/lesson/${lessons[currentLessonNumber].id}` : '#'}
+              className={`nav-btn ${currentLessonNumber === lessons.length ? 'disabled' : ''}`}
             >
               <span>Next Lesson</span>
               <ChevronRight size={20} />
@@ -253,7 +402,7 @@ const CourseLesson = () => {
                   <h4>Lesson Info</h4>
                   <div className="info-item">
                     <span className="info-label">Duration</span>
-                    <span className="info-value">{currentLesson.duration}</span>
+                    <span className="info-value">{formatDuration(currentLesson.duration_seconds)}</span>
                   </div>
                   <div className="info-item">
                     <span className="info-label">Type</span>
@@ -268,14 +417,27 @@ const CourseLesson = () => {
                 <div className="instructor-card">
                   <h4>Your Instructor</h4>
                   <div className="instructor-profile">
-                    <img src="https://i.pravatar.cc/64?img=1" alt={course.instructor} />
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '24px',
+                      fontWeight: '600'
+                    }}>
+                      {course.instructor_name?.charAt(0) || 'T'}
+                    </div>
                     <div className="instructor-details">
-                      <div className="instructor-name">{course.instructor}</div>
+                      <div className="instructor-name">{course.instructor_name || 'Instructor'}</div>
                       <div className="instructor-title">Senior Financial Advisor</div>
                     </div>
                   </div>
                   <p className="instructor-bio">
-                    Linda has over 15 years of experience in investment management and financial planning.
+                    {course.instructor_name} has extensive experience in financial education and investment management.
                   </p>
                   <button className="btn btn-secondary btn-full">Send Message</button>
                 </div>
