@@ -276,6 +276,13 @@ const ManageLessons = () => {
           </div>
           
           <div className="header-actions">
+            <button 
+              className="btn btn-outline" 
+              onClick={() => navigate(`/trainer/courses/${courseId}/assessments`)}
+            >
+              <UploadIcon size={18} />
+              <span>Manage Assessments</span>
+            </button>
             <button className="btn btn-outline" onClick={() => navigate(`/learner/courses/${courseId}/lesson/${lessons[0]?.id}`)}>
               <Eye size={18} />
               <span>Preview Course</span>
