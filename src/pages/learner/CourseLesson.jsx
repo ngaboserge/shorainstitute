@@ -64,6 +64,9 @@ const CourseLesson = () => {
           })
       }
 
+      // Update enrollment progress percentage
+      await updateEnrollmentProgress()
+
       // Refresh data
       await loadAllData()
 
@@ -76,6 +79,58 @@ const CourseLesson = () => {
     } catch (error) {
       console.error('Error marking lesson complete:', error)
       alert('Failed to mark lesson as complete')
+    }
+  }
+
+  // Update enrollment progress percentage
+  const updateEnrollmentProgress = async () => {
+    try {
+      // Get total lessons
+      const { data: allLessons } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('course_id', id)
+
+      const totalLessons = allLessons?.length || 0
+
+      // Get completed lessons
+      const { data: completedProgress } = await supabase
+        .from('lesson_progress')
+        .select('lesson_id')
+        .eq('user_id', user.id)
+        .eq('course_id', id)
+        .eq('completed', true)
+
+      const completedCount = completedProgress?.length || 0
+
+      // Calculate percentage
+      const progressPercentage = totalLessons > 0 
+        ? Math.round((completedCount / totalLessons) * 100) 
+        : 0
+
+      // Check if course is completed
+      const isCompleted = progressPercentage === 100
+
+      // Update enrollment
+      const updateData = {
+        progress_percentage: progressPercentage,
+        last_accessed_at: new Date().toISOString()
+      }
+
+      // If completed, set completed_at timestamp
+      if (isCompleted) {
+        updateData.completed_at = new Date().toISOString()
+      }
+
+      await supabase
+        .from('enrollments')
+        .update(updateData)
+        .eq('user_id', user.id)
+        .eq('course_id', id)
+
+      console.log(`✅ Enrollment progress updated: ${progressPercentage}%`)
+    } catch (error) {
+      console.error('Error updating enrollment progress:', error)
     }
   }
 
@@ -166,8 +221,9 @@ const CourseLesson = () => {
   }
 
   // Handle lesson completion
-  const handleLessonComplete = () => {
-    console.log('✅ Lesson completed! Refreshing data...')
+  const handleLessonComplete = async () => {
+    console.log('✅ Lesson completed! Updating enrollment progress...')
+    await updateEnrollmentProgress()
     loadAllData() // Refresh to show updated progress
   }
 
