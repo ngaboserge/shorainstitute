@@ -1,11 +1,69 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
 import { Edit, Check, Star, Clock, Globe, Shield, Calendar, MapPin, Phone, Mail, Linkedin, GraduationCap, MoreVertical } from 'lucide-react'
 import './Profile.css'
 
 const Profile = () => {
+  const { user, profile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [stats, setStats] = useState({
+    coursesCount: 0,
+    publishedCourses: 0,
+    totalStudents: 0,
+    averageRating: 0
+  })
+  const [recentCourses, setRecentCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (user?.id) {
+      loadProfileData()
+    }
+  }, [user?.id])
+
+  const loadProfileData = async () => {
+    try {
+      // Load trainer courses
+      const { data: courses, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('instructor_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(4)
+
+      if (error) throw error
+
+      const publishedCourses = courses?.filter(c => c.status === 'published') || []
+      const totalStudents = courses?.reduce((sum, c) => sum + (c.enrollment_count || 0), 0) || 0
+      const avgRating = courses?.length > 0
+        ? (courses.reduce((sum, c) => sum + (c.rating || 0), 0) / courses.length).toFixed(1)
+        : 0
+
+      setStats({
+        coursesCount: courses?.length || 0,
+        publishedCourses: publishedCourses.length,
+        totalStudents,
+        averageRating: avgRating
+      })
+
+      setRecentCourses(courses || [])
+    } catch (error) {
+      console.error('Error loading profile data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not set'
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short'
+    })
+  }
 
   const credentials = [
     { type: 'Chartered Financial Analyst (CFA)', issuer: 'CFA Institute', date: 'Issued Dec 2019', status: 'Verified' },
@@ -16,19 +74,23 @@ const Profile = () => {
 
   const expertise = ['Capital Markets', 'Investment Strategy', 'Corporate Finance', 'Financial Modeling', 'Valuation', 'Risk Management', 'Entrepreneurial Finance']
   
-  const topicApprovals = [
-    { name: 'Capital Markets Outlook & Investment Strategies', status: 'Approved' },
-    { name: 'Tax Planning for Investors & SMEs', status: 'Approved' },
-    { name: 'Entrepreneurial Finance: Funding & Valuation', status: 'Approved' },
-    { name: 'Financial Modeling for Professionals', status: 'Pending Review' }
-  ]
+  const topicApprovals = recentCourses.map(course => ({
+    name: course.title,
+    status: course.status === 'published' ? 'Approved' : 'Pending Review'
+  }))
 
-  const sessionHistory = [
-    { date: 'May 14, 2025', title: 'Capital Markets Outlook & Investment Strategies', attendees: 128, rating: 4.8 },
-    { date: 'Apr 21, 2025', title: 'Tax Planning for Investors & SMEs', attendees: 96, rating: 4.7 },
-    { date: 'Mar 15, 2025', title: 'Entrepreneurial Finance: Funding & Valuation', attendees: 110, rating: 4.9 },
-    { date: 'Feb 18, 2025', title: 'Financial Modeling for Professionals', attendees: 87, rating: 4.8 }
-  ]
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="trainer" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-layout">
@@ -41,7 +103,7 @@ const Profile = () => {
             <div className="trainer-badge">
               <Shield size={18} style={{color: '#FDB714'}} />
               <span>INVITED TRAINER</span>
-              <span className="member-since">Invited on Jan 15, 2023</span>
+              <span className="member-since">Member since {formatDate(profile?.created_at)}</span>
             </div>
           }
         />
@@ -54,11 +116,20 @@ const Profile = () => {
               <div className="card profile-header-card">
                 <div className="profile-header-content">
                   <div className="profile-avatar-section">
-                    <img 
-                      src="/alex-ntale.jpg" 
-                      alt="Alex Ntale" 
-                      className="profile-avatar-large"
-                    />
+                    <div style={{
+                      width: '120px',
+                      height: '120px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '48px',
+                      fontWeight: '600'
+                    }}>
+                      {profile?.full_name?.charAt(0) || 'T'}
+                    </div>
                     <button className="btn btn-sm btn-secondary edit-photo-btn">
                       <Edit size={16} />
                       Edit Photo
@@ -66,7 +137,7 @@ const Profile = () => {
                   </div>
                   <div className="profile-info-section">
                     <div className="profile-name-row">
-                      <h2 className="profile-name">Alex Ntale</h2>
+                      <h2 className="profile-name">{profile?.full_name || 'Trainer'}</h2>
                       <button className="btn-icon" onClick={() => setIsEditing(!isEditing)}>
                         <Edit size={18} />
                       </button>
@@ -76,12 +147,26 @@ const Profile = () => {
                     <div className="profile-badge-row">
                       <span className="profile-badge verified">
                         <Check size={14} />
-                        Ntale Advisory Group
+                        SHORA Institute
                       </span>
                       <span className="profile-badge invited">
                         <Shield size={14} />
                         SHORA INVITED TRAINER
                       </span>
+                    </div>
+                    <div className="profile-stats-quick">
+                      <div className="quick-stat">
+                        <strong>{stats.coursesCount}</strong>
+                        <span>Courses</span>
+                      </div>
+                      <div className="quick-stat">
+                        <strong>{stats.totalStudents}</strong>
+                        <span>Students</span>
+                      </div>
+                      <div className="quick-stat">
+                        <strong>{stats.averageRating}</strong>
+                        <span>Rating</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -195,22 +280,28 @@ const Profile = () => {
               {/* Topic Approvals */}
               <div className="card">
                 <div className="section-header">
-                  <h3>Topic Approvals</h3>
-                  <a href="#" className="link-text">View all →</a>
+                  <h3>Your Courses</h3>
+                  <a href="/trainer/courses" className="link-text">View all →</a>
                 </div>
-                <div className="topics-list">
-                  {topicApprovals.map((topic, idx) => (
-                    <div key={idx} className="topic-item">
-                      <div className="topic-icon">
-                        {topic.status === 'Approved' ? <Check size={18} /> : <Clock size={18} />}
+                {topicApprovals.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#999' }}>No courses yet. Create your first course!</p>
+                  </div>
+                ) : (
+                  <div className="topics-list">
+                    {topicApprovals.map((topic, idx) => (
+                      <div key={idx} className="topic-item">
+                        <div className="topic-icon">
+                          {topic.status === 'Approved' ? <Check size={18} /> : <Clock size={18} />}
+                        </div>
+                        <div className="topic-name">{topic.name}</div>
+                        <span className={`badge ${topic.status === 'Approved' ? 'success' : 'warning'}`}>
+                          {topic.status}
+                        </span>
                       </div>
-                      <div className="topic-name">{topic.name}</div>
-                      <span className={`badge ${topic.status === 'Approved' ? 'success' : 'warning'}`}>
-                        {topic.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -224,44 +315,77 @@ const Profile = () => {
                   Preview
                 </button>
                 <div className="preview-content">
-                  <div className="preview-avatar">
-                    <img src="/alex-ntale.jpg" alt="Alex Ntale" />
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '32px',
+                    fontWeight: '600',
+                    margin: '0 auto 16px'
+                  }}>
+                    {profile?.full_name?.charAt(0) || 'T'}
                   </div>
-                  <h4 className="preview-name">Alex Ntale</h4>
+                  <h4 className="preview-name">{profile?.full_name || 'Trainer'}</h4>
                   <p className="preview-title">Senior Finance & Investment Consultant</p>
                   <p className="preview-org">Capital Markets | Corporate Finance | Investment Strategy</p>
                   <span className="preview-badge">
                     <Shield size={12} />
                     SHORA Invited Trainer
                   </span>
+                  <div style={{ marginTop: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '18px', color: '#0B4F9F' }}>{stats.coursesCount}</strong>
+                        <span style={{ fontSize: '12px', color: '#666' }}>Courses</span>
+                      </div>
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '18px', color: '#0B4F9F' }}>{stats.totalStudents}</strong>
+                        <span style={{ fontSize: '12px', color: '#666' }}>Students</span>
+                      </div>
+                      <div>
+                        <strong style={{ display: 'block', fontSize: '18px', color: '#0B4F9F' }}>{stats.averageRating}</strong>
+                        <span style={{ fontSize: '12px', color: '#666' }}>Rating</span>
+                      </div>
+                    </div>
+                  </div>
                   <a href="#" className="link-text">View full public profile →</a>
                 </div>
               </div>
 
-              {/* Session History */}
+              {/* Recent Courses */}
               <div className="card">
                 <div className="section-header">
-                  <h3>Session History</h3>
-                  <a href="#" className="link-text-small">View all →</a>
+                  <h3>Recent Activity</h3>
+                  <a href="/trainer/courses" className="link-text-small">View all →</a>
                 </div>
-                <div className="session-history-list">
-                  {sessionHistory.map((session, idx) => (
-                    <div key={idx} className="session-history-item">
-                      <div className="session-date-small">
-                        <Calendar size={14} />
-                        {session.date}
+                {recentCourses.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <p style={{ color: '#999', fontSize: '14px' }}>No courses yet</p>
+                  </div>
+                ) : (
+                  <div className="session-history-list">
+                    {recentCourses.map((course, idx) => (
+                      <div key={idx} className="session-history-item">
+                        <div className="session-date-small">
+                          <Calendar size={14} />
+                          {formatDate(course.created_at)}
+                        </div>
+                        <div className="session-title-small">{course.title}</div>
+                        <div className="session-meta-small">
+                          <span>{course.enrollment_count || 0} students</span>
+                          <span className={`badge ${course.status === 'published' ? 'success' : 'neutral'}`}>
+                            {course.status}
+                          </span>
+                        </div>
                       </div>
-                      <div className="session-title-small">{session.title}</div>
-                      <div className="session-meta-small">
-                        <span>{session.attendees} attendees</span>
-                        <span className="session-rating">
-                          <Star size={12} fill="#FDB714" stroke="#FDB714" />
-                          {session.rating}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Availability Settings */}

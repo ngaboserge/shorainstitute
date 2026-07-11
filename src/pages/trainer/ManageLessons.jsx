@@ -152,6 +152,40 @@ const ManageLessons = () => {
     setShowUploadModal(true)
   }
 
+  // Publish individual lesson
+  const handlePublishLesson = async (lessonId) => {
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ status: 'published' })
+        .eq('id', lessonId)
+
+      if (error) throw error
+      loadData()
+      alert('Lesson published successfully!')
+    } catch (error) {
+      console.error('Error publishing lesson:', error)
+      alert('Failed to publish lesson')
+    }
+  }
+
+  // Unpublish individual lesson
+  const handleUnpublishLesson = async (lessonId) => {
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({ status: 'draft' })
+        .eq('id', lessonId)
+
+      if (error) throw error
+      loadData()
+      alert('Lesson unpublished!')
+    } catch (error) {
+      console.error('Error unpublishing lesson:', error)
+      alert('Failed to unpublish lesson')
+    }
+  }
+
   // Publish course
   const handlePublishCourse = async () => {
     // Validation
@@ -321,6 +355,18 @@ const ManageLessons = () => {
                   </div>
                   
                   <div className="lesson-actions">
+                    {lesson.video_url && (
+                      <button
+                        className={`btn-publish ${lesson.status === 'published' ? 'published' : 'draft'}`}
+                        onClick={() => lesson.status === 'published' 
+                          ? handleUnpublishLesson(lesson.id) 
+                          : handlePublishLesson(lesson.id)
+                        }
+                        title={lesson.status === 'published' ? 'Unpublish lesson' : 'Publish lesson'}
+                      >
+                        {lesson.status === 'published' ? 'Published' : 'Publish'}
+                      </button>
+                    )}
                     <button
                       className="action-btn"
                       onClick={() => handleAddVideo(lesson)}

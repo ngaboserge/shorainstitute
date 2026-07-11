@@ -235,6 +235,42 @@
 .lesson-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+.btn-publish {
+  padding: 8px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-publish.draft {
+  background: #0B4F9F;
+  border-color: #0B4F9F;
+  color: white;
+}
+
+.btn-publish.draft:hover {
+  background: #083a75;
+  border-color: #083a75;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(11, 79, 159, 0.3);
+}
+
+.btn-publish.published {
+  background: #d1fae5;
+  border-color: #059669;
+  color: #059669;
+}
+
+.btn-publish.published:hover {
+  background: #a7f3d0;
+  border-color: #047857;
 }
 
 .action-btn {
@@ -525,5 +561,13 @@
   .lesson-actions {
     width: 100%;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .btn-publish {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 8px;
   }
 }
