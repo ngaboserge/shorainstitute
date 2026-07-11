@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import jsPDF from 'jspdf'
 import './Certificates.css'
 
 const Certificates = () => {
@@ -47,6 +48,7 @@ const Certificates = () => {
           month: 'long',
           day: 'numeric'
         }),
+        completedAt: e.completed_at || e.enrolled_at,
         verificationId: `SHORA-${new Date().getFullYear()}-${e.id.split('-')[0].toUpperCase()}`,
         instructor: e.courses.instructor_name || 'SHORA Institute',
         status: 'issued'
@@ -69,6 +71,139 @@ const Certificates = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDownloadCertificate = (cert) => {
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    // Set colors
+    const primaryBlue = [11, 79, 159]
+    const accentYellow = [253, 183, 20]
+    const darkGray = [51, 51, 51]
+
+    // Add decorative border
+    pdf.setDrawColor(...primaryBlue)
+    pdf.setLineWidth(3)
+    pdf.rect(10, 10, 277, 190)
+    
+    pdf.setLineWidth(1)
+    pdf.rect(15, 15, 267, 180)
+
+    // Add SHORA logo text
+    pdf.setFontSize(32)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setTextColor(...primaryBlue)
+    pdf.text('SHORA INSTITUTE', 148.5, 40, { align: 'center' })
+
+    // Certificate title
+    pdf.setFontSize(24)
+    pdf.setTextColor(...darkGray)
+    pdf.text('CERTIFICATE OF COMPLETION', 148.5, 55, { align: 'center' })
+
+    // Decorative line
+    pdf.setDrawColor(...accentYellow)
+    pdf.setLineWidth(0.5)
+    pdf.line(90, 60, 207, 60)
+
+    // "This is to certify that"
+    pdf.setFontSize(12)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...darkGray)
+    pdf.text('This is to certify that', 148.5, 75, { align: 'center' })
+
+    // Learner name
+    pdf.setFontSize(20)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setTextColor(...primaryBlue)
+    pdf.text(profile?.full_name || 'Learner', 148.5, 90, { align: 'center' })
+
+    // "Has successfully completed"
+    pdf.setFontSize(12)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...darkGray)
+    pdf.text('has successfully completed', 148.5, 100, { align: 'center' })
+
+    // Course title
+    pdf.setFontSize(16)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setTextColor(...primaryBlue)
+    
+    // Handle long course titles (split into multiple lines if needed)
+    const courseTitle = cert.course
+    const maxWidth = 200
+    const lines = pdf.splitTextToSize(courseTitle, maxWidth)
+    const startY = 110
+    lines.forEach((line, index) => {
+      pdf.text(line, 148.5, startY + (index * 8), { align: 'center' })
+    })
+
+    // Issue date
+    const dateY = startY + (lines.length * 8) + 10
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    pdf.setTextColor(...darkGray)
+    pdf.text(`Issued on ${cert.issueDate}`, 148.5, dateY, { align: 'center' })
+
+    // Verification ID
+    pdf.setFontSize(8)
+    pdf.setTextColor(100, 100, 100)
+    pdf.text(`Verification ID: ${cert.verificationId}`, 148.5, dateY + 7, { align: 'center' })
+
+    // Signature section
+    const sigY = 165
+    
+    // Signature line
+    pdf.setLineWidth(0.3)
+    pdf.setDrawColor(...darkGray)
+    pdf.line(110, sigY, 187, sigY)
+    
+    // Instructor name
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setTextColor(...darkGray)
+    pdf.text(cert.instructor, 148.5, sigY + 6, { align: 'center' })
+    
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(8)
+    pdf.text('Instructor', 148.5, sigY + 11, { align: 'center' })
+
+    // Footer
+    pdf.setFontSize(8)
+    pdf.setTextColor(120, 120, 120)
+    pdf.text('SHORA Institute - Building Financial Literacy for Africa', 148.5, 195, { align: 'center' })
+
+    // Save the PDF
+    const fileName = `SHORA_Certificate_${cert.title.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`
+    pdf.save(fileName)
+  }
+
+  const handleShareCertificate = (cert) => {
+    const shareText = `I've completed "${cert.course}" at SHORA Institute! 🎓\n\nVerification ID: ${cert.verificationId}`
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'My SHORA Certificate',
+        text: shareText,
+        url: window.location.href
+      }).catch(() => {
+        // Fallback to copy
+        copyToClipboard(shareText)
+      })
+    } else {
+      copyToClipboard(shareText)
+    }
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Certificate details copied to clipboard!')
+    }).catch(() => {
+      alert('Unable to copy. Please try again.')
+    })
   }
 
   if (loading) {
@@ -130,11 +265,17 @@ const Certificates = () => {
                     <p>Issued on {cert.issueDate}</p>
                     <div className="verification-id">ID: {cert.verificationId}</div>
                     <div className="cert-actions">
-                      <button className="btn btn-primary btn-sm">
+                      <button 
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleDownloadCertificate(cert)}
+                      >
                         <Download size={16} />
                         Download
                       </button>
-                      <button className="btn btn-secondary btn-sm">
+                      <button 
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleShareCertificate(cert)}
+                      >
                         <Share2 size={16} />
                         Share
                       </button>
