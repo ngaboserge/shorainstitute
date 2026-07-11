@@ -1,91 +1,173 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Clock, Users, Video, Bell, CheckCircle, Award } from 'lucide-react'
+import { Calendar, Clock, Users, Video, Bell, CheckCircle, Award, ExternalLink } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 import './Seminars.css'
 
 const Seminars = () => {
+  const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState('upcoming')
+  const [seminars, setSeminars] = useState([])
+  const [registrations, setRegistrations] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const upcomingSeminars = [
-    {
-      id: 1,
-      title: 'Building Financial Foundations that Create Generational Wealth',
-      instructor: 'Alex Ntale',
-      role: 'CEO, SHORA Institute',
-      date: 'July 08, 2026',
-      time: '6:00 PM - 7:30 PM (EAT)',
-      platform: 'Zoom',
-      duration: '90 minutes',
-      seats: 173,
-      status: 'upcoming',
-      image: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=400&h=300&fit=crop&q=80',
-      registered: false
-    },
-    {
-      id: 2,
-      title: 'Tax Planning Strategies for Investors and SMEs',
-      instructor: 'Linda Umutoni',
-      role: 'Tax Consultant',
-      date: 'July 15, 2026',
-      time: '6:00 PM - 7:30 PM (EAT)',
-      platform: 'Zoom',
-      duration: '90 minutes',
-      seats: 142,
-      status: 'upcoming',
-      image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop&q=80',
-      registered: true
-    },
-    {
-      id: 3,
-      title: 'Investment Portfolio Diversification Essentials',
-      instructor: 'Emmanuel Habimana',
-      role: 'Investment Advisor',
-      date: 'July 22, 2026',
-      time: '6:00 PM - 7:30 PM (EAT)',
-      platform: 'Zoom',
-      duration: '90 minutes',
-      seats: 198,
-      status: 'upcoming',
-      image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=300&fit=crop&q=80',
-      registered: false
+  useEffect(() => {
+    if (user) {
+      loadSeminars()
+      loadRegistrations()
     }
-  ]
+  }, [user, activeTab])
 
-  const pastSeminars = [
-    {
-      id: 4,
-      title: 'Financial Modeling for Professionals',
-      instructor: 'Claudine Mukamana',
-      role: 'Finance Expert',
-      date: 'June 28, 2026',
-      time: '6:00 PM - 7:30 PM (EAT)',
-      platform: 'Zoom',
-      duration: '90 minutes',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop&q=80',
-      attended: true,
-      recording: true
-    },
-    {
-      id: 5,
-      title: 'Capital Markets Overview and Investment Opportunities',
-      instructor: 'Isaac Twizere',
-      role: 'Market Analyst',
-      date: 'June 21, 2026',
-      time: '6:00 PM - 7:30 PM (EAT)',
-      platform: 'Zoom',
-      duration: '90 minutes',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=300&fit=crop&q=80',
-      attended: true,
-      recording: true,
-      certificate: true
+  const loadSeminars = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      
+      const query = supabase
+        .from('seminars')
+        .select('*')
+        .order('date', { ascending: true })
+
+      if (activeTab === 'upcoming') {
+        query.gte('date', today).in('status', ['upcoming', 'live'])
+      } else {
+        query.lt('date', today).eq('status', 'completed')
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setSeminars(data || [])
+    } catch (error) {
+      console.error('Error loading seminars:', error)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
-  const seminars = activeTab === 'upcoming' ? upcomingSeminars : pastSeminars
+  const loadRegistrations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('seminar_registrations')
+        .select('seminar_id, registration_status, attended_at')
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      setRegistrations(data || [])
+    } catch (error) {
+      console.error('Error loading registrations:', error)
+    }
+  }
+
+  const isRegistered = (seminarId) => {
+    return registrations.some(r => r.seminar_id === seminarId && r.registration_status === 'registered')
+  }
+
+  const hasAttended = (seminarId) => {
+    return registrations.some(r => r.seminar_id === seminarId && r.registration_status === 'attended')
+  }
+
+  const handleRegister = async (seminarId) => {
+    try {
+      // Check capacity
+      const seminar = seminars.find(s => s.id === seminarId)
+      if (seminar && seminar.current_registrations >= seminar.capacity) {
+        alert('Sorry, this seminar is full!')
+        return
+      }
+
+      // Register
+      const { error: regError } = await supabase
+        .from('seminar_registrations')
+        .insert({
+          seminar_id: seminarId,
+          user_id: user.id,
+          user_name: profile?.full_name || 'Learner',
+          user_email: user.email,
+          registration_status: 'registered'
+        })
+
+      if (regError) throw regError
+
+      // Update seminar count
+      await supabase
+        .from('seminars')
+        .update({ 
+          current_registrations: (seminar.current_registrations || 0) + 1 
+        })
+        .eq('id', seminarId)
+
+      // Reload data
+      await loadSeminars()
+      await loadRegistrations()
+      
+      alert('✅ Successfully registered for seminar!')
+    } catch (error) {
+      console.error('Error registering:', error)
+      alert('Failed to register. Please try again.')
+    }
+  }
+
+  const handleCancelRegistration = async (seminarId) => {
+    if (!confirm('Are you sure you want to cancel your registration?')) return
+
+    try {
+      const { error } = await supabase
+        .from('seminar_registrations')
+        .update({ registration_status: 'cancelled' })
+        .eq('seminar_id', seminarId)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Update seminar count
+      const seminar = seminars.find(s => s.id === seminarId)
+      if (seminar) {
+        await supabase
+          .from('seminars')
+          .update({ 
+            current_registrations: Math.max(0, (seminar.current_registrations || 0) - 1)
+          })
+          .eq('id', seminarId)
+      }
+
+      await loadSeminars()
+      await loadRegistrations()
+      
+      alert('Registration cancelled successfully')
+    } catch (error) {
+      console.error('Error cancelling:', error)
+      alert('Failed to cancel registration')
+    }
+  }
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    })
+  }
+
+  const formatTime = (startTime, endTime, timeZone = 'EAT') => {
+    return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)} (${timeZone})`
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="learner" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading seminars...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-layout">
@@ -105,7 +187,7 @@ const Seminars = () => {
             >
               <Calendar size={16} />
               Upcoming
-              <span className="tab-count">{upcomingSeminars.length}</span>
+              <span className="tab-count">{activeTab === 'upcoming' ? seminars.length : 0}</span>
             </button>
             <button 
               className={`tab ${activeTab === 'past' ? 'active' : ''}`}
@@ -113,95 +195,168 @@ const Seminars = () => {
             >
               <CheckCircle size={16} />
               Past Seminars
-              <span className="tab-count">{pastSeminars.length}</span>
+              <span className="tab-count">{activeTab === 'past' ? seminars.length : 0}</span>
             </button>
           </div>
 
           {/* Seminars Grid */}
           <div className="seminars-grid">
-            {seminars.map((seminar) => (
-              <div key={seminar.id} className="seminar-card">
-                <div className="seminar-image-container">
-                  <img src={seminar.image} alt={seminar.title} className="seminar-image" />
-                  {seminar.status === 'upcoming' && seminar.registered && (
-                    <div className="registered-badge">
-                      <CheckCircle size={14} />
-                      Registered
-                    </div>
-                  )}
-                  {seminar.status === 'completed' && seminar.certificate && (
-                    <div className="certificate-badge">
-                      <Award size={14} />
-                      Certificate
-                    </div>
-                  )}
-                </div>
+            {seminars.map((seminar) => {
+              const registered = isRegistered(seminar.id)
+              const attended = hasAttended(seminar.id)
+              const spotsLeft = seminar.capacity - (seminar.current_registrations || 0)
 
-                <div className="seminar-content">
-                  <h3 className="seminar-title">{seminar.title}</h3>
-                  
-                  <div className="seminar-instructor">
-                    <img 
-                      src={`https://i.pravatar.cc/60?img=${seminar.id}`} 
-                      alt={seminar.instructor}
-                      className="instructor-avatar"
-                    />
-                    <div>
-                      <div className="instructor-name">{seminar.instructor}</div>
-                      <div className="instructor-role">{seminar.role}</div>
-                    </div>
-                  </div>
-
-                  <div className="seminar-details">
-                    <div className="detail-row">
-                      <Calendar size={16} />
-                      <span>{seminar.date}</span>
-                    </div>
-                    <div className="detail-row">
-                      <Clock size={16} />
-                      <span>{seminar.time}</span>
-                    </div>
-                    <div className="detail-row">
-                      <Video size={16} />
-                      <span>Live on {seminar.platform}</span>
-                    </div>
-                    {seminar.seats && (
-                      <div className="detail-row">
-                        <Users size={16} />
-                        <span>{seminar.seats} seats available</span>
+              return (
+                <div key={seminar.id} className="seminar-card">
+                  <div className="seminar-image-container">
+                    {seminar.thumbnail_url ? (
+                      <img src={seminar.thumbnail_url} alt={seminar.title} className="seminar-image" />
+                    ) : (
+                      <div style={{
+                        width: '100%',
+                        height: '200px',
+                        background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Video size={48} color="white" />
                       </div>
                     )}
+                    {seminar.status === 'upcoming' && registered && (
+                      <div className="registered-badge">
+                        <CheckCircle size={14} />
+                        Registered
+                      </div>
+                    )}
+                    {seminar.status === 'completed' && seminar.certificate_eligible && attended && (
+                      <div className="certificate-badge">
+                        <Award size={14} />
+                        Certificate
+                      </div>
+                    )}
+                    {seminar.is_featured && (
+                      <div className="featured-badge">Featured</div>
+                    )}
                   </div>
 
-                  <div className="seminar-actions">
-                    {seminar.status === 'upcoming' && !seminar.registered && (
-                      <button className="btn btn-warning btn-full">Register Free</button>
-                    )}
-                    {seminar.status === 'upcoming' && seminar.registered && (
-                      <>
-                        <button className="btn btn-primary btn-full">Join Session</button>
-                        <button className="btn btn-secondary btn-full">
-                          <Bell size={16} />
-                          Set Reminder
-                        </button>
-                      </>
-                    )}
-                    {seminar.status === 'completed' && seminar.recording && (
-                      <button className="btn btn-primary btn-full">
+                  <div className="seminar-content">
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{
+                        background: '#E8F0FE',
+                        color: '#0B4F9F',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}>
+                        {seminar.seminar_type || 'Webinar'}
+                      </span>
+                    </div>
+                    <h3 className="seminar-title">{seminar.title}</h3>
+                    
+                    <div className="seminar-instructor">
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '16px',
+                        fontWeight: '600'
+                      }}>
+                        {seminar.instructor_name?.charAt(0) || 'T'}
+                      </div>
+                      <div>
+                        <div className="instructor-name">{seminar.instructor_name || 'Instructor'}</div>
+                        <div className="instructor-role">SHORA Trainer</div>
+                      </div>
+                    </div>
+
+                    <div className="seminar-details">
+                      <div className="detail-row">
+                        <Calendar size={16} />
+                        <span>{formatDate(seminar.date)}</span>
+                      </div>
+                      <div className="detail-row">
+                        <Clock size={16} />
+                        <span>{formatTime(seminar.start_time, seminar.end_time, seminar.time_zone)}</span>
+                      </div>
+                      <div className="detail-row">
                         <Video size={16} />
-                        Watch Recording
-                      </button>
-                    )}
-                    {seminar.status === 'completed' && seminar.certificate && (
-                      <button className="btn btn-secondary btn-full">
-                        <Award size={16} />
-                        View Certificate
-                      </button>
-                    )}
+                        <span>Live on {seminar.platform || 'Zoom'}</span>
+                      </div>
+                      {seminar.status === 'upcoming' && (
+                        <div className="detail-row">
+                          <Users size={16} />
+                          <span style={{ color: spotsLeft < 20 ? '#f59e0b' : '#666' }}>
+                            {spotsLeft} seats available
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="seminar-actions">
+                      {seminar.status === 'upcoming' && !registered && (
+                        <button 
+                          className="btn btn-warning btn-full"
+                          onClick={() => handleRegister(seminar.id)}
+                          disabled={spotsLeft <= 0}
+                        >
+                          {spotsLeft > 0 ? 'Register Free' : 'Full'}
+                        </button>
+                      )}
+                      {seminar.status === 'upcoming' && registered && (
+                        <>
+                          {seminar.meeting_link && (
+                            <a 
+                              href={seminar.meeting_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-primary btn-full"
+                              style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                              Join Session <ExternalLink size={16} />
+                            </a>
+                          )}
+                          <button 
+                            className="btn btn-secondary btn-full"
+                            onClick={() => handleCancelRegistration(seminar.id)}
+                          >
+                            Cancel Registration
+                          </button>
+                        </>
+                      )}
+                      {seminar.status === 'completed' && seminar.recording_url && (
+                        <a 
+                          href={seminar.recording_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-primary btn-full"
+                          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                          <Video size={16} />
+                          Watch Recording
+                        </a>
+                      )}
+                      {seminar.status === 'completed' && seminar.certificate_eligible && attended && (
+                        <Link 
+                          to="/learner/certificates"
+                          className="btn btn-secondary btn-full"
+                          style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                          <Award size={16} />
+                          View Certificate
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Empty State */}
@@ -209,7 +364,7 @@ const Seminars = () => {
             <div className="empty-state">
               <Video size={48} color="#0B4F9F" />
               <h3>No seminars found</h3>
-              <p>Check back soon for new expert-led sessions.</p>
+              <p>{activeTab === 'upcoming' ? 'Check back soon for new expert-led sessions.' : 'You haven\'t attended any seminars yet.'}</p>
             </div>
           )}
         </div>
