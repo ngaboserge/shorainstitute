@@ -41,7 +41,8 @@ const Sidebar = ({ type = 'institutional' }) => {
   const trainerMenuItems = [
     { path: '/trainer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/trainer/courses', icon: BookOpen, label: 'My Courses' },
-    { path: '/trainer/sessions', icon: Video, label: 'Live Seminars' },
+    { path: '/trainer/manage-seminars', icon: Video, label: 'Manage Seminars' },
+    { path: '/trainer/manage-paths', icon: BarChart3, label: 'Learning Paths' },
     { path: '/trainer/proposals', icon: BookOpen, label: 'Proposals' },
     { path: '/trainer/qa', icon: HelpCircle, label: 'Learner Q&A' },
     { path: '/trainer/resources', icon: BookOpen, label: 'Resources' },
@@ -55,7 +56,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/learner/courses', icon: BookOpen, label: 'My Learning' },
     { path: '/learner/browse', icon: Search, label: 'Browse Courses' },
     { path: '/learner/seminars', icon: Video, label: 'Live Seminars' },
-    { path: '/learner/pathway', icon: BarChart3, label: 'Learning Paths' },
+    { path: '/learner/paths', icon: BarChart3, label: 'Learning Paths' },
     { path: '/learner/assessments', icon: Award, label: 'Assessments & Assignments' },
     { path: '/learner/certificates', icon: Award, label: 'Certificates' },
     { path: '/learner/resources', icon: BookOpen, label: 'Resources' },

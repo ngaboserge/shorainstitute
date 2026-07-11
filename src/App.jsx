@@ -28,6 +28,8 @@ import CreateCourse from './pages/trainer/CreateCourse'
 import ManageLessons from './pages/trainer/ManageLessons'
 import ManageAssessments from './pages/trainer/ManageAssessments'
 import EditAssessment from './pages/trainer/EditAssessment'
+import ManageSeminars from './pages/trainer/ManageSeminars'
+import ManagePaths from './pages/trainer/ManagePaths'
 import LearnerDashboard from './pages/learner/Dashboard'
 import LearnerCourses from './pages/learner/Courses'
 import LearnerBrowse from './pages/learner/BrowseCourses'
@@ -44,6 +46,7 @@ import LiveSeminarCentre from './pages/public/LiveSeminarCentre'
 import SeminarRegistration from './pages/public/SeminarRegistration'
 import CourseLesson from './pages/learner/CourseLesson'
 import LearningPathway from './pages/learner/LearningPathway'
+import LearningPaths from './pages/learner/LearningPaths'
 import OnboardingAssessment from './pages/public/OnboardingAssessment'
 import './App.css'
 
@@ -95,6 +98,8 @@ function App() {
         <Route path="/trainer/proposals" element={<ProtectedRoute requiredRole="trainer"><TrainerProposals /></ProtectedRoute>} />
         <Route path="/trainer/qa" element={<ProtectedRoute requiredRole="trainer"><TrainerQA /></ProtectedRoute>} />
         <Route path="/trainer/sessions" element={<ProtectedRoute requiredRole="trainer"><TrainerSessions /></ProtectedRoute>} />
+        <Route path="/trainer/manage-seminars" element={<ProtectedRoute requiredRole="trainer"><ManageSeminars /></ProtectedRoute>} />
+        <Route path="/trainer/manage-paths" element={<ProtectedRoute requiredRole="trainer"><ManagePaths /></ProtectedRoute>} />
         <Route path="/trainer/settings" element={<ProtectedRoute requiredRole="trainer"><TrainerProfile /></ProtectedRoute>} />
         
         {/* Learner Portal Routes - Protected */}
@@ -103,6 +108,7 @@ function App() {
         <Route path="/learner/courses/:id/lesson/:lessonId" element={<ProtectedRoute requiredRole="learner"><CourseLesson /></ProtectedRoute>} />
         <Route path="/learner/browse" element={<ProtectedRoute requiredRole="learner"><LearnerBrowse /></ProtectedRoute>} />
         <Route path="/learner/pathway" element={<ProtectedRoute requiredRole="learner"><LearningPathway /></ProtectedRoute>} />
+        <Route path="/learner/paths" element={<ProtectedRoute requiredRole="learner"><LearningPaths /></ProtectedRoute>} />
         <Route path="/learner/assessments" element={<ProtectedRoute requiredRole="learner"><LearnerAssessments /></ProtectedRoute>} />
         <Route path="/learner/assessments/:assessmentId/take" element={<ProtectedRoute requiredRole="learner"><TakeAssessment /></ProtectedRoute>} />
         <Route path="/learner/assessments/:assessmentId/results/:attemptId" element={<ProtectedRoute requiredRole="learner"><AssessmentResults /></ProtectedRoute>} />
