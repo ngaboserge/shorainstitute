@@ -97,6 +97,31 @@
   outline: none;
 }
 
+.filter-select-small {
+  padding: 10px 16px;
+  background: #f5f7fa;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  min-width: 180px;
+  transition: all 0.2s;
+}
+
+.filter-select-small:hover {
+  border-color: #0B4F9F;
+  background: white;
+}
+
+.filter-select-small:focus {
+  outline: none;
+  border-color: #0B4F9F;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(11, 79, 159, 0.1);
+}
+
 .btn-icon {
   width: 44px;
   height: 44px;

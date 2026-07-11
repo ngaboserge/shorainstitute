@@ -13,12 +13,27 @@ const Courses = () => {
   const [inProgressCourses, setInProgressCourses] = useState([])
   const [completedCourses, setCompletedCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterCategory, setFilterCategory] = useState('all')
 
   useEffect(() => {
     if (user) {
       loadEnrolledCourses()
     }
   }, [user])
+
+  // Filter courses based on search and category
+  const filterCourses = (courses) => {
+    return courses.filter(course => {
+      const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           course.instructor?.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesCategory = filterCategory === 'all' || course.category === filterCategory
+      return matchesSearch && matchesCategory
+    })
+  }
+
+  const filteredInProgress = filterCourses(inProgressCourses)
+  const filteredCompleted = filterCourses(completedCourses)
 
   const loadEnrolledCourses = async () => {
     try {
@@ -173,26 +188,45 @@ const Courses = () => {
                 <div className="search-filter-group">
                   <div className="search-box-small">
                     <Search size={18} />
-                    <input type="text" placeholder="Search your courses..." />
+                    <input 
+                      type="text" 
+                      placeholder="Search your courses..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                  <button className="btn btn-icon">
-                    <Filter size={18} />
-                  </button>
+                  <select 
+                    className="filter-select-small"
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Finance & Investment">Finance & Investment</option>
+                    <option value="Business & Entrepreneurship">Business & Entrepreneurship</option>
+                    <option value="Technology & Programming">Technology & Programming</option>
+                    <option value="Personal Development">Personal Development</option>
+                  </select>
                 </div>
               </div>
 
-              {inProgressCourses.length === 0 ? (
+              {filteredInProgress.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center' }}>
                   <BookOpen size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
-                  <h3 style={{ color: '#666', marginBottom: '8px' }}>No courses in progress</h3>
-                  <p style={{ color: '#999', marginBottom: '24px' }}>Start learning by enrolling in a course</p>
-                  <Link to="/learner/browse" className="btn btn-primary">
-                    Browse Courses
-                  </Link>
+                  <h3 style={{ color: '#666', marginBottom: '8px' }}>
+                    {searchQuery || filterCategory !== 'all' ? 'No courses match your search' : 'No courses in progress'}
+                  </h3>
+                  <p style={{ color: '#999', marginBottom: '24px' }}>
+                    {searchQuery || filterCategory !== 'all' ? 'Try adjusting your filters' : 'Start learning by enrolling in a course'}
+                  </p>
+                  {!searchQuery && filterCategory === 'all' && (
+                    <Link to="/learner/browse" className="btn btn-primary">
+                      Browse Courses
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="courses-list-vertical">
-                  {inProgressCourses.map((course) => (
+                  {filteredInProgress.map((course) => (
                     <div key={course.id} className="course-card-horizontal">
                       <div className="course-image-horizontal">
                         {course.image ? (
@@ -287,23 +321,40 @@ const Courses = () => {
                 <div className="search-filter-group">
                   <div className="search-box-small">
                     <Search size={18} />
-                    <input type="text" placeholder="Search your courses..." />
+                    <input 
+                      type="text" 
+                      placeholder="Search your courses..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
-                  <button className="btn btn-icon">
-                    <Filter size={18} />
-                  </button>
+                  <select 
+                    className="filter-select-small"
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Finance & Investment">Finance & Investment</option>
+                    <option value="Business & Entrepreneurship">Business & Entrepreneurship</option>
+                    <option value="Technology & Programming">Technology & Programming</option>
+                    <option value="Personal Development">Personal Development</option>
+                  </select>
                 </div>
               </div>
 
-              {completedCourses.length === 0 ? (
+              {filteredCompleted.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center' }}>
                   <Award size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
-                  <h3 style={{ color: '#666', marginBottom: '8px' }}>No completed courses yet</h3>
-                  <p style={{ color: '#999' }}>Complete your first course to earn a certificate</p>
+                  <h3 style={{ color: '#666', marginBottom: '8px' }}>
+                    {searchQuery || filterCategory !== 'all' ? 'No courses match your search' : 'No completed courses yet'}
+                  </h3>
+                  <p style={{ color: '#999' }}>
+                    {searchQuery || filterCategory !== 'all' ? 'Try adjusting your filters' : 'Complete your first course to earn a certificate'}
+                  </p>
                 </div>
               ) : (
                 <div className="courses-grid-3col">
-                  {completedCourses.map((course) => (
+                  {filteredCompleted.map((course) => (
                     <div key={course.id} className="course-card-completed">
                       <div className="course-image-standard">
                         {course.image ? (

@@ -27,6 +27,58 @@ const CourseLesson = () => {
     }
   }, [id, lessonId, user])
 
+  // Mark lesson as complete
+  const handleMarkComplete = async () => {
+    if (!user || !currentLesson) return
+
+    try {
+      // Check if already completed
+      const { data: existing } = await supabase
+        .from('lesson_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lesson_id', currentLesson.id)
+        .eq('course_id', id)
+        .maybeSingle()
+
+      if (existing) {
+        // Update to completed
+        await supabase
+          .from('lesson_progress')
+          .update({ 
+            completed: true,
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+      } else {
+        // Create new progress entry
+        await supabase
+          .from('lesson_progress')
+          .insert({
+            user_id: user.id,
+            course_id: id,
+            lesson_id: currentLesson.id,
+            completed: true,
+            completed_at: new Date().toISOString(),
+            last_position_seconds: currentLesson.duration_seconds || 0
+          })
+      }
+
+      // Refresh data
+      await loadAllData()
+
+      // Move to next lesson if available
+      const currentIndex = lessons.findIndex(l => l.id === currentLesson.id)
+      if (currentIndex < lessons.length - 1) {
+        const nextLesson = lessons[currentIndex + 1]
+        navigate(`/learner/courses/${id}/lesson/${nextLesson.id}`)
+      }
+    } catch (error) {
+      console.error('Error marking lesson complete:', error)
+      alert('Failed to mark lesson as complete')
+    }
+  }
+
   const loadAllData = async () => {
     setLoading(true)
     
@@ -288,9 +340,13 @@ const CourseLesson = () => {
               <span>Previous Lesson</span>
             </Link>
             
-            <button className="btn btn-primary mark-complete-btn">
+            <button 
+              className="btn btn-primary mark-complete-btn"
+              onClick={handleMarkComplete}
+              disabled={completedLessons.includes(currentLesson?.id)}
+            >
               <Check size={18} />
-              <span>Mark as Complete</span>
+              <span>{completedLessons.includes(currentLesson?.id) ? 'Completed ✓' : 'Mark as Complete'}</span>
             </button>
 
             <Link
