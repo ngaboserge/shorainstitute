@@ -7,7 +7,7 @@ import { Edit, Check, Star, Clock, Globe, Shield, Calendar, MapPin, Phone, Mail,
 import './Profile.css'
 
 const Profile = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [stats, setStats] = useState({
     coursesCount: 0,
@@ -17,12 +17,35 @@ const Profile = () => {
   })
   const [recentCourses, setRecentCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    full_name: '',
+    phone: '',
+    location: '',
+    bio: '',
+    title: '',
+    expertise: ''
+  })
 
   useEffect(() => {
     if (user?.id) {
       loadProfileData()
     }
-  }, [user?.id])
+    // Initialize form data
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+        location: profile.location || '',
+        bio: profile.bio || '',
+        title: profile.title || 'Senior Finance & Investment Consultant',
+        expertise: profile.expertise || 'Capital Markets, Corporate Finance, Investment Strategy'
+      })
+    }
+  }, [user?.id, profile])
 
   const loadProfileData = async () => {
     try {
@@ -63,6 +86,47 @@ const Profile = () => {
       year: 'numeric', 
       month: 'short'
     })
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSaveProfile = async () => {
+    setSaving(true)
+    setSuccessMessage('')
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: formData.full_name,
+          phone: formData.phone,
+          location: formData.location,
+          bio: formData.bio,
+          title: formData.title,
+          expertise: formData.expertise,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      // Refresh profile
+      if (refreshProfile) {
+        await refreshProfile()
+      }
+
+      setSuccessMessage('Profile updated successfully!')
+      setIsEditing(false)
+      
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      alert('Failed to update profile. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const credentials = [
@@ -114,6 +178,19 @@ const Profile = () => {
             <div className="profile-main">
               {/* Profile Header Card */}
               <div className="card profile-header-card">
+                {successMessage && (
+                  <div style={{
+                    padding: '12px',
+                    background: '#d1fae5',
+                    color: '#065f46',
+                    borderRadius: '8px',
+                    marginBottom: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {successMessage}
+                  </div>
+                )}
+                
                 <div className="profile-header-content">
                   <div className="profile-avatar-section">
                     <div style={{
@@ -128,7 +205,7 @@ const Profile = () => {
                       fontSize: '48px',
                       fontWeight: '600'
                     }}>
-                      {profile?.full_name?.charAt(0) || 'T'}
+                      {formData.full_name?.charAt(0) || profile?.full_name?.charAt(0) || 'T'}
                     </div>
                     <button className="btn btn-sm btn-secondary edit-photo-btn">
                       <Edit size={16} />
@@ -137,13 +214,17 @@ const Profile = () => {
                   </div>
                   <div className="profile-info-section">
                     <div className="profile-name-row">
-                      <h2 className="profile-name">{profile?.full_name || 'Trainer'}</h2>
-                      <button className="btn-icon" onClick={() => setIsEditing(!isEditing)}>
+                      <h2 className="profile-name">{formData.full_name || profile?.full_name || 'Trainer'}</h2>
+                      <button 
+                        className="btn-icon" 
+                        onClick={() => setIsEditing(!isEditing)}
+                        title={isEditing ? 'Cancel editing' : 'Edit profile'}
+                      >
                         <Edit size={18} />
                       </button>
                     </div>
-                    <p className="profile-title">Senior Finance & Investment Consultant</p>
-                    <p className="profile-subtitle">Empowering Financial Literacy | Investment Strategy | Corporate Finance</p>
+                    <p className="profile-title">{formData.title}</p>
+                    <p className="profile-subtitle">{formData.expertise}</p>
                     <div className="profile-badge-row">
                       <span className="profile-badge verified">
                         <Check size={14} />
@@ -171,25 +252,170 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Professional Biography */}
-                <div className="profile-section">
-                  <div className="section-header">
-                    <h3>Professional Biography</h3>
-                    <button className="btn-text">
-                      <Edit size={16} />
-                      Edit
-                    </button>
+                {/* Editable Fields */}
+                {isEditing && (
+                  <div style={{ marginTop: '30px', padding: '20px', background: '#f9fafb', borderRadius: '12px' }}>
+                    <h3 style={{ marginBottom: '20px' }}>Edit Profile Information</h3>
+                    
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Full Name</label>
+                      <input
+                        type="text"
+                        name="full_name"
+                        value={formData.full_name}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Professional Title</label>
+                      <input
+                        type="text"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="e.g., Senior Finance Consultant"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Expertise/Specialization</label>
+                      <input
+                        type="text"
+                        name="expertise"
+                        value={formData.expertise}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="e.g., Capital Markets, Investment Strategy"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Phone</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="+250 XXX XXX XXX"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Location</label>
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="City, Country"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Professional Biography</label>
+                      <textarea
+                        name="bio"
+                        value={formData.bio}
+                        onChange={handleInputChange}
+                        rows={6}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          resize: 'vertical'
+                        }}
+                        placeholder="Share your professional background and teaching philosophy..."
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button 
+                        className="btn btn-primary"
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                      >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                      <button 
+                        className="btn btn-outline"
+                        onClick={() => setIsEditing(false)}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <p className="bio-text">
-                    Alex is a seasoned financial strategist and educator with over 15 years of deep expertise in capital markets, investment 
-                    management, finance, and investment strategy. He has helped thousands of professionals and institutions make informed, 
-                    impactful, portfolio management, and financial modeling.
-                  </p>
-                  <p className="bio-text">
-                    Alex is passionate about making complex financial concepts accessible to empower professionals and business leaders to 
-                    make better financial decisions.
-                  </p>
-                </div>
+                )}
+
+                {/* Professional Biography */}
+                {!isEditing && (
+                  <div className="profile-section">
+                    <div className="section-header">
+                      <h3>Professional Biography</h3>
+                      <button className="btn-text" onClick={() => setIsEditing(true)}>
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                    </div>
+                    <p className="bio-text">
+                      {formData.bio || profile?.bio || `${formData.full_name || 'This trainer'} is a seasoned financial strategist and educator with expertise in ${formData.expertise || 'finance and investment'}. Passionate about making complex financial concepts accessible to empower professionals and business leaders.`}
+                    </p>
+                    {formData.phone && (
+                      <div style={{ marginTop: '16px', padding: '12px', background: '#f9fafb', borderRadius: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                          <Phone size={16} color="#666" />
+                          <span style={{ fontWeight: 500 }}>Contact:</span>
+                          <span style={{ color: '#666' }}>{formData.phone}</span>
+                        </div>
+                        {formData.location && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <MapPin size={16} color="#666" />
+                            <span style={{ fontWeight: 500 }}>Location:</span>
+                            <span style={{ color: '#666' }}>{formData.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Areas of Expertise */}
                 <div className="profile-section">
