@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Search, Filter, Play, Clock, Award, BookOpen, Star, TrendingUp, ChevronRight } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
@@ -9,6 +9,7 @@ import './Courses.css'
 
 const Courses = () => {
   const { user } = useAuth()
+  const location = useLocation()
   const [activeTab, setActiveTab] = useState('in-progress')
   const [inProgressCourses, setInProgressCourses] = useState([])
   const [completedCourses, setCompletedCourses] = useState([])
@@ -16,11 +17,12 @@ const Courses = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
 
+  // Reload data when returning to this page
   useEffect(() => {
     if (user) {
       loadEnrolledCourses()
     }
-  }, [user])
+  }, [user, location.pathname])
 
   // Filter courses based on search and category
   const filterCourses = (courses) => {
