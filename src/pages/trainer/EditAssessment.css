@@ -1,0 +1,179 @@
+/* Edit Assessment Styles */
+
+.edit-assessment-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.edit-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.actions-right {
+  display: flex;
+  gap: 12px;
+}
+
+/* Questions List */
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.question-editor-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.question-drag {
+  cursor: grab;
+  color: #9ca3af;
+}
+
+.question-drag:active {
+  cursor: grabbing;
+}
+
+.question-header h4 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.question-editor-body {
+  padding: 24px;
+}
+
+/* Options Editor */
+.options-editor {
+  margin-top: 20px;
+}
+
+.options-editor > label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.option-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.correct-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #9ca3af;
+}
+
+.correct-btn:hover {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.correct-btn.selected {
+  border-color: #4caf50;
+  background: #4caf50;
+  color: white;
+}
+
+.option-editor-row input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.option-editor-row input:focus {
+  outline: none;
+  border-color: #0B4F9F;
+  box-shadow: 0 0 0 3px rgba(11, 79, 159, 0.1);
+}
+
+.btn-icon.delete {
+  color: #ef4444;
+}
+
+.btn-icon.delete:hover {
+  background: #fef2f2;
+}
+
+/* Success Button */
+.btn-success {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #45a049;
+  border-color: #45a049;
+}
+
+.btn-success:disabled {
+  background: #94d3a2;
+  border-color: #94d3a2;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .edit-actions-bar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .actions-right {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .actions-right button {
+    width: 100%;
+  }
+
+  .option-editor-row {
+    flex-wrap: wrap;
+  }
+
+  .option-editor-row input {
+    width: 100%;
+  }
+}
