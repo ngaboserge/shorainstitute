@@ -86,20 +86,30 @@ const CourseLesson = () => {
   const updateEnrollmentProgress = async () => {
     try {
       // Get total lessons
-      const { data: allLessons } = await supabase
+      const { data: allLessons, error: lessonsError } = await supabase
         .from('lessons')
         .select('id')
         .eq('course_id', id)
 
+      if (lessonsError) {
+        console.error('Error fetching lessons:', lessonsError)
+        throw lessonsError
+      }
+
       const totalLessons = allLessons?.length || 0
 
       // Get completed lessons
-      const { data: completedProgress } = await supabase
+      const { data: completedProgress, error: progressError } = await supabase
         .from('lesson_progress')
         .select('lesson_id')
         .eq('user_id', user.id)
         .eq('course_id', id)
         .eq('completed', true)
+
+      if (progressError) {
+        console.error('Error fetching progress:', progressError)
+        throw progressError
+      }
 
       const completedCount = completedProgress?.length || 0
 
@@ -107,6 +117,8 @@ const CourseLesson = () => {
       const progressPercentage = totalLessons > 0 
         ? Math.round((completedCount / totalLessons) * 100) 
         : 0
+
+      console.log(`📊 Progress calculation: ${completedCount}/${totalLessons} = ${progressPercentage}%`)
 
       // Check if course is completed
       const isCompleted = progressPercentage === 100
@@ -120,17 +132,25 @@ const CourseLesson = () => {
       // If completed, set completed_at timestamp
       if (isCompleted) {
         updateData.completed_at = new Date().toISOString()
+        console.log('🎉 Course completed! Setting completed_at timestamp')
       }
 
-      await supabase
+      const { data: updateResult, error: updateError } = await supabase
         .from('enrollments')
         .update(updateData)
         .eq('user_id', user.id)
         .eq('course_id', id)
+        .select()
 
-      console.log(`✅ Enrollment progress updated: ${progressPercentage}%`)
+      if (updateError) {
+        console.error('❌ Error updating enrollment:', updateError)
+        throw updateError
+      }
+
+      console.log(`✅ Enrollment progress updated: ${progressPercentage}%`, updateResult)
     } catch (error) {
       console.error('Error updating enrollment progress:', error)
+      alert(`Failed to update progress: ${error.message}`)
     }
   }
 
