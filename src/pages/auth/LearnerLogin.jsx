@@ -122,6 +122,7 @@ const LearnerLogin = () => {
                 onChange={(e) => handleChange('email', e.target.value)}
                 className={errors.email ? 'error' : ''}
                 disabled={loading}
+                autoComplete="email"
                 autoFocus
               />
             </div>
@@ -141,6 +142,7 @@ const LearnerLogin = () => {
                 onChange={(e) => handleChange('password', e.target.value)}
                 className={errors.password ? 'error' : ''}
                 disabled={loading}
+                autoComplete="current-password"
               />
               <button
                 type="button"

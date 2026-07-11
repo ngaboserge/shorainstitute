@@ -187,6 +187,11 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const refreshProfile = async () => {
+    if (!user?.id) return
+    await loadUserProfile(user.id)
+  }
+
   const value = {
     user,
     profile,
@@ -195,6 +200,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     updateProfile,
+    refreshProfile,
     isAuthenticated: !!user,
     isTrainer: profile?.role === 'trainer',
     isLearner: profile?.role === 'learner',
