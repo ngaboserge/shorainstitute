@@ -517,9 +517,7 @@ const Profile = () => {
                   <a href="#">Delete Account</a>
                 </div>
               </div>
-            </div>
-          </div>
-        </ResponsiveLayout>
+            </div></ResponsiveLayout>
   )
 }
 
