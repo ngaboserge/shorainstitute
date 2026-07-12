@@ -30,6 +30,7 @@ import ManageAssessments from './pages/trainer/ManageAssessments'
 import EditAssessment from './pages/trainer/EditAssessment'
 import ManageSeminars from './pages/trainer/ManageSeminars'
 import ManagePaths from './pages/trainer/ManagePaths'
+import ManageResources from './pages/trainer/ManageResources'
 import LearnerDashboard from './pages/learner/Dashboard'
 import LearnerCourses from './pages/learner/Courses'
 import LearnerBrowse from './pages/learner/BrowseCourses'
@@ -100,6 +101,7 @@ function App() {
         <Route path="/trainer/sessions" element={<ProtectedRoute requiredRole="trainer"><TrainerSessions /></ProtectedRoute>} />
         <Route path="/trainer/manage-seminars" element={<ProtectedRoute requiredRole="trainer"><ManageSeminars /></ProtectedRoute>} />
         <Route path="/trainer/manage-paths" element={<ProtectedRoute requiredRole="trainer"><ManagePaths /></ProtectedRoute>} />
+        <Route path="/trainer/manage-resources" element={<ProtectedRoute requiredRole="trainer"><ManageResources /></ProtectedRoute>} />
         <Route path="/trainer/settings" element={<ProtectedRoute requiredRole="trainer"><TrainerProfile /></ProtectedRoute>} />
         
         {/* Learner Portal Routes - Protected */}
