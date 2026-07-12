@@ -293,7 +293,6 @@ const BrowseCourses = () => {
               ))}
             </div>
           )}
-        </div>
       </ResponsiveLayout>
     )
   }
