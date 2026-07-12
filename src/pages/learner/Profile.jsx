@@ -517,8 +517,10 @@ const Profile = () => {
                   <a href="#">Delete Account</a>
                 </div>
               </div>
-            </div></ResponsiveLayout>
-  )
-}
+            </div>
+          </div>
+        </ResponsiveLayout>
+      )
+    }
 
 export default Profile

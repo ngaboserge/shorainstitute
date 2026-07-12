@@ -328,7 +328,9 @@ const Resources = () => {
                   Explore Learning Paths →
                 </Link>
               </div>
-            </div></ResponsiveLayout>
+            </div>
+
+            </ResponsiveLayout>
   )
 }
 

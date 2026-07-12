@@ -419,7 +419,9 @@ const Assessments = () => {
                   Explore Live Seminars →
                 </Link>
               </div>
-            </div></ResponsiveLayout>
+            </div>
+
+            </ResponsiveLayout>
   )
 }
 
