@@ -363,8 +363,9 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
-        </ResponsiveLayout>
-      )
-    }
+        </div>
+      </ResponsiveLayout>
+    )
+  }
 
 export default Dashboard
