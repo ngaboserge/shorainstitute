@@ -71,13 +71,17 @@
 
 .input-with-icon input {
   width: 100%;
-  padding: 14px 50px 14px 44px;
+  padding: 14px 50px 14px 48px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 15px;
   transition: all 0.2s;
   background: white;
   line-height: 1.5;
+}
+
+.input-with-icon input::placeholder {
+  padding-left: 4px;
 }
 
 .input-with-icon input::placeholder {
