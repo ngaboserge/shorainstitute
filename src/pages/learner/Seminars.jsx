@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Clock, Users, Video, Bell, CheckCircle, Award, ExternalLink } from 'lucide-react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './Seminars.css'
@@ -158,27 +158,24 @@ const Seminars = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading seminars...</p>
-          </div>
+      <ResponsiveLayout 
+        title="Live Seminars"
+        subtitle="Loading seminars..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading seminars...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Live Seminars"
-          subtitle="Join expert-led sessions and grow your financial knowledge."
-        />
-        
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Live Seminars"
+      subtitle="Join expert-led sessions and grow your financial knowledge."
+      type="learner"
+    >
           {/* Tabs */}
           <div className="seminars-tabs">
             <button 
@@ -367,10 +364,8 @@ const Seminars = () => {
               <p>{activeTab === 'upcoming' ? 'Check back soon for new expert-led sessions.' : 'You haven\'t attended any seminars yet.'}</p>
             </div>
           )}
-        </div>
-      </div>
-    </div>
-  )
-}
+        </ResponsiveLayout>
+      )
+    }
 
 export default Seminars

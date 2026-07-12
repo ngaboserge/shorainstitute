@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Play, Clock, Award, TrendingUp, BookOpen, Target, Calendar, ChevronRight, Star, Users } from 'lucide-react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './Dashboard.css'
@@ -116,26 +115,25 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading your dashboard...</p>
-          </div>
+      <ResponsiveLayout 
+        title="Dashboard" 
+        subtitle="Loading your personalized learning dashboard"
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading your dashboard...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title={`Welcome back, ${profile?.full_name?.split(' ')[0] || 'Learner'}.`}
-          subtitle="Keep learning. Keep growing. Build lasting wealth."
-        />
-        <div className="content-wrapper learner-dashboard">
+    <ResponsiveLayout 
+      title={`Welcome back, ${profile?.full_name?.split(' ')[0] || 'Learner'}.`}
+      subtitle="Keep learning. Keep growing. Build lasting wealth."
+      type="learner"
+    >
+      <div className="learner-dashboard">
           {/* Stats Overview */}
           <div className="stats-grid-4">
             <div className="stat-card">
@@ -367,7 +365,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </ResponsiveLayout>
   )
 }
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Clock, Award, TrendingUp, Check, Lock, Play, Target } from 'lucide-react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './LearningPaths.css'
@@ -109,27 +109,24 @@ const LearningPaths = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading learning paths...</p>
-          </div>
+      <ResponsiveLayout 
+        title="Learning Paths"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Learning Paths"
-          subtitle="Structured learning journeys to achieve your goals"
-        />
-
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Learning Paths"
+      subtitle="Structured learning journeys to master financial topics"
+      type="learner"
+    >
           {/* Tabs */}
           <div className="tabs-nav-large">
             <button 
@@ -329,9 +326,7 @@ const LearningPaths = () => {
               )}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </ResponsiveLayout>
   )
 }
 

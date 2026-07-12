@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { User, Mail, Phone, MapPin, Calendar, Edit } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import './Profile.css'
 
 const Profile = () => {
@@ -182,26 +182,24 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading profile...</p>
-          </div>
+      <ResponsiveLayout 
+        title="My Profile"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="My Profile" 
-          subtitle="Manage your account settings and preferences"
-        />
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="My Profile"
+      subtitle="Manage your account and learning preferences"
+      type="learner"
+    >
           <div className="profile-grid">
             <div className="profile-main">
               <div className="card">
@@ -521,9 +519,7 @@ const Profile = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </ResponsiveLayout>
   )
 }
 

@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, CheckCircle, Clock, Target, TrendingUp, Award, FileText, PlayCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import './Assessments.css'
 
 const Assessments = () => {
@@ -125,26 +125,24 @@ const Assessments = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading assessments...</p>
-          </div>
+      <ResponsiveLayout 
+        title="Assessments"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Assessments & Assignments" 
-          subtitle="Track your assessments, assignments, and performance."
-        />
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Assessments"
+      subtitle="Test your knowledge and track your progress"
+      type="learner"
+    >
           {/* Stats Grid */}
           <div className="stats-grid-4">
             {stats.map((stat, idx) => (
@@ -423,9 +421,7 @@ const Assessments = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </ResponsiveLayout>
   )
 }
 

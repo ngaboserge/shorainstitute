@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Filter, Download, Play, FileText, Video, BookOpen, File, Bookmark, Clock } from 'lucide-react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './Resources.css'
@@ -151,29 +151,24 @@ const Resources = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <Header title="Resources & Replay Library" subtitle="Loading..." />
-          <div className="content-wrapper">
-            <div className="card">
-              <p>Loading resources...</p>
-            </div>
-          </div>
+      <ResponsiveLayout 
+        title="Resource Library"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Resources & Replay Library" 
-          subtitle="Practical tools, expert insights, and on-demand learning to help you build financial knowledge and create lifelong wealth."
-        />
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Resource Library"
+      subtitle="Download guides, templates, and materials to support your learning"
+      type="learner"
+    >
           {/* Search Bar */}
           <div className="resources-search-bar">
             <div className="search-box-large">
@@ -335,9 +330,7 @@ const Resources = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </ResponsiveLayout>
   )
 }
 

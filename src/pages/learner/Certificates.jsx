@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { Download, Share2, Award, CheckCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import jsPDF from 'jspdf'
 import './Certificates.css'
 
@@ -208,26 +208,24 @@ const Certificates = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading certificates...</p>
-          </div>
+      <ResponsiveLayout 
+        title="My Certificates"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="My Certificates" 
-          subtitle="View and download your earned certificates"
-        />
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="My Certificates"
+      subtitle="View and download your earned certificates"
+      type="learner"
+    >
           {certificates.length === 0 ? (
             <div style={{ padding: '60px 20px', textAlign: 'center' }}>
               <Award size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
@@ -310,9 +308,7 @@ const Certificates = () => {
               </div>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </ResponsiveLayout>
   )
 }
 

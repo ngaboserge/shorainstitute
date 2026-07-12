@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { MessageSquare, Users, TrendingUp, Plus, ThumbsUp, Send, Search } from 'lucide-react'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './Community.css'
@@ -179,27 +179,24 @@ const Community = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <Header title="Community" subtitle="Loading..." />
-          <div className="content-wrapper">
-            <div className="card">Loading discussions...</div>
-          </div>
+      <ResponsiveLayout 
+        title="Community"
+        subtitle="Loading..."
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Community" 
-          subtitle="Connect with fellow learners, share insights, and build a stronger learning community"
-        />
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Community"
+      subtitle="Connect with peers, ask questions, and share insights"
+      type="learner"
+    >
           {/* Search and Create */}
           <div style={{display: 'flex', gap: '12px', marginBottom: '24px'}}>
             <div className="search-box" style={{flex: 1}}>

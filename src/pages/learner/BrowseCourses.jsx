@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Search, Filter, Star, Clock, Users, BookOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import Sidebar from '../../components/Sidebar'
-import Header from '../../components/Header'
+import ResponsiveLayout from '../../components/ResponsiveLayout'
+
 import './BrowseCourses.css'
 
 const BrowseCourses = () => {
@@ -115,27 +115,24 @@ const BrowseCourses = () => {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar type="learner" />
-        <div className="main-content">
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p>Loading courses...</p>
-          </div>
+      <ResponsiveLayout 
+        title="Browse Courses"
+        subtitle="Loading courses"
+        type="learner"
+      >
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <p>Loading courses...</p>
         </div>
-      </div>
+      </ResponsiveLayout>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar type="learner" />
-      <div className="main-content">
-        <Header 
-          title="Browse Courses"
-          subtitle="Discover courses to expand your financial knowledge."
-        />
-        
-        <div className="content-wrapper">
+    <ResponsiveLayout 
+      title="Browse Courses"
+      subtitle="Discover courses to expand your financial knowledge."
+      type="learner"
+    >
           {/* Search and Filters */}
           <div className="browse-filters">
             <div className="search-bar">
@@ -297,9 +294,8 @@ const BrowseCourses = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
+      </ResponsiveLayout>
+    )
+  }
 
 export default BrowseCourses
