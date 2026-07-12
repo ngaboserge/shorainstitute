@@ -341,8 +341,7 @@ const Community = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </ResponsiveLayout>
 
       {/* Create Discussion Modal */}
       {showCreateModal && (
@@ -402,7 +401,7 @@ const Community = () => {
           </div>
         </div>
       )}
-    </div>
+    </ResponsiveLayout>
   )
 }
 
