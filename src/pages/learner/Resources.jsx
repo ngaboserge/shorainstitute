@@ -329,9 +329,9 @@ const Resources = () => {
                 </Link>
               </div>
             </div>
-
-            </ResponsiveLayout>
-  )
-}
+          </div>
+        </ResponsiveLayout>
+      )
+    }
 
 export default Resources
