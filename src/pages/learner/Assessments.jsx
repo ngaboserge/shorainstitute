@@ -420,9 +420,9 @@ const Assessments = () => {
                 </Link>
               </div>
             </div>
-
-            </ResponsiveLayout>
-  )
-}
+          </div>
+        </ResponsiveLayout>
+      )
+    }
 
 export default Assessments
