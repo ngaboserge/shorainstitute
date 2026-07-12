@@ -3,7 +3,7 @@ import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { Upload, Search, Edit, Trash2, Eye, Globe, Lock, FileText, Video, File, BookOpen, Plus } from 'lucide-react'
+import { Upload, Search, Edit, Trash2, Eye, Globe, Lock, FileText, Video, File, BookOpen, Plus, Grid, List, Download, ExternalLink } from 'lucide-react'
 import './Resources.css'
 
 const ManageResources = () => {
@@ -11,8 +11,11 @@ const ManageResources = () => {
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedResource, setSelectedResource] = useState(null)
   const [editingResource, setEditingResource] = useState(null)
   const [filterType, setFilterType] = useState('all')
+  const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
 
   const [formData, setFormData] = useState({
     title: '',
@@ -110,6 +113,11 @@ const ManageResources = () => {
     setShowCreateModal(true)
   }
 
+  const handleViewDetails = (resource) => {
+    setSelectedResource(resource)
+    setShowDetailsModal(true)
+  }
+
   const handleDelete = async (resourceId) => {
     if (!confirm('Are you sure you want to delete this resource?')) return
 
@@ -179,8 +187,8 @@ const ManageResources = () => {
         
         <div className="content-wrapper">
           {/* Header Actions */}
-          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '24px'}}>
-            <div style={{display: 'flex', gap: '12px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px'}}>
+            <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
               <select 
                 className="filter-select"
                 value={filterType}
@@ -194,6 +202,32 @@ const ManageResources = () => {
                 <option value="video">Videos</option>
                 <option value="ebook">E-books</option>
               </select>
+              
+              {/* View Toggle */}
+              <div style={{display: 'flex', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px'}}>
+                <button
+                  className={`btn-icon ${viewMode === 'grid' ? 'active' : ''}`}
+                  onClick={() => setViewMode('grid')}
+                  title="Grid view"
+                  style={{
+                    background: viewMode === 'grid' ? '#E8F0FE' : 'transparent',
+                    color: viewMode === 'grid' ? '#0B4F9F' : '#666'
+                  }}
+                >
+                  <Grid size={18} />
+                </button>
+                <button
+                  className={`btn-icon ${viewMode === 'list' ? 'active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                  title="List view"
+                  style={{
+                    background: viewMode === 'list' ? '#E8F0FE' : 'transparent',
+                    color: viewMode === 'list' ? '#0B4F9F' : '#666'
+                  }}
+                >
+                  <List size={18} />
+                </button>
+              </div>
             </div>
             <button 
               className="btn btn-primary"
@@ -208,7 +242,7 @@ const ManageResources = () => {
             </button>
           </div>
 
-          {/* Resources Grid */}
+          {/* Resources Display */}
           <div className="card">
             <h3>Your Resources ({resources.length})</h3>
             
@@ -216,6 +250,157 @@ const ManageResources = () => {
               <div style={{padding: '40px', textAlign: 'center', color: '#666'}}>
                 <FileText size={48} style={{margin: '0 auto 16px', opacity: 0.5}} />
                 <p>No resources yet. Create your first resource!</p>
+              </div>
+            ) : viewMode === 'grid' ? (
+              // Grid View
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '20px',
+                marginTop: '20px'
+              }}>
+                {resources.map((resource) => (
+                  <div key={resource.id} className="resource-card" style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: 'white'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  onClick={() => handleViewDetails(resource)}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{
+                      width: '100%',
+                      height: '180px',
+                      background: resource.thumbnail_url 
+                        ? `url(${resource.thumbnail_url}) center/cover` 
+                        : 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}>
+                      {!resource.thumbnail_url && (
+                        <div style={{color: 'white', fontSize: '48px'}}>
+                          {getResourceIcon(resource.resource_type)}
+                        </div>
+                      )}
+                      
+                      {/* Badges */}
+                      <div style={{position: 'absolute', top: '12px', left: '12px'}}>
+                        <span style={{
+                          background: '#FDB714',
+                          color: 'white',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase'
+                        }}>
+                          {resource.resource_type}
+                        </span>
+                      </div>
+                      
+                      <div style={{position: 'absolute', top: '12px', right: '12px'}}>
+                        {resource.is_public ? (
+                          <Globe size={20} color="white" />
+                        ) : (
+                          <Lock size={20} color="white" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Content */}
+                    <div style={{padding: '16px'}}>
+                      <h4 style={{
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        marginBottom: '8px',
+                        lineHeight: '1.4',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
+                      }}>
+                        {resource.title}
+                      </h4>
+                      
+                      <div style={{
+                        fontSize: '13px',
+                        color: '#666',
+                        marginBottom: '12px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical'
+                      }}>
+                        {resource.description || 'No description'}
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        fontSize: '13px',
+                        color: '#666',
+                        marginBottom: '12px'
+                      }}>
+                        <span>{resource.category || 'Uncategorized'}</span>
+                        <span style={{
+                          background: '#f3f4f6',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px'
+                        }}>
+                          {resource.level}
+                        </span>
+                      </div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        color: '#666',
+                        marginBottom: '16px'
+                      }}>
+                        <Download size={14} />
+                        <span>{resource.download_count || 0} downloads</span>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div style={{
+                        display: 'flex',
+                        gap: '8px',
+                        borderTop: '1px solid #f3f4f6',
+                        paddingTop: '12px'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      >
+                        <button 
+                          className="btn btn-secondary btn-sm"
+                          style={{flex: 1}}
+                          onClick={() => handleEdit(resource)}
+                        >
+                          <Edit size={14} />
+                          Edit
+                        </button>
+                        <button 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleDelete(resource.id)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="table-container" style={{marginTop: '20px'}}>
@@ -428,6 +613,195 @@ const ManageResources = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Details Modal */}
+      {showDetailsModal && selectedResource && (
+        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '700px'}}>
+            <div className="modal-header">
+              <h2>Resource Details</h2>
+              <button className="close-btn" onClick={() => setShowDetailsModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {/* Thumbnail Image */}
+              <div style={{
+                width: '100%',
+                height: '300px',
+                background: selectedResource.thumbnail_url 
+                  ? `url(${selectedResource.thumbnail_url}) center/cover` 
+                  : 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative'
+              }}>
+                {!selectedResource.thumbnail_url && (
+                  <div style={{color: 'white', fontSize: '64px'}}>
+                    {getResourceIcon(selectedResource.resource_type)}
+                  </div>
+                )}
+                
+                {/* Status Badge */}
+                <div style={{position: 'absolute', top: '16px', right: '16px'}}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'rgba(255,255,255,0.95)',
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}>
+                    {selectedResource.is_public ? (
+                      <>
+                        <Globe size={16} color="#10b981" />
+                        <span style={{color: '#10b981'}}>Public</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={16} color="#f59e0b" />
+                        <span style={{color: '#f59e0b'}}>Restricted</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Resource Info */}
+              <div style={{marginBottom: '20px'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px'}}>
+                  <span style={{
+                    background: '#FDB714',
+                    color: 'white',
+                    padding: '6px 14px',
+                    borderRadius: '14px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }}>
+                    {selectedResource.resource_type}
+                  </span>
+                  <span style={{
+                    background: '#E8F0FE',
+                    color: '#0B4F9F',
+                    padding: '6px 14px',
+                    borderRadius: '14px',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    {selectedResource.file_format?.toUpperCase()}
+                  </span>
+                  <span style={{
+                    background: '#f3f4f6',
+                    padding: '6px 14px',
+                    borderRadius: '14px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    color: '#666'
+                  }}>
+                    {selectedResource.level}
+                  </span>
+                </div>
+                
+                <h3 style={{fontSize: '24px', fontWeight: '600', marginBottom: '12px', color: '#1f2937'}}>
+                  {selectedResource.title}
+                </h3>
+                
+                <p style={{fontSize: '15px', color: '#666', lineHeight: '1.6', marginBottom: '20px'}}>
+                  {selectedResource.description || 'No description provided.'}
+                </p>
+                
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '16px',
+                  padding: '20px',
+                  background: '#f9fafb',
+                  borderRadius: '12px',
+                  marginBottom: '20px'
+                }}>
+                  <div>
+                    <div style={{fontSize: '13px', color: '#999', marginBottom: '4px'}}>Category</div>
+                    <div style={{fontSize: '15px', fontWeight: '500', color: '#1f2937'}}>
+                      {selectedResource.category || 'Uncategorized'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize: '13px', color: '#999', marginBottom: '4px'}}>Downloads</div>
+                    <div style={{fontSize: '15px', fontWeight: '500', color: '#1f2937'}}>
+                      {selectedResource.download_count || 0}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize: '13px', color: '#999', marginBottom: '4px'}}>Author</div>
+                    <div style={{fontSize: '15px', fontWeight: '500', color: '#1f2937'}}>
+                      {selectedResource.author_name}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{fontSize: '13px', color: '#999', marginBottom: '4px'}}>Created</div>
+                    <div style={{fontSize: '15px', fontWeight: '500', color: '#1f2937'}}>
+                      {new Date(selectedResource.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* File URL */}
+                {selectedResource.file_url && (
+                  <div style={{
+                    padding: '16px',
+                    background: '#E8F0FE',
+                    borderRadius: '8px',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{fontSize: '13px', color: '#0B4F9F', marginBottom: '8px', fontWeight: '500'}}>
+                      File URL
+                    </div>
+                    <a 
+                      href={selectedResource.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: '14px',
+                        color: '#0B4F9F',
+                        textDecoration: 'none',
+                        wordBreak: 'break-all',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {selectedResource.file_url}
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowDetailsModal(false)}
+              >
+                Close
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  setShowDetailsModal(false)
+                  handleEdit(selectedResource)
+                }}
+              >
+                <Edit size={16} />
+                Edit Resource
+              </button>
+            </div>
           </div>
         </div>
       )}
