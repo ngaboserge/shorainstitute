@@ -96,7 +96,7 @@ const HomePage = () => {
                       <div className="dropdown-desc">Test your knowledge</div>
                     </div>
                   </Link>
-                  <Link to="/onboarding" className="dropdown-item">
+                  <Link to="/auth/learner/signup" className="dropdown-item">
                     <UserPlus size={16} />
                     <div>
                       <div className="dropdown-title">Get Started</div>
@@ -169,7 +169,7 @@ const HomePage = () => {
             <Link to="/learner/dashboard" className="nav-btn-login">
               Log in
             </Link>
-            <Link to="/onboarding" className="nav-btn-start">
+            <Link to="/auth/learner/signup" className="nav-btn-start">
               Get Started
             </Link>
           </div>
@@ -380,7 +380,7 @@ const HomePage = () => {
                 <span>Build confidence with money</span>
               </div>
             </div>
-            <Link to="/onboarding" className="sprint-btn">Start Free Sprint →</Link>
+            <Link to="/auth/learner/signup" className="sprint-btn">Start Free Sprint →</Link>
           </div>
           <div className="sprint-right">
             <div className="days-badge">
