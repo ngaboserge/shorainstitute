@@ -29,6 +29,10 @@ const ManageResources = () => {
     is_public: true
   })
 
+  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState(null)
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
+
   useEffect(() => {
     if (user) {
       loadResources()
@@ -58,12 +62,79 @@ const ManageResources = () => {
     }
   }
 
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB')
+      return
+    }
+
+    setThumbnailFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setThumbnailPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const uploadThumbnail = async () => {
+    if (!thumbnailFile) return formData.thumbnail_url
+
+    setUploadingThumbnail(true)
+    try {
+      const fileExt = thumbnailFile.name.split('.').pop()
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const filePath = `resource-thumbnails/${fileName}`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('resources')
+        .upload(filePath, thumbnailFile, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (error) throw error
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('resources')
+        .getPublicUrl(filePath)
+
+      return publicUrl
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error)
+      alert('Failed to upload thumbnail. Using URL instead.')
+      return formData.thumbnail_url
+    } finally {
+      setUploadingThumbnail(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
     try {
+      // Upload thumbnail if file selected
+      let thumbnailUrl = formData.thumbnail_url
+      if (thumbnailFile) {
+        thumbnailUrl = await uploadThumbnail()
+      }
+
       const resourceData = {
         ...formData,
+        thumbnail_url: thumbnailUrl,
         author_name: profile?.full_name || user.email,
         created_by: user.id
       }
@@ -110,6 +181,8 @@ const ManageResources = () => {
       level: resource.level || 'all',
       is_public: resource.is_public !== false
     })
+    setThumbnailPreview(resource.thumbnail_url || null)
+    setThumbnailFile(null)
     setShowCreateModal(true)
   }
 
@@ -148,6 +221,8 @@ const ManageResources = () => {
       level: 'all',
       is_public: true
     })
+    setThumbnailFile(null)
+    setThumbnailPreview(null)
   }
 
   const getResourceIcon = (type) => {
@@ -551,15 +626,102 @@ const ManageResources = () => {
                   </small>
                 </div>
 
+                {/* Thumbnail Upload Section */}
                 <div className="form-group">
-                  <label>Thumbnail URL (Optional)</label>
-                  <input
-                    type="url"
-                    className="form-input"
-                    placeholder="https://example.com/thumbnail.jpg"
-                    value={formData.thumbnail_url}
-                    onChange={(e) => setFormData({...formData, thumbnail_url: e.target.value})}
-                  />
+                  <label>Thumbnail Image</label>
+                  
+                  {/* Preview */}
+                  {thumbnailPreview && (
+                    <div style={{
+                      marginBottom: '12px',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      maxWidth: '300px'
+                    }}>
+                      <img 
+                        src={thumbnailPreview} 
+                        alt="Thumbnail preview"
+                        style={{
+                          width: '100%',
+                          height: '180px',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Upload Button */}
+                  <div style={{display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px'}}>
+                    <label 
+                      htmlFor="thumbnail-upload"
+                      className="btn btn-secondary"
+                      style={{cursor: 'pointer', margin: 0}}
+                    >
+                      <Upload size={16} />
+                      {thumbnailFile ? 'Change Image' : 'Upload Image'}
+                    </label>
+                    <input
+                      id="thumbnail-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                      style={{display: 'none'}}
+                    />
+                    {thumbnailFile && (
+                      <span style={{fontSize: '14px', color: '#666'}}>
+                        {thumbnailFile.name}
+                      </span>
+                    )}
+                    {thumbnailPreview && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setThumbnailFile(null)
+                          setThumbnailPreview(null)
+                          setFormData({...formData, thumbnail_url: ''})
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* OR Divider */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    margin: '16px 0',
+                    color: '#999',
+                    fontSize: '13px'
+                  }}>
+                    <div style={{flex: 1, height: '1px', background: '#e5e7eb'}}></div>
+                    <span>OR</span>
+                    <div style={{flex: 1, height: '1px', background: '#e5e7eb'}}></div>
+                  </div>
+                  
+                  {/* URL Input */}
+                  <div>
+                    <label style={{fontSize: '13px', color: '#666', marginBottom: '6px', display: 'block'}}>
+                      Thumbnail URL
+                    </label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://example.com/thumbnail.jpg"
+                      value={formData.thumbnail_url}
+                      onChange={(e) => {
+                        setFormData({...formData, thumbnail_url: e.target.value})
+                        setThumbnailPreview(e.target.value)
+                        setThumbnailFile(null)
+                      }}
+                    />
+                    <small style={{color: '#666', fontSize: '13px'}}>
+                      Or paste an image URL from the web
+                    </small>
+                  </div>
                 </div>
 
                 <div className="form-row">
@@ -608,8 +770,19 @@ const ManageResources = () => {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingResource ? 'Update Resource' : 'Create Resource'}
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={uploadingThumbnail}
+                >
+                  {uploadingThumbnail ? (
+                    <>
+                      <Upload size={16} className="spinning" />
+                      Uploading...
+                    </>
+                  ) : (
+                    editingResource ? 'Update Resource' : 'Create Resource'
+                  )}
                 </button>
               </div>
             </form>
