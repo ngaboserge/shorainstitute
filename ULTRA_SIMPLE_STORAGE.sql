@@ -1,47 +1,38 @@
--- Create Storage Bucket for Resource Thumbnails
--- Run this in Supabase SQL Editor
+-- ULTRA SIMPLE STORAGE POLICY SETUP
+-- This version only touches policies, nothing else
+-- Run in Supabase SQL Editor
 
--- 1. Create the storage bucket (if not exists)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('resources', 'resources', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
-
--- 2. Drop existing policies if they exist (to avoid conflicts)
+-- Drop any existing policies first (to avoid conflicts)
 DROP POLICY IF EXISTS "Authenticated users can upload resource thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Public can view resource thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update their own resource thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their own resource thumbnails" ON storage.objects;
 
--- 3. Create new storage policies for the bucket
--- Allow authenticated users to upload files (more permissive for development)
+-- Create simple, permissive policies for development
 CREATE POLICY "Authenticated users can upload resource thumbnails"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'resources');
 
--- Allow public read access to all files
 CREATE POLICY "Public can view resource thumbnails"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'resources');
 
--- Allow authenticated users to update files
 CREATE POLICY "Users can update their own resource thumbnails"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'resources');
 
--- Allow authenticated users to delete files
 CREATE POLICY "Users can delete their own resource thumbnails"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'resources');
 
--- 4. Ensure RLS is enabled on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- 5. Grant necessary permissions
-GRANT ALL ON storage.buckets TO authenticated;
-GRANT ALL ON storage.objects TO authenticated;
-GRANT SELECT ON storage.buckets TO public;
-GRANT SELECT ON storage.objects TO public;
+-- Verify policies were created
+SELECT policyname, cmd, roles 
+FROM pg_policies 
+WHERE schemaname = 'storage' 
+  AND tablename = 'objects'
+  AND policyname LIKE '%resource%'
+ORDER BY policyname;
