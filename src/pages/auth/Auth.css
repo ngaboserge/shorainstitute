@@ -61,7 +61,7 @@
 
 .input-with-icon > svg:first-child {
   position: absolute;
-  left: 16px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: #999;
@@ -71,14 +71,13 @@
 
 .input-with-icon input {
   width: 100%;
-  padding: 14px 50px 14px 56px;
+  padding: 14px 50px 14px 44px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 15px;
   transition: all 0.2s;
   background: white;
   line-height: 1.5;
-  text-indent: 0;
 }
 
 .input-with-icon input::placeholder {
