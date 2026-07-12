@@ -197,6 +197,7 @@ const Community = () => {
       subtitle="Connect with peers, ask questions, and share insights"
       type="learner"
     >
+      <div>
           {/* Search and Create */}
           <div style={{display: 'flex', gap: '12px', marginBottom: '24px'}}>
             <div className="search-box" style={{flex: 1}}>
@@ -341,10 +342,9 @@ const Community = () => {
               </div>
             </div>
           </div>
-        </ResponsiveLayout>
 
-      {/* Create Discussion Modal */}
-      {showCreateModal && (
+        {/* Create Discussion Modal */}
+        {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -401,6 +401,7 @@ const Community = () => {
           </div>
         </div>
       )}
+      </div>
     </ResponsiveLayout>
   )
 }
