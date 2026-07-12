@@ -81,29 +81,26 @@ const TrainerCourses = () => {
   }
 
   return (
-    <div className="app-container">
-      <Header />
-      <div className="app-body">
-        <Sidebar role="trainer" />
-        <main className="main-content">
-          <div className="trainer-courses-page">
-            {/* Header */}
-            <div className="page-header">
-              <div className="header-left">
-                <h1>My Courses</h1>
-                <p className="subtitle">Create and manage your course content</p>
-              </div>
-              <button 
-                className="btn btn-primary"
-                onClick={() => navigate('/trainer/create-course')}
-              >
-                <Plus size={18} />
-                <span>Create New Course</span>
-              </button>
-            </div>
+    <div className="dashboard-layout">
+      <Sidebar type="trainer" />
+      <div className="main-content">
+        <Header 
+          title="My Courses" 
+          subtitle="Create and manage your course content"
+        />
+        <div className="content-wrapper">
+          <div className="page-actions" style={{marginBottom: '24px'}}>
+            <button 
+              className="btn btn-primary"
+              onClick={() => navigate('/trainer/create-course')}
+            >
+              <Plus size={18} />
+              Create New Course
+            </button>
+          </div>
 
-            {/* Statistics */}
-            <div className="stats-grid">
+          {/* Statistics */}
+          <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-icon" style={{ background: '#eff6ff' }}>
                   <PlayCircle size={24} color="#0B4F9F" />
@@ -153,8 +150,8 @@ const TrainerCourses = () => {
               </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="filter-tabs">
+          {/* Filter Tabs */}
+          <div className="filter-tabs">
               <button
                 className={`filter-tab ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => setFilter('all')}
@@ -181,28 +178,28 @@ const TrainerCourses = () => {
               </button>
             </div>
 
-            {/* Courses Grid */}
-            {loading ? (
-              <div className="loading-state">
-                <p>Loading courses...</p>
-              </div>
-            ) : courses.length === 0 ? (
-              <div className="empty-state">
-                <PlayCircle size={64} />
-                <h3>No courses yet</h3>
-                <p>Create your first course and start teaching</p>
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => navigate('/trainer/create-course')}
-                >
-                  <Plus size={18} />
-                  <span>Create Your First Course</span>
-                </button>
-              </div>
-            ) : (
-              <div className="courses-grid">
-                {courses.map(course => (
-                  <div key={course.id} className="course-card">
+          {/* Courses Grid */}
+          {loading ? (
+            <div className="loading-state">
+              <p>Loading courses...</p>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="empty-state">
+              <PlayCircle size={64} />
+              <h3>No courses yet</h3>
+              <p>Create your first course and start teaching</p>
+              <button 
+                className="btn btn-primary"
+                onClick={() => navigate('/trainer/create-course')}
+              >
+                <Plus size={18} />
+                <span>Create Your First Course</span>
+              </button>
+            </div>
+          ) : (
+            <div className="courses-grid">
+              {courses.map(course => (
+                <div key={course.id} className="course-card">
                     <div className="course-thumbnail">
                       {course.thumbnail_url ? (
                         <img src={course.thumbnail_url} alt={course.title} />
@@ -255,37 +252,36 @@ const TrainerCourses = () => {
                       </div>
                     </div>
 
-                    <div className="course-actions">
-                      <button
-                        className="action-btn"
-                        onClick={() => navigate(`/trainer/courses/${course.id}/manage-lessons`)}
-                        title="Manage lessons"
-                      >
-                        <Edit2 size={18} />
-                        <span>Manage</span>
-                      </button>
-                      <button
-                        className="action-btn"
-                        onClick={() => navigate(`/learner/courses/${course.id}/lesson/${course.id}`)}
-                        title="Preview course"
-                      >
-                        <Eye size={18} />
-                        <span>Preview</span>
-                      </button>
-                      <button
-                        className="action-btn delete"
-                        onClick={() => handleDeleteCourse(course.id)}
-                        title="Delete course"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                  <div className="course-actions">
+                    <button
+                      className="action-btn"
+                      onClick={() => navigate(`/trainer/courses/${course.id}/manage-lessons`)}
+                      title="Manage lessons"
+                    >
+                      <Edit2 size={18} />
+                      <span>Manage</span>
+                    </button>
+                    <button
+                      className="action-btn"
+                      onClick={() => navigate(`/learner/courses/${course.id}/lesson/${course.id}`)}
+                      title="Preview course"
+                    >
+                      <Eye size={18} />
+                      <span>Preview</span>
+                    </button>
+                    <button
+                      className="action-btn delete"
+                      onClick={() => handleDeleteCourse(course.id)}
+                      title="Delete course"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </main>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
