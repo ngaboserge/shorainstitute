@@ -46,8 +46,7 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
           course_id: course.id,
           payment_id: data.id,
           payment_status: 'pending',
-          payment_required: true,
-          status: 'pending'
+          payment_required: true
         })
 
       if (enrollmentError) throw enrollmentError
