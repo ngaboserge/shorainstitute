@@ -13,6 +13,7 @@ const Courses = () => {
   const [activeTab, setActiveTab] = useState('in-progress')
   const [inProgressCourses, setInProgressCourses] = useState([])
   const [completedCourses, setCompletedCourses] = useState([])
+  const [pendingPaymentCourses, setPendingPaymentCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -41,7 +42,7 @@ const Courses = () => {
 
   const loadEnrolledCourses = async () => {
     try {
-      // Load all enrollments with course details
+      // Load all enrollments with course details (exclude pending payments)
       const { data: enrollments, error } = await supabase
         .from('enrollments')
         .select(`
@@ -57,6 +58,7 @@ const Courses = () => {
           )
         `)
         .eq('user_id', user.id)
+        .neq('payment_status', 'pending')
         .order('last_accessed_at', { ascending: false })
 
       if (error) throw error
@@ -115,6 +117,39 @@ const Courses = () => {
 
       setInProgressCourses(inProgress)
       setCompletedCourses(completed)
+
+      // Load pending payment courses separately
+      const { data: pendingEnrollments } = await supabase
+        .from('enrollments')
+        .select(`
+          *,
+          courses (
+            id,
+            title,
+            thumbnail_url,
+            instructor_name,
+            category,
+            price,
+            currency
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('payment_status', 'pending')
+
+      if (pendingEnrollments) {
+        const pendingCourses = pendingEnrollments.map(enrollment => ({
+          id: enrollment.course_id,
+          enrollmentId: enrollment.id,
+          title: enrollment.courses.title,
+          image: enrollment.courses.thumbnail_url,
+          instructor: enrollment.courses.instructor_name,
+          category: enrollment.courses.category,
+          price: enrollment.courses.price,
+          currency: enrollment.courses.currency,
+          submittedDate: new Date(enrollment.enrolled_at).toLocaleDateString()
+        }))
+        setPendingPaymentCourses(pendingCourses)
+      }
     } catch (error) {
       console.error('Error loading enrolled courses:', error)
     } finally {
@@ -165,6 +200,13 @@ const Courses = () => {
             >
               In Progress
               <span className="tab-badge">{inProgressCourses.length}</span>
+            </button>
+            <button 
+              className={`tab-btn-large ${activeTab === 'pending' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pending')}
+            >
+              Pending Approval
+              <span className="tab-badge">{pendingPaymentCourses.length}</span>
             </button>
             <button 
               className={`tab-btn-large ${activeTab === 'completed' ? 'active' : ''}`}
@@ -413,6 +455,91 @@ const Courses = () => {
                         <button className="btn btn-outline btn-full">
                           Review Course
                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Pending Approval Tab */}
+          {activeTab === 'pending' && (
+            <div className="courses-section">
+              <div className="section-header-action">
+                <h3>Pending Payment Approval</h3>
+              </div>
+
+              {pendingPaymentCourses.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+                  <Clock size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
+                  <h3 style={{ color: '#666', marginBottom: '8px' }}>No pending payments</h3>
+                  <p style={{ color: '#999' }}>Courses requiring payment approval will appear here</p>
+                </div>
+              ) : (
+                <div className="courses-grid-3col">
+                  {pendingPaymentCourses.map((course) => (
+                    <div key={course.id} className="course-card-completed" style={{border: '2px solid #fbbf24'}}>
+                      <div className="course-image-standard">
+                        {course.image ? (
+                          <img src={course.image} alt={course.title} />
+                        ) : (
+                          <div style={{
+                            width: '100%',
+                            height: '200px',
+                            background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <BookOpen size={48} color="white" />
+                          </div>
+                        )}
+                        <div className="completed-badge" style={{background: '#fbbf24', color: '#78350f'}}>
+                          <Clock size={20} />
+                          <span>Pending</span>
+                        </div>
+                      </div>
+                      <div className="course-content-standard">
+                        <div className="course-category-badge">{course.category}</div>
+                        <h3 className="course-title-standard">{course.title}</h3>
+                        <div className="course-instructor-standard">
+                          <div style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}>
+                            {course.instructor?.charAt(0) || 'T'}
+                          </div>
+                          <span>{course.instructor || 'Instructor'}</span>
+                        </div>
+                        <div style={{
+                          padding: '12px',
+                          background: '#fef3c7',
+                          borderRadius: '8px',
+                          marginTop: '12px',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{fontSize: '13px', color: '#78350f', fontWeight: '600', marginBottom: '4px'}}>
+                            ⏳ Payment Under Review
+                          </div>
+                          <div style={{fontSize: '12px', color: '#92400e'}}>
+                            Amount: {course.currency === 'USD' ? '$' : course.currency === 'RWF' ? 'FRw' : '€'}{parseFloat(course.price).toFixed(2)}
+                          </div>
+                          <div style={{fontSize: '12px', color: '#92400e'}}>
+                            Submitted: {course.submittedDate}
+                          </div>
+                        </div>
+                        <div style={{fontSize: '13px', color: '#666', textAlign: 'center', padding: '8px'}}>
+                          You'll be notified once the trainer approves your payment
+                        </div>
                       </div>
                     </div>
                   ))}
