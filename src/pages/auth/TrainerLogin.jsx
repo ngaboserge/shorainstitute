@@ -98,6 +98,16 @@ const TrainerLogin = () => {
   return (
     <div className="auth-page">
       <div className="auth-container">
+        {/* Role Switcher at Top */}
+        <div className="role-switcher">
+          <Link to="/auth/learner/login" className="role-btn">
+            👨‍🎓 Learner Login
+          </Link>
+          <Link to="/auth/trainer/login" className="role-btn active">
+            👨‍🏫 Trainer Login
+          </Link>
+        </div>
+
         <div className="auth-header">
           <h1>Trainer Login</h1>
           <p>Welcome back! Continue inspiring learners</p>
