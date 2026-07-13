@@ -1,0 +1,149 @@
+/* Payment Modal Styles */
+.payment-modal {
+  max-width: 600px;
+}
+
+.payment-summary {
+  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-row.total {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  font-size: 18px;
+}
+
+.summary-row .amount {
+  font-size: 24px;
+  color: #FDB714;
+}
+
+.payment-instructions {
+  background: #E8F0FE;
+  border-left: 4px solid #0B4F9F;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.payment-instructions h4 {
+  margin: 0 0 12px 0;
+  color: #0B4F9F;
+  font-size: 16px;
+}
+
+.payment-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.payment-instructions li {
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bank-details {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.bank-details h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #0B4F9F;
+  font-weight: 600;
+}
+
+.bank-details p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.bank-details strong {
+  color: #0B4F9F;
+  margin-right: 8px;
+}
+
+.form-notice {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.form-notice svg {
+  flex-shrink: 0;
+  color: #856404;
+}
+
+.form-notice div {
+  font-size: 14px;
+  color: #856404;
+  line-height: 1.5;
+}
+
+.form-notice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .payment-modal {
+    max-width: 100%;
+    margin: 20px;
+  }
+
+  .summary-row {
+    font-size: 14px;
+  }
+
+  .summary-row.total {
+    font-size: 16px;
+  }
+
+  .summary-row .amount {
+    font-size: 20px;
+  }
+}
