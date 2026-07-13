@@ -4,6 +4,7 @@ import { Search, Filter, Star, Clock, Users, BookOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
+import PaymentModal from '../../components/PaymentModal'
 
 import './BrowseCourses.css'
 
@@ -14,6 +15,8 @@ const BrowseCourses = () => {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
 
   useEffect(() => {
     loadPublishedCourses()
@@ -71,7 +74,7 @@ const BrowseCourses = () => {
     return `${symbols[currency] || currency} ${price.toLocaleString()}`
   }
 
-  const handleEnroll = async (courseId) => {
+  const handleEnroll = async (course) => {
     if (!user) {
       navigate('/auth/learner/login')
       return
@@ -80,23 +83,35 @@ const BrowseCourses = () => {
     // Check if already enrolled
     const { data: existingEnrollment } = await supabase
       .from('enrollments')
-      .select('id')
+      .select('id, payment_status')
       .eq('user_id', user.id)
-      .eq('course_id', courseId)
+      .eq('course_id', course.id)
       .single()
 
     if (existingEnrollment) {
-      navigate(`/learner/courses`)
+      if (existingEnrollment.payment_status === 'pending') {
+        alert('Your payment is pending approval. You will be notified once approved.')
+      } else {
+        navigate(`/learner/courses`)
+      }
       return
     }
 
-    // Create enrollment
+    // Check if course is paid
+    if (course.is_paid && course.price > 0) {
+      // Open payment modal for paid courses
+      setSelectedCourse(course)
+      setShowPaymentModal(true)
+      return
+    }
+
+    // Free course - enroll immediately
     try {
       const { error } = await supabase
         .from('enrollments')
         .insert({
           user_id: user.id,
-          course_id: courseId,
+          course_id: course.id,
           payment_status: 'free',
           enrolled_at: new Date().toISOString()
         })
@@ -104,7 +119,7 @@ const BrowseCourses = () => {
       if (error) throw error
 
       // Update enrollment count
-      await supabase.rpc('increment_enrollment_count', { course_id: courseId })
+      await supabase.rpc('increment_enrollment_count', { course_id: course.id })
 
       navigate(`/learner/courses`)
     } catch (error) {
@@ -211,7 +226,7 @@ const BrowseCourses = () => {
             <div className="browse-grid">
               {filteredCourses.map((course) => (
                 <div key={course.id} className="browse-course-card">
-                  <div className="course-image-wrapper">
+                    <div className="course-image-wrapper">
                     {course.thumbnail_url ? (
                       <img src={course.thumbnail_url} alt={course.title} className="course-img" />
                     ) : (
@@ -230,7 +245,12 @@ const BrowseCourses = () => {
                     )}
                     <div className="course-category-badge">{course.category}</div>
                     <div className="course-level-badge">{course.level}</div>
-                    {course.price === 0 && <div className="free-badge">FREE</div>}
+                    {(!course.is_paid || course.price === 0) && <div className="free-badge">FREE</div>}
+                    {course.is_paid && course.price > 0 && (
+                      <div className="price-badge-overlay">
+                        {formatPrice(course.price, course.currency)}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="course-card-content">
@@ -283,10 +303,10 @@ const BrowseCourses = () => {
                   
                   <div className="course-card-footer">
                     <button
-                      onClick={() => handleEnroll(course.id)}
-                      className={`btn ${course.price === 0 ? 'btn-warning' : 'btn-primary'} btn-full`}
+                      onClick={() => handleEnroll(course)}
+                      className={`btn ${(!course.is_paid || course.price === 0) ? 'btn-warning' : 'btn-primary'} btn-full`}
                     >
-                      {course.price === 0 ? 'Enroll Free' : formatPrice(course.price, course.currency)}
+                      {(!course.is_paid || course.price === 0) ? 'Enroll Free' : `Enroll - ${formatPrice(course.price, course.currency)}`}
                     </button>
                   </div>
                 </div>
@@ -294,7 +314,23 @@ const BrowseCourses = () => {
             </div>
           )}
       </ResponsiveLayout>
-    )
-  }
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedCourse && (
+        <PaymentModal
+          course={selectedCourse}
+          user={user}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setSelectedCourse(null)
+          }}
+          onSuccess={() => {
+            loadPublishedCourses()
+          }}
+        />
+      )}
+    </>
+  )
+}
 
 export default BrowseCourses

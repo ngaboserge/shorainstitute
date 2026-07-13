@@ -178,6 +178,20 @@
   letter-spacing: 0.5px;
 }
 
+.price-badge-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(253, 183, 20, 0.95);
+  color: #0B4F9F;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .course-card-content {
   padding: 16px;
   flex: 1;

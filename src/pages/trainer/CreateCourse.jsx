@@ -20,6 +20,7 @@ const CreateCourse = () => {
     category: '',
     level: 'beginner',
     language: 'English',
+    is_paid: false,
     price: 0,
     currency: 'RWF',
     thumbnail: null,
@@ -213,7 +214,8 @@ const CreateCourse = () => {
           category: courseData.category,
           level: courseData.level,
           language: courseData.language,
-          price: courseData.price,
+          is_paid: courseData.is_paid,
+          price: courseData.is_paid ? courseData.price : 0,
           currency: courseData.currency,
           status: 'draft'
         })
@@ -403,35 +405,65 @@ const CreateCourse = () => {
           <section className="form-section">
             <h2>Pricing</h2>
             
-            <div className="form-row">
-              <div className="form-group">
-                <label>Price</label>
-                <div className="price-input-group">
-                  <select
-                    value={courseData.currency}
-                    onChange={(e) => handleChange('currency', e.target.value)}
-                    className="currency-select"
-                  >
-                    {currencies.map(curr => (
-                      <option key={curr.value} value={curr.value}>
-                        {curr.symbol}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={courseData.price}
-                    onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
-                    className={errors.price ? 'error' : ''}
-                    min="0"
-                    step="1000"
-                  />
-                </div>
-                {errors.price && <span className="error-message">{errors.price}</span>}
-                <p className="help-text">Set to 0 for a free course</p>
-              </div>
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={courseData.is_paid}
+                  onChange={(e) => handleChange('is_paid', e.target.checked)}
+                  style={{width: 'auto', marginRight: '8px'}}
+                />
+                <span>This is a paid course</span>
+              </label>
+              <p className="help-text">Check this box if learners need to pay to enroll</p>
             </div>
+
+            {courseData.is_paid && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Price *</label>
+                  <div className="price-input-group">
+                    <select
+                      value={courseData.currency}
+                      onChange={(e) => handleChange('currency', e.target.value)}
+                      className="currency-select"
+                    >
+                      {currencies.map(curr => (
+                        <option key={curr.value} value={curr.value}>
+                          {curr.symbol}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      value={courseData.price}
+                      onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
+                      className={errors.price ? 'error' : ''}
+                      min="0"
+                      step="1000"
+                    />
+                  </div>
+                  {errors.price && <span className="error-message">{errors.price}</span>}
+                  <p className="help-text">Set the enrollment price for this course</p>
+                </div>
+              </div>
+            )}
+
+            {!courseData.is_paid && (
+              <div className="info-box" style={{
+                padding: '16px', 
+                background: '#e0f2fe', 
+                border: '1px solid #0891b2',
+                borderRadius: '8px',
+                color: '#164e63',
+                marginTop: '12px'
+              }}>
+                <p style={{margin: 0, fontSize: '14px'}}>
+                  📢 This course will be free. Learners can enroll without payment.
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Thumbnail */}
@@ -527,13 +559,13 @@ const CreateCourse = () => {
               </div>
               
               <div className="preview-price">
-                {courseData.price === 0 ? (
-                  <span className="free-badge">FREE</span>
-                ) : (
+                {courseData.is_paid && courseData.price > 0 ? (
                   <span className="price-badge">
                     {currencies.find(c => c.value === courseData.currency)?.symbol}
                     {courseData.price.toLocaleString()}
                   </span>
+                ) : (
+                  <span className="free-badge">FREE</span>
                 )}
               </div>
             </div>

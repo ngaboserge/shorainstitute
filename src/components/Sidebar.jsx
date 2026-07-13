@@ -13,7 +13,8 @@ import {
   HelpCircle,
   LogOut,
   Search,
-  User
+  User,
+  DollarSign
 } from 'lucide-react'
 import './Sidebar.css'
 
@@ -44,6 +45,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/trainer/manage-seminars', icon: Video, label: 'Manage Seminars' },
     { path: '/trainer/manage-paths', icon: BarChart3, label: 'Learning Paths' },
     { path: '/trainer/manage-resources', icon: BookOpen, label: 'Manage Resources' },
+    { path: '/trainer/payment-approvals', icon: DollarSign, label: 'Payment Approvals' },
     { path: '/trainer/proposals', icon: BookOpen, label: 'Proposals' },
     { path: '/trainer/qa', icon: HelpCircle, label: 'Learner Q&A' },
     { path: '/trainer/analytics', icon: BarChart3, label: 'Analytics' },

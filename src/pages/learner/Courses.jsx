@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Search, Filter, Play, Clock, Award, BookOpen, Star, TrendingUp, ChevronRight } from 'lucide-react'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
+import PaymentModal from '../../components/PaymentModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './Courses.css'
@@ -15,6 +16,8 @@ const Courses = () => {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
 
   // Reload data when returning to this page
   useEffect(() => {
