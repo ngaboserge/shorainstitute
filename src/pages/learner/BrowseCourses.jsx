@@ -143,7 +143,8 @@ const BrowseCourses = () => {
   }
 
   return (
-    <ResponsiveLayout 
+    <>
+      <ResponsiveLayout 
       title="Browse Courses"
       subtitle="Discover courses to expand your financial knowledge."
       type="learner"
