@@ -101,10 +101,10 @@ const LearnerLogin = () => {
         {/* Role Switcher at Top */}
         <div className="role-switcher">
           <Link to="/auth/learner/login" className="role-btn active">
-            👨‍🎓 Learner Login
+            Learner Login
           </Link>
           <Link to="/auth/trainer/login" className="role-btn">
-            👨‍🏫 Trainer Login
+            Trainer Login
           </Link>
         </div>
 
