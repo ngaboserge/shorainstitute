@@ -59,20 +59,26 @@
   align-items: center;
 }
 
-.input-with-icon > svg:first-child {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  pointer-events: none;
-  z-index: 1;
+.input-with-icon > svg {
+  position: absolute !important;
+  left: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #999 !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
+.input-with-icon > svg:last-child {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
 }
 
 .input-with-icon input {
   width: 100%;
-  padding: 14px 50px 14px 16px;
-  padding-left: 48px;
+  padding: 14px 50px 14px 48px !important;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 15px;
