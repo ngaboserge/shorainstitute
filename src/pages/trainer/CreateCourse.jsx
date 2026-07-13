@@ -58,7 +58,22 @@ const CreateCourse = () => {
 
   // Handle input changes
   const handleChange = (field, value) => {
-    setCourseData(prev => ({ ...prev, [field]: value }))
+    setCourseData(prev => {
+      const updated = { ...prev, [field]: value }
+      
+      // Auto-enable is_paid when price is set above 0
+      if (field === 'price' && value > 0 && !prev.is_paid) {
+        updated.is_paid = true
+      }
+      
+      // Auto-disable is_paid when price is set to 0
+      if (field === 'price' && value === 0) {
+        updated.is_paid = false
+      }
+      
+      return updated
+    })
+    
     // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }))
@@ -415,7 +430,11 @@ const CreateCourse = () => {
                 />
                 <span>This is a paid course</span>
               </label>
-              <p className="help-text">Check this box if learners need to pay to enroll</p>
+              <p className="help-text">
+                {courseData.is_paid 
+                  ? '✓ Learners will need to pay and get approval before enrolling' 
+                  : 'Learners can enroll for free instantly'}
+              </p>
             </div>
 
             {courseData.is_paid && (
