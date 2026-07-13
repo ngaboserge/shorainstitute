@@ -207,9 +207,9 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="course-resume-content">
-                      <div className="course-category">IN PROGRESS</div>
-                      <h4 className="course-resume-title">{currentCourse.title}</h4>
-                      <div className="course-instructor-small">
+                      <div className="course-category" style={{color: '#0B4F9F'}}>IN PROGRESS</div>
+                      <h4 className="course-resume-title" style={{color: '#1a1a1a', fontSize: '20px', fontWeight: '700'}}>{currentCourse.title}</h4>
+                      <div className="course-instructor-small" style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px'}}>
                         <div style={{
                           width: '32px',
                           height: '32px',
@@ -224,23 +224,23 @@ const Dashboard = () => {
                         }}>
                           {currentCourse.instructor?.charAt(0) || 'T'}
                         </div>
-                        <span>{currentCourse.instructor || 'Instructor'}</span>
+                        <span style={{color: '#666', fontSize: '14px', fontWeight: '500'}}>{currentCourse.instructor || 'Instructor'}</span>
                       </div>
                       <div className="progress-section">
-                        <div className="progress-header">
-                          <span className="progress-label">Your Progress</span>
-                          <span className="progress-percent">{currentCourse.progress}% complete</span>
+                        <div className="progress-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
+                          <span className="progress-label" style={{color: '#666', fontSize: '13px', fontWeight: '600'}}>Your Progress</span>
+                          <span className="progress-percent" style={{color: '#0B4F9F', fontSize: '13px', fontWeight: '700'}}>{currentCourse.progress}% complete</span>
                         </div>
                         <div className="progress-bar-large">
                           <div className="progress-fill" style={{width: `${currentCourse.progress}%`}}></div>
                         </div>
-                        <div className="lessons-info">
+                        <div className="lessons-info" style={{color: '#666', fontSize: '13px', marginTop: '8px'}}>
                           {currentCourse.completedLessons} of {currentCourse.totalLessons} lessons completed
                         </div>
                       </div>
-                      <div className="next-lesson-info">
-                        <div className="next-lesson-label">NEXT LESSON</div>
-                        <div className="next-lesson-title">{currentCourse.nextLesson?.title || 'Start first lesson'}</div>
+                      <div className="next-lesson-info" style={{padding: '16px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '16px', marginTop: '16px'}}>
+                        <div className="next-lesson-label" style={{color: '#0B4F9F', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px'}}>NEXT LESSON</div>
+                        <div className="next-lesson-title" style={{color: '#1a1a1a', fontSize: '15px', fontWeight: '600'}}>{currentCourse.nextLesson?.title || 'Start first lesson'}</div>
                       </div>
                       <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson?.id}`} className="btn btn-primary btn-full">
                         Continue Learning →

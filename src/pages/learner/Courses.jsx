@@ -309,9 +309,9 @@ const Courses = () => {
                           <div className="progress-number">{course.progress}%</div>
                         </div>
                       </div>
-                      <div className="course-content-horizontal">
-                        <div className="course-category-badge">{course.category}</div>
-                        <h3 className="course-title-horizontal">{course.title}</h3>
+                      <div className="course-content-horizontal" style={{color: '#1a1a1a'}}>
+                        <div className="course-category-badge" style={{color: '#0B4F9F', background: '#e3f2fd', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', marginBottom: '12px', width: 'fit-content'}}>{course.category}</div>
+                        <h3 style={{fontSize: '22px', fontWeight: '700', color: '#1a1a1a', marginBottom: '12px', lineHeight: '1.3'}}>{course.title}</h3>
                         <div className="course-instructor-horizontal">
                           <div style={{
                             width: '32px',
@@ -327,27 +327,27 @@ const Courses = () => {
                           }}>
                             {course.instructor?.charAt(0) || 'T'}
                           </div>
-                          <span>{course.instructor || 'Instructor'}</span>
+                          <span style={{fontSize: '14px', color: '#666', fontWeight: '500'}}>{course.instructor || 'Instructor'}</span>
                         </div>
                         <div className="progress-info-horizontal">
                           <div className="progress-bar-container">
                             <div className="progress-bar-horizontal">
                               <div className="progress-fill" style={{width: `${course.progress}%`}}></div>
                             </div>
-                            <div className="progress-text">
+                            <div style={{fontSize: '13px', color: '#666', fontWeight: '500'}}>
                               {course.completedLessons} of {course.totalLessons} lessons • {course.progress}% complete
                             </div>
                           </div>
                         </div>
-                        <div className="next-lesson-horizontal">
-                          <div className="next-label">NEXT UP:</div>
-                          <div className="next-text">{course.nextLesson?.title || 'Start first lesson'}</div>
+                        <div style={{padding: '16px', background: '#f5f7fa', borderRadius: '10px', marginBottom: '20px'}}>
+                          <div style={{fontSize: '11px', fontWeight: '700', color: '#0B4F9F', letterSpacing: '1px', marginBottom: '6px'}}>NEXT UP:</div>
+                          <div style={{fontSize: '15px', fontWeight: '600', color: '#1a1a1a'}}>{course.nextLesson?.title || 'Start first lesson'}</div>
                         </div>
                         <div className="course-actions-horizontal">
                           <Link to={`/learner/courses/${course.id}/lesson/${course.nextLesson?.id}`} className="btn btn-primary">
                             Continue Learning →
                           </Link>
-                          <div className="last-accessed">Last accessed {course.lastAccessed}</div>
+                          <div className="last-accessed" style={{color: '#999'}}>Last accessed {course.lastAccessed}</div>
                         </div>
                       </div>
                     </div>
@@ -420,9 +420,9 @@ const Courses = () => {
                           <span>Completed</span>
                         </div>
                       </div>
-                      <div className="course-content-standard">
-                        <div className="course-category-badge">{course.category}</div>
-                        <h3 className="course-title-standard">{course.title}</h3>
+                      <div className="course-content-standard" style={{color: '#1a1a1a'}}>
+                        <div className="course-category-badge" style={{color: '#0B4F9F'}}>{course.category}</div>
+                        <h3 className="course-title-standard" style={{color: '#1a1a1a'}}>{course.title}</h3>
                         <div className="course-instructor-standard">
                           <div style={{
                             width: '28px',
@@ -438,13 +438,13 @@ const Courses = () => {
                           }}>
                             {course.instructor?.charAt(0) || 'T'}
                           </div>
-                          <span>{course.instructor || 'Instructor'}</span>
+                          <span style={{color: '#666'}}>{course.instructor || 'Instructor'}</span>
                         </div>
                         <div className="completion-info">
-                          <div className="completion-date">
+                          <div className="completion-date" style={{color: '#4caf50'}}>
                             Completed on {formatDate(course.completedDate)}
                           </div>
-                          <div className="course-duration">
+                          <div className="course-duration" style={{color: '#666'}}>
                             <Clock size={14} />
                             <span>{formatDuration(course.duration)}</span>
                           </div>
@@ -500,9 +500,9 @@ const Courses = () => {
                           <span>Pending</span>
                         </div>
                       </div>
-                      <div className="course-content-standard">
-                        <div className="course-category-badge">{course.category}</div>
-                        <h3 className="course-title-standard">{course.title}</h3>
+                      <div className="course-content-standard" style={{color: '#1a1a1a'}}>
+                        <div className="course-category-badge" style={{color: '#0B4F9F'}}>{course.category}</div>
+                        <h3 className="course-title-standard" style={{color: '#1a1a1a'}}>{course.title}</h3>
                         <div className="course-instructor-standard">
                           <div style={{
                             width: '28px',
@@ -518,7 +518,7 @@ const Courses = () => {
                           }}>
                             {course.instructor?.charAt(0) || 'T'}
                           </div>
-                          <span>{course.instructor || 'Instructor'}</span>
+                          <span style={{color: '#666'}}>{course.instructor || 'Instructor'}</span>
                         </div>
                         <div style={{
                           padding: '12px',
