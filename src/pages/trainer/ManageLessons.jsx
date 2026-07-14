@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Plus, Edit2, Trash2, GripVertical, ArrowLeft, Eye, Save, X, Upload as UploadIcon } from 'lucide-react'
+import { Plus, Edit2, Trash2, GripVertical, ArrowLeft, Eye, Save, X, Upload as UploadIcon, FileText, BookOpen } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import UploadVideoModal from '../../components/UploadVideoModal'
@@ -18,6 +18,12 @@ const ManageLessons = () => {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [editingLesson, setEditingLesson] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [lessonDetails, setLessonDetails] = useState(null)
+  const [learningObjectives, setLearningObjectives] = useState([])
+  const [newObjective, setNewObjective] = useState('')
+  const [lessonResources, setLessonResources] = useState([])
+  const [newResource, setNewResource] = useState({ title: '', file_url: '', file_type: '', description: '' })
   
   // Use authenticated user ID
   const instructorId = user?.id
@@ -68,6 +74,124 @@ const ManageLessons = () => {
       status: 'draft'
     })
     setShowAddLesson(true)
+  }
+
+  // Open lesson details editor
+  const handleEditDetails = async (lesson) => {
+    setLessonDetails(lesson)
+    setLearningObjectives(lesson.learning_objectives || [])
+    setNewObjective('')
+    
+    // Load existing resources
+    try {
+      const { data, error } = await supabase
+        .from('lesson_resources')
+        .select('*')
+        .eq('lesson_id', lesson.id)
+        .order('order_number')
+      
+      if (error) throw error
+      setLessonResources(data || [])
+    } catch (error) {
+      console.error('Error loading resources:', error)
+      setLessonResources([])
+    }
+    
+    setNewResource({ title: '', file_url: '', file_type: '', description: '' })
+    setShowDetailsModal(true)
+  }
+
+  // Add learning objective
+  const addObjective = () => {
+    if (!newObjective.trim()) return
+    setLearningObjectives([...learningObjectives, newObjective.trim()])
+    setNewObjective('')
+  }
+
+  // Remove learning objective
+  const removeObjective = (index) => {
+    setLearningObjectives(learningObjectives.filter((_, i) => i !== index))
+  }
+
+  // Add resource
+  const addResource = async () => {
+    if (!newResource.title.trim() || !newResource.file_url.trim()) {
+      alert('Resource title and URL are required')
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('lesson_resources')
+        .insert({
+          lesson_id: lessonDetails.id,
+          course_id: courseId,
+          title: newResource.title.trim(),
+          description: newResource.description.trim(),
+          file_url: newResource.file_url.trim(),
+          file_type: newResource.file_type.trim() || 'PDF',
+          order_number: lessonResources.length + 1,
+          created_by: user.id
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setLessonResources([...lessonResources, data])
+      setNewResource({ title: '', file_url: '', file_type: '', description: '' })
+      alert('Resource added successfully!')
+    } catch (error) {
+      console.error('Error adding resource:', error)
+      alert('Failed to add resource')
+    }
+  }
+
+  // Delete resource
+  const deleteResource = async (resourceId) => {
+    if (!confirm('Delete this resource?')) return
+
+    try {
+      const { error } = await supabase
+        .from('lesson_resources')
+        .delete()
+        .eq('id', resourceId)
+
+      if (error) throw error
+
+      setLessonResources(lessonResources.filter(r => r.id !== resourceId))
+      alert('Resource deleted!')
+    } catch (error) {
+      console.error('Error deleting resource:', error)
+      alert('Failed to delete resource')
+    }
+  }
+
+  // Save lesson details
+  const saveLessonDetails = async () => {
+    if (!lessonDetails.description.trim()) {
+      alert('Lesson description is required')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('lessons')
+        .update({
+          description: lessonDetails.description,
+          learning_objectives: learningObjectives.length > 0 ? learningObjectives : null
+        })
+        .eq('id', lessonDetails.id)
+
+      if (error) throw error
+
+      alert('Lesson details saved successfully!')
+      setShowDetailsModal(false)
+      loadData() // Refresh data
+    } catch (error) {
+      console.error('Error saving lesson details:', error)
+      alert('Failed to save lesson details')
+    }
   }
 
   // Save lesson
@@ -376,6 +500,13 @@ const ManageLessons = () => {
                     )}
                     <button
                       className="action-btn"
+                      onClick={() => handleEditDetails(lesson)}
+                      title="Edit lesson details, objectives & resources"
+                    >
+                      <FileText size={18} />
+                    </button>
+                    <button
+                      className="action-btn"
                       onClick={() => handleAddVideo(lesson)}
                       title={lesson.video_url ? 'Change video' : 'Add video'}
                     >
@@ -384,7 +515,7 @@ const ManageLessons = () => {
                     <button
                       className="action-btn"
                       onClick={() => handleEditLesson(lesson)}
-                      title="Edit lesson"
+                      title="Edit lesson title"
                     >
                       <Edit2 size={18} />
                     </button>
@@ -539,6 +670,216 @@ const ManageLessons = () => {
             setSelectedLesson(null)
           }}
         />
+      )}
+
+      {/* Lesson Details Modal */}
+      {showDetailsModal && lessonDetails && (
+        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="modal-container large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Lesson Details - {lessonDetails.title}</h3>
+              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{maxHeight: '600px', overflowY: 'auto'}}>
+              {/* Description */}
+              <div className="form-group">
+                <label>Lesson Description *</label>
+                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
+                  Explain what learners will discover in this lesson
+                </p>
+                <textarea
+                  placeholder="In this lesson, you'll learn..."
+                  value={lessonDetails.description || ''}
+                  onChange={(e) => setLessonDetails({...lessonDetails, description: e.target.value})}
+                  rows={6}
+                  style={{width: '100%', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                />
+              </div>
+
+              {/* Learning Objectives */}
+              <div className="form-group">
+                <label>Learning Objectives</label>
+                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
+                  What specific skills or knowledge will learners gain?
+                </p>
+                
+                {learningObjectives.length > 0 && (
+                  <div style={{marginBottom: '12px'}}>
+                    {learningObjectives.map((objective, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        background: '#f5f7fa',
+                        borderRadius: '6px',
+                        marginBottom: '8px'
+                      }}>
+                        <span style={{flex: 1, fontSize: '14px'}}>{objective}</span>
+                        <button
+                          onClick={() => removeObjective(idx)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#f44336',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            padding: '0 8px'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <input
+                    type="text"
+                    placeholder="e.g., Understand the concept of diversification"
+                    value={newObjective}
+                    onChange={(e) => setNewObjective(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addObjective()}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <button
+                    onClick={addObjective}
+                    className="btn btn-secondary"
+                    disabled={!newObjective.trim()}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Resources */}
+              <div className="form-group">
+                <label>Downloadable Resources</label>
+                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
+                  Attach files that learners can download (PDFs, spreadsheets, etc.)
+                </p>
+
+                {lessonResources.length > 0 && (
+                  <div style={{marginBottom: '16px'}}>
+                    {lessonResources.map((resource) => (
+                      <div key={resource.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        background: '#f5f7fa',
+                        borderRadius: '8px',
+                        marginBottom: '8px',
+                        border: '1px solid #e0e0e0'
+                      }}>
+                        <FileText size={20} color="#0B4F9F" />
+                        <div style={{flex: 1}}>
+                          <div style={{fontWeight: '600', fontSize: '14px', marginBottom: '4px'}}>
+                            {resource.title}
+                          </div>
+                          <div style={{fontSize: '12px', color: '#666'}}>
+                            {resource.file_type} • {resource.description || 'No description'}
+                          </div>
+                          <a
+                            href={resource.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{fontSize: '12px', color: '#0B4F9F', textDecoration: 'none'}}
+                          >
+                            View file →
+                          </a>
+                        </div>
+                        <button
+                          onClick={() => deleteResource(resource.id)}
+                          style={{
+                            background: '#ffebee',
+                            border: 'none',
+                            color: '#f44336',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db'}}>
+                  <h4 style={{fontSize: '14px', marginBottom: '12px', fontWeight: '600'}}>Add New Resource</h4>
+                  
+                  <div style={{display: 'grid', gap: '12px'}}>
+                    <input
+                      type="text"
+                      placeholder="Resource title (e.g., Lesson Slides)"
+                      value={newResource.title}
+                      onChange={(e) => setNewResource({...newResource, title: e.target.value})}
+                      style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                    />
+                    
+                    <input
+                      type="text"
+                      placeholder="File URL (https://...)"
+                      value={newResource.file_url}
+                      onChange={(e) => setNewResource({...newResource, file_url: e.target.value})}
+                      style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                    />
+                    
+                    <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px'}}>
+                      <input
+                        type="text"
+                        placeholder="Type (PDF, XLSX, etc.)"
+                        value={newResource.file_type}
+                        onChange={(e) => setNewResource({...newResource, file_type: e.target.value})}
+                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                      />
+                      
+                      <input
+                        type="text"
+                        placeholder="Description (optional)"
+                        value={newResource.description}
+                        onChange={(e) => setNewResource({...newResource, description: e.target.value})}
+                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={addResource}
+                      className="btn btn-primary"
+                      disabled={!newResource.title.trim() || !newResource.file_url.trim()}
+                    >
+                      Add Resource
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowDetailsModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={saveLessonDetails}>
+                <Save size={18} />
+                <span>Save Lesson Details</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
