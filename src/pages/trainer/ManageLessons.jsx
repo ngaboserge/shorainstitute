@@ -500,9 +500,27 @@ const ManageLessons = () => {
                       </button>
                     )}
                     <button
+                      className="btn btn-secondary"
+                      onClick={() => handleEditDetails(lesson)}
+                      title="Edit lesson details, objectives & resources"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <FileText size={16} />
+                      <span>Edit Details</span>
+                    </button>
+                    <button
                       className="action-btn"
                       onClick={() => handleEditDetails(lesson)}
                       title="Edit lesson details, objectives & resources"
+                      style={{display: 'none'}}
                     >
                       <FileText size={18} />
                     </button>

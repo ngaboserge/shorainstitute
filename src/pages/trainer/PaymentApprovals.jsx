@@ -54,20 +54,24 @@ const PaymentApprovals = () => {
       // Filter to show only payments for this trainer's courses
       let filtered = data?.filter(p => p.courses?.instructor_id === user.id) || []
       
-      // Fetch learner details from profiles table
+      // Fetch learner emails using custom function
       if (filtered.length > 0) {
-        const userIds = [...new Set(filtered.map(p => p.user_id))]
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, email, full_name')
-          .in('id', userIds)
+        const enrichedPayments = await Promise.all(
+          filtered.map(async (payment) => {
+            const { data: emailData, error } = await supabase
+              .rpc('get_user_email', { user_id: payment.user_id })
+            
+            const learnerEmail = emailData || `User ${payment.user_id.slice(0, 13)}...`
+            
+            return {
+              ...payment,
+              learner_email: learnerEmail,
+              learner_name: learnerEmail
+            }
+          })
+        )
         
-        // Enrich payments with user data
-        filtered = filtered.map(payment => ({
-          ...payment,
-          learner_email: profiles?.find(p => p.id === payment.user_id)?.email || 'Unknown',
-          learner_name: profiles?.find(p => p.id === payment.user_id)?.full_name || 'Unknown'
-        }))
+        filtered = enrichedPayments
       }
       
       setPayments(filtered)

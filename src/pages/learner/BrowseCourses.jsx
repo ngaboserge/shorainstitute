@@ -80,13 +80,14 @@ const BrowseCourses = () => {
       return
     }
 
-    // Check if already enrolled
+    // Check if already enrolled (excluding rejected)
     const { data: existingEnrollment } = await supabase
       .from('enrollments')
-      .select('id, payment_status')
+      .select('id, payment_status, payment_id')
       .eq('user_id', user.id)
       .eq('course_id', course.id)
-      .single()
+      .neq('payment_status', 'rejected')  // Exclude rejected enrollments
+      .maybeSingle()  // Use maybeSingle() to avoid error if no rows
 
     if (existingEnrollment) {
       if (existingEnrollment.payment_status === 'pending') {
@@ -95,6 +96,23 @@ const BrowseCourses = () => {
         navigate(`/learner/courses`)
       }
       return
+    }
+
+    // Also check if there's a rejected payment (shouldn't exist but double check)
+    const { data: rejectedPayment } = await supabase
+      .from('course_payments')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('course_id', course.id)
+      .eq('status', 'rejected')
+      .maybeSingle()
+
+    if (rejectedPayment) {
+      // Clean up the rejected payment record to allow re-enrollment
+      await supabase
+        .from('course_payments')
+        .delete()
+        .eq('id', rejectedPayment.id)
     }
 
     // Check if course is paid

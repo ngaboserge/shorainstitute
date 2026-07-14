@@ -158,6 +158,18 @@
   transition: all 0.3s;
 }
 
+/* Force all text inside course cards to be visible */
+.course-card-horizontal * {
+  color: inherit;
+}
+
+.course-card-horizontal h3,
+.course-card-horizontal h4,
+.course-card-horizontal span,
+.course-card-horizontal div {
+  color: #1a1a1a !important;
+}
+
 .course-card-horizontal:hover {
   box-shadow: 0 8px 32px rgba(0,0,0,0.12);
   transform: translateY(-2px);
@@ -236,13 +248,14 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  color: #1a1a1a; /* Ensure text is dark */
 }
 
 .course-category-badge {
   display: inline-block;
   padding: 6px 12px;
   background: #e3f2fd;
-  color: #0B4F9F;
+  color: #0B4F9F !important; /* Force blue color */
   border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
@@ -255,7 +268,7 @@
 .course-title-horizontal {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #1a1a1a !important; /* Force dark color */
   margin-bottom: 12px;
   line-height: 1.3;
 }
@@ -275,7 +288,7 @@
 
 .course-instructor-horizontal span {
   font-size: 14px;
-  color: #666;
+  color: #666 !important; /* Force gray color */
   font-weight: 500;
 }
 
@@ -297,7 +310,7 @@
 
 .progress-text {
   font-size: 13px;
-  color: #666;
+  color: #666 !important; /* Force gray color */
 }
 
 .next-lesson-horizontal {
@@ -310,7 +323,7 @@
 .next-label {
   font-size: 11px;
   font-weight: 700;
-  color: #0B4F9F;
+  color: #0B4F9F !important; /* Force blue color */
   letter-spacing: 1px;
   margin-bottom: 6px;
 }
@@ -318,7 +331,7 @@
 .next-text {
   font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1a1a1a !important; /* Force dark color */
 }
 
 .course-actions-horizontal {
@@ -590,4 +603,26 @@
   .search-box-small {
     min-width: 100%;
   }
+}
+
+
+/* NUCLEAR FIX - Force all text to be visible */
+.courses-list-vertical .course-card-horizontal * {
+  color: #1a1a1a !important;
+}
+
+.courses-list-vertical .course-instructor-horizontal span {
+  color: #666 !important;
+}
+
+.courses-list-vertical .next-label {
+  color: #0B4F9F !important;
+}
+
+.courses-list-vertical .progress-text {
+  color: #666 !important;
+}
+
+.courses-list-vertical .last-accessed {
+  color: #999 !important;
 }
