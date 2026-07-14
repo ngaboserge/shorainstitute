@@ -22,6 +22,7 @@ const CourseLesson = () => {
   const [lessonResources, setLessonResources] = useState([])
   const [lessonNotes, setLessonNotes] = useState([])
   const [newNote, setNewNote] = useState('')
+  const [activeTab, setActiveTab] = useState('overview')
 
   // Load all data
   useEffect(() => {
@@ -528,15 +529,24 @@ const CourseLesson = () => {
         {/* Tabbed Content Below Video */}
         <div className="lesson-tabs-section">
           <div className="lesson-tabs">
-            <button className="lesson-tab active">
+            <button 
+              className={`lesson-tab ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
               <FileText size={18} />
               <span>Overview</span>
             </button>
-            <button className="lesson-tab">
+            <button 
+              className={`lesson-tab ${activeTab === 'resources' ? 'active' : ''}`}
+              onClick={() => setActiveTab('resources')}
+            >
               <BookOpen size={18} />
               <span>Resources</span>
             </button>
-            <button className="lesson-tab">
+            <button 
+              className={`lesson-tab ${activeTab === 'discussion' ? 'active' : ''}`}
+              onClick={() => setActiveTab('discussion')}
+            >
               <MessageSquare size={18} />
               <span>Discussion</span>
             </button>
@@ -544,7 +554,7 @@ const CourseLesson = () => {
 
           <div className="lesson-tab-content">
             {/* Overview Tab */}
-            <div className="overview-tab">
+            {activeTab === 'overview' && (
               <div className="overview-main">
                 <h4>Lesson Description</h4>
                 <p className="lesson-description">
@@ -694,6 +704,108 @@ const CourseLesson = () => {
                 </div>
               </div>
             </div>
+            )}
+
+            {/* Resources Tab */}
+            {activeTab === 'resources' && (
+              <div className="resources-tab">
+                <h3 style={{marginBottom: '24px', fontSize: '24px', fontWeight: '700'}}>Lesson Resources</h3>
+                
+                {lessonResources.length > 0 ? (
+                  <div style={{display: 'grid', gap: '16px'}}>
+                    {lessonResources.map((resource) => (
+                      <div key={resource.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '20px',
+                        background: 'white',
+                        borderRadius: '12px',
+                        border: '1px solid #e0e0e0',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                      }}>
+                        <div style={{
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: '12px',
+                          background: '#e3f2fd',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <FileText size={28} color="#0B4F9F" />
+                        </div>
+                        <div style={{flex: 1}}>
+                          <h4 style={{fontSize: '16px', fontWeight: '600', marginBottom: '4px', color: '#1a1a1a'}}>
+                            {resource.title}
+                          </h4>
+                          {resource.description && (
+                            <p style={{fontSize: '14px', color: '#666', marginBottom: '8px'}}>
+                              {resource.description}
+                            </p>
+                          )}
+                          <div style={{fontSize: '13px', color: '#999'}}>
+                            {resource.file_type} • {formatFileSize(resource.file_size_bytes)}
+                          </div>
+                        </div>
+                        <a 
+                          href={resource.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-primary"
+                          style={{whiteSpace: 'nowrap'}}
+                        >
+                          Download
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    background: 'white',
+                    borderRadius: '12px',
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    <FileText size={64} color="#ccc" style={{margin: '0 auto 16px'}} />
+                    <h4 style={{fontSize: '18px', fontWeight: '600', color: '#666', marginBottom: '8px'}}>
+                      No Resources Available
+                    </h4>
+                    <p style={{fontSize: '14px', color: '#999'}}>
+                      The instructor hasn't added any downloadable resources for this lesson yet.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Discussion Tab */}
+            {activeTab === 'discussion' && (
+              <div className="discussion-tab">
+                <h3 style={{marginBottom: '24px', fontSize: '24px', fontWeight: '700'}}>Lesson Discussion</h3>
+                
+                <div style={{
+                  textAlign: 'center',
+                  padding: '60px 20px',
+                  background: 'white',
+                  borderRadius: '12px',
+                  border: '1px solid #e0e0e0'
+                }}>
+                  <MessageSquare size={64} color="#ccc" style={{margin: '0 auto 16px'}} />
+                  <h4 style={{fontSize: '18px', fontWeight: '600', color: '#666', marginBottom: '8px'}}>
+                    Discussion Feature Coming Soon
+                  </h4>
+                  <p style={{fontSize: '14px', color: '#999', marginBottom: '24px'}}>
+                    Soon you'll be able to ask questions and discuss this lesson with other learners and your instructor.
+                  </p>
+                  <button className="btn btn-secondary" disabled style={{opacity: 0.5}}>
+                    <MessageSquare size={16} />
+                    Start a Discussion
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
