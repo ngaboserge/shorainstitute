@@ -555,9 +555,10 @@ const CourseLesson = () => {
           <div className="lesson-tab-content">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
-              <div className="overview-main">
-                <h4>Lesson Description</h4>
-                <p className="lesson-description">
+              <div className="overview-tab">
+                <div className="overview-main">
+                  <h4>Lesson Description</h4>
+                  <p className="lesson-description">
                   {currentLesson?.description || 'No description available for this lesson.'}
                 </p>
 
