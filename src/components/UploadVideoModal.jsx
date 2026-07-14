@@ -133,19 +133,27 @@ const UploadVideoModal = ({
     setUploading(true)
     
     try {
+      // Fetch video duration from YouTube (using a simple approach)
+      // Note: For production, you'd want to use YouTube Data API v3
+      // For now, we'll set a default duration and trainers can update it manually
+      
+      const durationSeconds = 600 // Default 10 minutes - trainers can edit this
+      
       // Save to database
       const { error: updateError } = await supabase
         .from('lessons')
         .update({
           video_type: 'youtube',
           video_id: videoId,
-          video_url: youtubeUrl
+          video_url: youtubeUrl,
+          duration_seconds: durationSeconds
         })
         .eq('id', lessonId)
       
       if (updateError) throw updateError
       
       setUploading(false)
+      alert('Video added! Note: Duration set to 10 minutes by default. You can update it in the lesson details.')
       onUploadComplete?.()
       
     } catch (error) {

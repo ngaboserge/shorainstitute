@@ -179,7 +179,8 @@ const ManageLessons = () => {
         .from('lessons')
         .update({
           description: lessonDetails.description,
-          learning_objectives: learningObjectives.length > 0 ? learningObjectives : null
+          learning_objectives: learningObjectives.length > 0 ? learningObjectives : null,
+          duration_seconds: lessonDetails.duration_seconds || 0
         })
         .eq('id', lessonDetails.id)
 
@@ -684,6 +685,29 @@ const ManageLessons = () => {
             </div>
 
             <div className="modal-body" style={{maxHeight: '600px', overflowY: 'auto'}}>
+              {/* Duration */}
+              <div className="form-group">
+                <label>Video Duration (in minutes)</label>
+                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
+                  Enter the video length in minutes
+                </p>
+                <input
+                  type="number"
+                  placeholder="e.g., 15"
+                  value={lessonDetails.duration_seconds ? Math.round(lessonDetails.duration_seconds / 60) : ''}
+                  onChange={(e) => {
+                    const minutes = parseInt(e.target.value) || 0
+                    setLessonDetails({...lessonDetails, duration_seconds: minutes * 60})
+                  }}
+                  style={{width: '200px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
+                  min="0"
+                  max="300"
+                />
+                <span style={{marginLeft: '8px', fontSize: '13px', color: '#666'}}>
+                  minutes ({lessonDetails.duration_seconds ? Math.floor(lessonDetails.duration_seconds / 60) + ':' + String(lessonDetails.duration_seconds % 60).padStart(2, '0') : '0:00'})
+                </span>
+              </div>
+
               {/* Description */}
               <div className="form-group">
                 <label>Lesson Description *</label>
