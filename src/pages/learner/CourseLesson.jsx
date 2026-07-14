@@ -19,6 +19,9 @@ const CourseLesson = () => {
   const [loading, setLoading] = useState(true)
   const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
   const [isEnrolled, setIsEnrolled] = useState(false)
+  const [lessonResources, setLessonResources] = useState([])
+  const [lessonNotes, setLessonNotes] = useState([])
+  const [newNote, setNewNote] = useState('')
 
   // Load all data
   useEffect(() => {
@@ -26,6 +29,84 @@ const CourseLesson = () => {
       loadAllData()
     }
   }, [id, lessonId, user])
+
+  // Load lesson resources
+  const loadLessonResources = async () => {
+    if (!lessonId) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('lesson_resources')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('order_number')
+      
+      if (error) throw error
+      setLessonResources(data || [])
+    } catch (error) {
+      console.error('Error loading lesson resources:', error)
+    }
+  }
+
+  // Load lesson notes
+  const loadLessonNotes = async () => {
+    if (!lessonId || !user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('lesson_notes')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .eq('user_id', user.id)
+        .order('timestamp_seconds')
+      
+      if (error) throw error
+      setLessonNotes(data || [])
+    } catch (error) {
+      console.error('Error loading lesson notes:', error)
+    }
+  }
+
+  // Add a new note
+  const handleAddNote = async () => {
+    if (!newNote.trim() || !user || !lessonId) return
+    
+    try {
+      const { error } = await supabase
+        .from('lesson_notes')
+        .insert({
+          user_id: user.id,
+          lesson_id: lessonId,
+          course_id: id,
+          timestamp_seconds: 0, // TODO: Get current video timestamp
+          note_text: newNote.trim()
+        })
+      
+      if (error) throw error
+      
+      setNewNote('')
+      await loadLessonNotes()
+    } catch (error) {
+      console.error('Error adding note:', error)
+      alert('Failed to add note')
+    }
+  }
+
+  // Delete a note
+  const handleDeleteNote = async (noteId) => {
+    try {
+      const { error } = await supabase
+        .from('lesson_notes')
+        .delete()
+        .eq('id', noteId)
+      
+      if (error) throw error
+      await loadLessonNotes()
+    } catch (error) {
+      console.error('Error deleting note:', error)
+      alert('Failed to delete note')
+    }
+  }
 
   // Mark lesson as complete
   const handleMarkComplete = async () => {
@@ -237,6 +318,11 @@ const CourseLesson = () => {
       console.error('Error loading data:', error)
     } finally {
       setLoading(false)
+      // Load resources and notes after main data is loaded
+      if (lessonId) {
+        loadLessonResources()
+        loadLessonNotes()
+      }
     }
   }
 
@@ -298,16 +384,20 @@ const CourseLesson = () => {
 
   const currentLessonNumber = lessons.findIndex(l => l.id === lessonId) + 1
 
-  const resources = [
-    { name: 'Lesson Slides (PDF)', type: 'PDF', size: '2.4 MB' },
-    { name: 'Portfolio Template (Excel)', type: 'XLSX', size: '145 KB' },
-    { name: 'Key Concepts Summary', type: 'PDF', size: '890 KB' }
-  ]
+  // Helper functions for formatting
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 KB'
+    const kb = bytes / 1024
+    const mb = kb / 1024
+    if (mb >= 1) return `${mb.toFixed(1)} MB`
+    return `${kb.toFixed(0)} KB`
+  }
 
-  const notes = [
-    { time: '02:15', text: 'Remember: Diversification reduces unsystematic risk' },
-    { time: '08:42', text: 'Asset allocation rule of thumb: 100 - age = % stocks' }
-  ]
+  const formatTimestamp = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   return (
     <div className="lesson-layout">
@@ -456,76 +546,96 @@ const CourseLesson = () => {
             {/* Overview Tab */}
             <div className="overview-tab">
               <div className="overview-main">
-                <h3>Lesson Overview</h3>
+                <h4>Lesson Description</h4>
                 <p className="lesson-description">
-                  In this lesson, you'll learn about the fundamental principles of diversification and how 
-                  spreading investments across different asset classes can help reduce risk while maintaining 
-                  potential returns. We'll explore practical strategies for building a well-diversified portfolio 
-                  that aligns with your financial goals and risk tolerance.
+                  {currentLesson?.description || 'No description available for this lesson.'}
                 </p>
 
-                <h4>What You'll Learn</h4>
-                <ul className="learning-objectives">
-                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> The concept of diversification and why it matters</li>
-                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Different types of diversification strategies</li>
-                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> How to spread risk across asset classes</li>
-                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Common diversification mistakes to avoid</li>
-                  <li><Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} /> Building a diversified portfolio for your goals</li>
-                </ul>
-
-                <h4>Key Concepts</h4>
-                <div className="key-concepts-grid">
-                  <div className="concept-card">
-                    <div className="concept-icon">
-                      <BarChart3 size={32} color="#0B4F9F" />
-                    </div>
-                    <div className="concept-title">Asset Allocation</div>
-                    <p>Distributing investments across different asset classes</p>
-                  </div>
-                  <div className="concept-card">
-                    <div className="concept-icon">
-                      <Scale size={32} color="#0B4F9F" />
-                    </div>
-                    <div className="concept-title">Risk Management</div>
-                    <p>Reducing portfolio volatility through diversification</p>
-                  </div>
-                  <div className="concept-card">
-                    <div className="concept-icon">
-                      <Target size={32} color="#0B4F9F" />
-                    </div>
-                    <div className="concept-title">Portfolio Balance</div>
-                    <p>Maintaining optimal mix of investments</p>
-                  </div>
-                </div>
+                {currentLesson?.learning_objectives && currentLesson.learning_objectives.length > 0 && (
+                  <>
+                    <h4>What You'll Learn</h4>
+                    <ul className="learning-objectives">
+                      {currentLesson.learning_objectives.map((objective, idx) => (
+                        <li key={idx}>
+                          <Check size={16} color="#4caf50" style={{marginRight: '8px', display: 'inline-block'}} />
+                          {objective}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
 
                 <h4>Downloadable Resources</h4>
-                <div className="resources-list">
-                  {resources.map((resource, idx) => (
-                    <div key={idx} className="resource-item">
-                      <div className="resource-icon">
-                        <FileText size={20} />
+                {lessonResources.length > 0 ? (
+                  <div className="resources-list">
+                    {lessonResources.map((resource) => (
+                      <div key={resource.id} className="resource-item">
+                        <div className="resource-icon">
+                          <FileText size={20} />
+                        </div>
+                        <div className="resource-info">
+                          <div className="resource-name">{resource.title}</div>
+                          <div className="resource-meta">
+                            {resource.file_type} • {formatFileSize(resource.file_size_bytes)}
+                          </div>
+                          {resource.description && (
+                            <div className="resource-description">{resource.description}</div>
+                          )}
+                        </div>
+                        <a 
+                          href={resource.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Download
+                        </a>
                       </div>
-                      <div className="resource-info">
-                        <div className="resource-name">{resource.name}</div>
-                        <div className="resource-meta">{resource.type} • {resource.size}</div>
-                      </div>
-                      <button className="btn btn-secondary btn-sm">Download</button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{color: '#666', fontSize: '14px', fontStyle: 'italic'}}>
+                    No resources available for this lesson yet.
+                  </p>
+                )}
 
                 <h4>Your Notes</h4>
                 <div className="notes-section">
-                  {notes.map((note, idx) => (
-                    <div key={idx} className="note-item">
-                      <div className="note-time">{note.time}</div>
-                      <div className="note-text">{note.text}</div>
-                      <button className="note-delete">×</button>
+                  {lessonNotes.map((note) => (
+                    <div key={note.id} className="note-item">
+                      <div className="note-time">{formatTimestamp(note.timestamp_seconds)}</div>
+                      <div className="note-text">{note.note_text}</div>
+                      <button 
+                        className="note-delete"
+                        onClick={() => handleDeleteNote(note.id)}
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
-                  <button className="btn btn-outline btn-full">
-                    + Add a Note at Current Timestamp
-                  </button>
+                  <div style={{display: 'flex', gap: '8px', marginTop: '16px'}}>
+                    <input
+                      type="text"
+                      placeholder="Add a note..."
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <button 
+                      className="btn btn-primary"
+                      onClick={handleAddNote}
+                      disabled={!newNote.trim()}
+                    >
+                      Add Note
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -542,7 +652,7 @@ const CourseLesson = () => {
                   </div>
                   <div className="info-item">
                     <span className="info-label">Resources</span>
-                    <span className="info-value">{resources.length} files</span>
+                    <span className="info-value">{lessonResources.length} file{lessonResources.length !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
 
