@@ -104,7 +104,7 @@ const VideoPlayer = ({
       <iframe
         ref={iframeRef}
         key={lesson.id}
-        src={`https://www.youtube.com/embed/${videoId}?start=${Math.floor(lastPosition)}&rel=0&modestbranding=1&autoplay=0`}
+        src={`https://www.youtube.com/embed/${videoId}?start=${Math.floor(lastPosition)}&controls=1&rel=0&modestbranding=1&autoplay=0`}
         title={lesson.title}
         width="100%"
         height="500"
