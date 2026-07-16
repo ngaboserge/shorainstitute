@@ -27,7 +27,7 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Load courses with stats
+      // Load courses
       const { data: courses, error: coursesError } = await supabase
         .from('courses')
         .select('*')
@@ -36,17 +36,45 @@ const Dashboard = () => {
 
       if (coursesError) throw coursesError
 
+      // Get real enrollment counts for each course
+      const courseIds = courses?.map(c => c.id) || []
+      
+      let totalEnrollments = 0
+      if (courseIds.length > 0) {
+        const { data: enrollments, error: enrollError } = await supabase
+          .from('enrollments')
+          .select('course_id')
+          .in('course_id', courseIds)
+        
+        if (!enrollError) {
+          totalEnrollments = enrollments?.length || 0
+        }
+      }
+
+      // Get average completion rate as a proxy for rating
+      // (since we don't have a ratings table yet)
+      let avgCompletionRate = 0
+      if (courseIds.length > 0) {
+        const { data: completions, error: completionError } = await supabase
+          .from('enrollments')
+          .select('progress_percentage')
+          .in('course_id', courseIds)
+          .not('progress_percentage', 'is', null)
+        
+        if (!completionError && completions && completions.length > 0) {
+          const avgProgress = completions.reduce((sum, e) => sum + (e.progress_percentage || 0), 0) / completions.length
+          // Convert progress to a 5-star scale (0-100% -> 0-5)
+          avgCompletionRate = ((avgProgress / 100) * 5).toFixed(1)
+        }
+      }
+
       // Calculate stats
       const publishedCourses = courses?.filter(c => c.status === 'published') || []
-      const totalLearners = courses?.reduce((sum, c) => sum + (c.enrollment_count || 0), 0) || 0
-      const avgRating = courses?.length > 0
-        ? (courses.reduce((sum, c) => sum + (c.rating || 0), 0) / courses.length).toFixed(1)
-        : 0
 
       setStats({
         coursesCount: courses?.length || 0,
-        totalLearners,
-        averageRating: avgRating,
+        totalLearners: totalEnrollments,
+        averageRating: avgCompletionRate || '0.0',
         publishedCourses: publishedCourses.length
       })
 

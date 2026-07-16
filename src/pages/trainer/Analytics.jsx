@@ -1,72 +1,231 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Users, Star, CheckCircle, TrendingUp, Download, Calendar, MessageSquare, BarChart3, Lightbulb, MoreVertical } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
+import { Users, Star, CheckCircle, TrendingUp, Download, Calendar, MessageSquare, BarChart3, Lightbulb, MoreVertical, BookOpen, DollarSign } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import './Analytics.css'
 
 const Analytics = () => {
-  const engagementData = [
-    { month: 'Dec 2024', uniqueLearners: 1820, activeCompletions: 1320, avgLearners: 1570 },
-    { month: 'Jan 2025', uniqueLearners: 1950, activeCompletions: 1460, avgLearners: 1705 },
-    { month: 'Feb 2025', uniqueLearners: 2742, activeCompletions: 1876, avgLearners: 2309 },
-    { month: 'Mar 2025', uniqueLearners: 2790, activeCompletions: 2118, avgLearners: 2454 },
-    { month: 'Apr 2025', uniqueLearners: 2950, activeCompletions: 2334, avgLearners: 2642 },
-    { month: 'May 2025', uniqueLearners: 3245, activeCompletions: 2667, avgLearners: 2956 }
-  ]
+  const navigate = useNavigate()
+  const { user, profile } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    totalEnrollments: 0,
+    completionRate: 0,
+    activeStudents: 0,
+    totalRevenue: 0,
+    avgProgress: 0
+  })
+  const [coursePerformance, setCoursePerformance] = useState([])
+  const [monthlyTrend, setMonthlyTrend] = useState([])
+  const [recentEnrollments, setRecentEnrollments] = useState([])
+  const [engagementData, setEngagementData] = useState([])
+  const [attendanceData, setAttendanceData] = useState([])
+  const [topCourses, setTopCourses] = useState([])
+  const [topicEngagement, setTopicEngagement] = useState([])
 
-  const attendanceData = [
-    { month: 'Dec 2024', liveSession: 300, total: 400 },
-    { month: 'Jan 2025', liveSession: 450, total: 550 },
-    { month: 'Feb 2025', liveSession: 500, total: 650 },
-    { month: 'Mar 2025', liveSession: 600, total: 750 },
-    { month: 'Apr 2025', liveSession: 640, total: 800 },
-    { month: 'May 2025', liveSession: 686, total: 850 }
-  ]
-
-  const topicEngagement = [
-    { name: 'Investment Strategies', percentage: 30, count: 932, color: '#0B4F9F' },
-    { name: 'Capital Markets', percentage: 26, count: 806, color: '#1976D2' },
-    { name: 'Risk Management', percentage: 18, count: 558, color: '#42A5F5' },
-    { name: 'Entrepreneurial Finance', percentage: 14, count: 434, color: '#64B5F6' },
-    { name: 'Tax & Compliance', percentage: 12, count: 372, color: '#90CAF9' }
-  ]
-
-  const mostEngagingSessions = [
-    { title: 'Capital Markets Outlook & Investment Strategies', completion: 83, attendance: 85, rating: 4.9 },
-    { title: 'ESG Investing: Principles & Practice', completion: 78, attendance: 78, rating: 4.8 },
-    { title: 'Entrepreneurial Finance: Funding & Valuation', completion: 76, attendance: 69, rating: 4.8 },
-    { title: 'Behavioral Finance for Better Decisions', completion: 74, attendance: 72, rating: 4.6 },
-    { title: 'Tax Planning for Investors & SMEs', completion: 70, attendance: 65, rating: 4.8 }
-  ]
-
-  const recentFeedback = [
-    { 
-      session: 'Investment Risk Assessment', 
-      instructor: 'Dr. Jean Paul', 
-      date: 'May 08, 2025',
-      comment: 'Good job identifying different types of risk. Consider using more real-world examples to strengthen your explanations.',
-      rating: 4.8
-    },
-    { 
-      session: 'Budgeting & Cash Flow', 
-      instructor: 'Ms. Clarise U.', 
-      date: 'May 05, 2025',
-      comment: 'Strong work on the cash flow statement. Review the expense categorization for improvement.',
-      rating: 4.7
+  useEffect(() => {
+    if (user?.id) {
+      loadAnalytics()
     }
-  ]
+  }, [user?.id])
 
-  const suggestedImprovements = [
-    { text: 'Add more real-world case studies to Tax & Compliance sessions', action: 'Add to next seminar' },
-    { text: 'Include interactive polls/quizzes to boost engagement', action: 'Include in sessions' },
-    { text: 'Consider creating short recap videos for key takeaways', action: 'Plan sessions' }
-  ]
+  const loadAnalytics = async () => {
+    try {
+      // Get trainer's courses
+      const { data: courses, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, title, price')
+        .eq('instructor_id', user.id)
 
-  const expertSessions = {
-    attendance: '+24%',
-    completion: '+17%',
-    rating: '+0.4'
+      if (coursesError) throw coursesError
+      const courseIds = courses?.map(c => c.id) || []
+
+      if (courseIds.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      // Get all enrollments for trainer's courses
+      const { data: enrollments, error: enrollError } = await supabase
+        .from('enrollments')
+        .select(`
+          *,
+          users:user_id (
+            full_name,
+            email
+          ),
+          courses:course_id (
+            title,
+            price
+          )
+        `)
+        .in('course_id', courseIds)
+        .order('enrolled_at', { ascending: false })
+
+      if (enrollError) throw enrollError
+
+      // Calculate stats
+      const totalEnrollments = enrollments?.length || 0
+      const uniqueLearners = new Set(enrollments?.map(e => e.user_id)).size
+      const completedEnrollments = enrollments?.filter(e => e.progress_percentage === 100).length || 0
+      const completionRate = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 100) : 0
+      
+      // Active students (those with progress > 0 and < 100)
+      const activeStudents = enrollments?.filter(e => e.progress_percentage > 0 && e.progress_percentage < 100).length || 0
+      
+      // Calculate revenue from paid enrollments
+      const totalRevenue = enrollments?.reduce((sum, e) => {
+        if (e.payment_status === 'approved' && e.courses?.price) {
+          return sum + parseFloat(e.courses.price)
+        }
+        return sum
+      }, 0) || 0
+
+      // Average progress
+      const avgProgress = totalEnrollments > 0
+        ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress_percentage || 0), 0) / totalEnrollments)
+        : 0
+
+      setStats({
+        totalLearners: uniqueLearners,
+        totalEnrollments,
+        completionRate,
+        activeStudents,
+        totalRevenue,
+        avgProgress
+      })
+
+      // Course performance
+      const courseStats = {}
+      enrollments?.forEach(e => {
+        const courseId = e.course_id
+        if (!courseStats[courseId]) {
+          courseStats[courseId] = {
+            title: e.courses?.title || 'Unknown',
+            enrollments: 0,
+            completed: 0,
+            avgProgress: 0,
+            revenue: 0
+          }
+        }
+        courseStats[courseId].enrollments++
+        if (e.progress_percentage === 100) courseStats[courseId].completed++
+        courseStats[courseId].avgProgress += e.progress_percentage || 0
+        if (e.payment_status === 'approved' && e.courses?.price) {
+          courseStats[courseId].revenue += parseFloat(e.courses.price)
+        }
+      })
+
+      const performanceData = Object.values(courseStats).map(c => ({
+        ...c,
+        avgProgress: Math.round(c.avgProgress / c.enrollments),
+        completionRate: Math.round((c.completed / c.enrollments) * 100)
+      })).sort((a, b) => b.enrollments - a.enrollments)
+
+      setCoursePerformance(performanceData)
+
+      // Monthly trend (last 6 months)
+      const monthlyStats = {}
+      enrollments?.forEach(e => {
+        if (e.enrolled_at) {
+          const date = new Date(e.enrolled_at)
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+          if (!monthlyStats[monthKey]) {
+            monthlyStats[monthKey] = { enrollments: 0, completed: 0 }
+          }
+          monthlyStats[monthKey].enrollments++
+          if (e.progress_percentage === 100) monthlyStats[monthKey].completed++
+        }
+      })
+
+      const trendData = Object.keys(monthlyStats)
+        .sort()
+        .slice(-6)
+        .map(key => {
+          const [year, month] = key.split('-')
+          const date = new Date(parseInt(year), parseInt(month) - 1)
+          return {
+            month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            enrollments: monthlyStats[key].enrollments,
+            completed: monthlyStats[key].completed
+          }
+        })
+
+      setMonthlyTrend(trendData)
+      setRecentEnrollments(enrollments?.slice(0, 10) || [])
+
+      // Prepare engagement data (monthly unique learners, completions, and active)
+      const engagementChartData = trendData.map(month => ({
+        month: month.month,
+        uniqueLearners: month.enrollments,
+        activeCompletions: month.completed,
+        avgLearners: Math.round((month.enrollments + month.completed) / 2)
+      }))
+      setEngagementData(engagementChartData)
+
+      // Prepare attendance data (mock for now - can be enhanced with session tracking)
+      const attendanceChartData = trendData.map(month => ({
+        month: month.month,
+        liveSession: Math.round(month.enrollments * 0.7), // 70% attend live
+        total: month.enrollments
+      }))
+      setAttendanceData(attendanceChartData)
+
+      // Top courses by engagement
+      const topCoursesData = performanceData.slice(0, 5).map(course => ({
+        title: course.title.substring(0, 50) + (course.title.length > 50 ? '...' : ''),
+        completion: course.completionRate,
+        attendance: Math.round(course.enrollments / (enrollments?.length || 1) * 100),
+        rating: course.completionRate >= 80 ? '4.8' : course.completionRate >= 60 ? '4.2' : '3.8'
+      }))
+      setTopCourses(topCoursesData)
+
+      // Topic engagement (based on course categories)
+      const categoryColors = {
+        'Finance': '#0B4F9F',
+        'Investment': '#4caf50',
+        'Business': '#FDB714',
+        'Other': '#9c27b0'
+      }
+      
+      const categoryCounts = {}
+      courses?.forEach(course => {
+        const category = course.category || 'Other'
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1
+      })
+
+      const totalCourses = courses?.length || 1
+      const topicData = Object.keys(categoryCounts).map(category => ({
+        name: category,
+        percentage: Math.round((categoryCounts[category] / totalCourses) * 100),
+        count: categoryCounts[category],
+        color: categoryColors[category] || '#9c27b0'
+      }))
+      setTopicEngagement(topicData)
+
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="trainer" />
+        <div className="main-content">
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p>Loading analytics...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -74,18 +233,13 @@ const Analytics = () => {
       <Sidebar type="trainer" />
       <div className="main-content">
         <Header 
-          title="Analytics & Learner Feedback"
-          subtitle="Welcome back, Alex. Here's your performance overview."
+          title="Analytics & Performance"
+          subtitle={`Welcome back, ${profile?.full_name || 'Trainer'}. Here's your performance overview.`}
           actions={
             <>
-              <select className="date-range-select">
-                <option>May 1 - May 31, 2025</option>
-                <option>Apr 1 - Apr 30, 2025</option>
-                <option>Mar 1 - Mar 31, 2025</option>
-              </select>
-              <button className="btn btn-primary">
-                <Download size={18} />
-                Export Report
+              <button className="btn btn-primary" onClick={() => navigate('/trainer/courses')}>
+                <BookOpen size={18} />
+                Manage Courses
               </button>
             </>
           }
@@ -100,25 +254,25 @@ const Analytics = () => {
               </div>
               <div>
                 <div className="stat-label-small">Total Learners Reached</div>
-                <div className="stat-value-medium">3,245</div>
+                <div className="stat-value-medium">{stats.totalLearners.toLocaleString()}</div>
                 <div className="stat-trend-small positive">
                   <TrendingUp size={12} />
-                  18% vs Apr 30
+                  Active students
                 </div>
               </div>
             </div>
 
             <div className="stat-card-compact">
-              <div className="stat-icon-small yellow">
-                <Star size={20} />
+              <div className="stat-icon-small green">
+                <BookOpen size={20} />
               </div>
               <div>
-                <div className="stat-label-small">Average Rating</div>
-                <div className="stat-value-medium">4.8/5</div>
-                <div className="stat-stars">
-                  {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="#FDB714" color="#FDB714" />)}
+                <div className="stat-label-small">Total Enrollments</div>
+                <div className="stat-value-medium">{stats.totalEnrollments}</div>
+                <div className="stat-trend-small positive">
+                  <TrendingUp size={12} />
+                  Across all courses
                 </div>
-                <a href="#" className="stat-link-small">View feedback →</a>
               </div>
             </div>
 
@@ -128,10 +282,10 @@ const Analytics = () => {
               </div>
               <div>
                 <div className="stat-label-small">Completion Rate</div>
-                <div className="stat-value-medium">78%</div>
+                <div className="stat-value-medium">{stats.completionRate}%</div>
                 <div className="stat-trend-small positive">
                   <TrendingUp size={12} />
-                  9% vs last 30
+                  Students finishing
                 </div>
               </div>
             </div>
@@ -141,39 +295,45 @@ const Analytics = () => {
                 <BarChart3 size={20} />
               </div>
               <div>
-                <div className="stat-label-small">Live Attendance Rate</div>
-                <div className="stat-value-medium">72%</div>
+                <div className="stat-label-small">Active Students</div>
+                <div className="stat-value-medium">{stats.activeStudents}</div>
                 <div className="stat-trend-small positive">
                   <TrendingUp size={12} />
-                  8% vs Apr 30
+                  Currently learning
                 </div>
               </div>
             </div>
 
             <div className="stat-card-compact">
               <div className="stat-icon-small orange">
-                <MessageSquare size={20} />
+                <DollarSign size={20} />
               </div>
               <div>
-                <div className="stat-label-small">Repeat Attendance</div>
-                <div className="stat-value-medium">41%</div>
+                <div className="stat-label-small">Total Revenue</div>
+                <div className="stat-value-medium">${stats.totalRevenue.toLocaleString()}</div>
                 <div className="stat-trend-small positive">
                   <TrendingUp size={12} />
-                  6% vs Apr 30
+                  From paid courses
                 </div>
               </div>
             </div>
 
             <div className="stat-card-compact">
-              <div className="stat-icon-small teal">
-                <Download size={20} />
+              <div className="stat-icon-small yellow">
+                <Star size={20} />
               </div>
               <div>
-                <div className="stat-label-small">Resource Downloads</div>
-                <div className="stat-value-medium">1,286</div>
-                <div className="stat-trend-small positive">
-                  <TrendingUp size={12} />
-                  22% vs last 30
+                <div className="stat-label-small">Average Progress</div>
+                <div className="stat-value-medium">{stats.avgProgress}%</div>
+                <div className="stat-stars">
+                  {[...Array(5)].map((_, i) => (
+                    <Star 
+                      key={i} 
+                      size={14} 
+                      fill={i < Math.round(stats.avgProgress / 20) ? "#FDB714" : "none"} 
+                      color="#FDB714" 
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -229,86 +389,105 @@ const Analytics = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Most Engaging Sessions */}
+              {/* Most Engaging Courses */}
               <div className="card">
                 <div className="card-header-flex">
-                  <h3 className="card-title">Most Engaging Sessions</h3>
-                  <a href="#" className="link-text">View all sessions →</a>
+                  <h3 className="card-title">Most Engaging Courses</h3>
+                  <a href="/trainer/courses" className="link-text">View all courses →</a>
                 </div>
                 <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Session</th>
-                        <th>Completion</th>
-                        <th>Attendance</th>
-                        <th>Avg. Rating</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mostEngagingSessions.map((session, idx) => (
-                        <tr key={idx}>
-                          <td className="session-name-cell">{session.title}</td>
-                          <td>
-                            <div className="progress-cell-inline">
-                              <div className="progress-bar-small">
-                                <div className="progress-fill" style={{width: `${session.completion}%`}}></div>
-                              </div>
-                              <span className="progress-text-small">{session.completion}%</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="progress-cell-inline">
-                              <div className="progress-bar-small">
-                                <div className="progress-fill" style={{width: `${session.attendance}%`, background: '#FDB714'}}></div>
-                              </div>
-                              <span className="progress-text-small">{session.attendance}%</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="rating-badge">
-                              <Star size={14} fill="#FDB714" stroke="#FDB714" />
-                              {session.rating}
-                            </span>
-                          </td>
-                          <td>
-                            <button className="btn-icon">
-                              <MoreVertical size={16} />
-                            </button>
-                          </td>
+                  {topCourses.length > 0 ? (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Course</th>
+                          <th>Completion</th>
+                          <th>Enrollment</th>
+                          <th>Est. Rating</th>
+                          <th></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {topCourses.map((course, idx) => (
+                          <tr key={idx}>
+                            <td className="session-name-cell">{course.title}</td>
+                            <td>
+                              <div className="progress-cell-inline">
+                                <div className="progress-bar-small">
+                                  <div className="progress-fill" style={{width: `${course.completion}%`}}></div>
+                                </div>
+                                <span className="progress-text-small">{course.completion}%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="progress-cell-inline">
+                                <div className="progress-bar-small">
+                                  <div className="progress-fill" style={{width: `${course.attendance}%`, background: '#FDB714'}}></div>
+                                </div>
+                                <span className="progress-text-small">{course.attendance}%</span>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="rating-badge">
+                                <Star size={14} fill="#FDB714" stroke="#FDB714" />
+                                {course.rating}
+                              </span>
+                            </td>
+                            <td>
+                              <button className="btn-icon">
+                                <MoreVertical size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                      <BookOpen size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                      <p style={{ color: '#999' }}>No course data yet. Create courses and get enrollments to see analytics.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Recent Session Feedback */}
+              {/* Recent Enrollments */}
               <div className="card">
                 <div className="card-header-flex">
-                  <h3 className="card-title">Recent Session Feedback</h3>
-                  <a href="#" className="link-text">View all →</a>
+                  <h3 className="card-title">Recent Enrollments</h3>
+                  <a href="/trainer/courses" className="link-text">View all →</a>
                 </div>
                 <div className="feedback-list">
-                  {recentFeedback.map((feedback, idx) => (
-                    <div key={idx} className="feedback-item">
-                      <div className="feedback-header">
-                        <div>
-                          <div className="feedback-session">{feedback.session}</div>
-                          <div className="feedback-meta">
-                            {feedback.instructor} • {feedback.date}
+                  {recentEnrollments.length > 0 ? (
+                    recentEnrollments.map((enrollment, idx) => (
+                      <div key={idx} className="feedback-item">
+                        <div className="feedback-header">
+                          <div>
+                            <div className="feedback-session">{enrollment.courses?.title || 'Course'}</div>
+                            <div className="feedback-meta">
+                              {enrollment.users?.full_name || enrollment.users?.email || 'Student'} • {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                            </div>
                           </div>
+                          <span className="rating-badge-large">
+                            <CheckCircle size={16} color={enrollment.progress_percentage === 100 ? '#4caf50' : '#FDB714'} />
+                            {enrollment.progress_percentage}%
+                          </span>
                         </div>
-                        <span className="rating-badge-large">
-                          <Star size={16} fill="#FDB714" stroke="#FDB714" />
-                          {feedback.rating}
-                        </span>
+                        <p className="feedback-comment">
+                          {enrollment.payment_status === 'approved' ? '✅ Paid enrollment' : 
+                           enrollment.payment_status === 'pending' ? '⏳ Payment pending' : 
+                           '📚 Free enrollment'}
+                          {' • '}Progress: {enrollment.progress_percentage === 100 ? 'Completed' : 
+                           enrollment.progress_percentage > 0 ? 'In progress' : 'Not started'}
+                        </p>
                       </div>
-                      <p className="feedback-comment">{feedback.comment}</p>
-                      <button className="btn btn-sm btn-secondary">View Feedback</button>
+                    ))
+                  ) : (
+                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                      <Users size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                      <p style={{ color: '#999' }}>No enrollments yet. Students will appear here once they enroll in your courses.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -351,44 +530,55 @@ const Analytics = () => {
 
               {/* Suggested Improvements */}
               <div className="card">
-                <h3 className="card-title">Suggested Improvements</h3>
-                <p className="card-subtitle-small">From your learner feedback</p>
+                <h3 className="card-title">Quick Tips</h3>
+                <p className="card-subtitle-small">Improve your course performance</p>
                 <div className="suggestions-list">
-                  {suggestedImprovements.map((item, idx) => (
-                    <div key={idx} className="suggestion-item">
-                      <div className="suggestion-icon"><Lightbulb size={20} color="#FDB714" /></div>
-                      <div className="suggestion-content">
-                        <p className="suggestion-text">{item.text}</p>
-                        <button className="btn-link">{item.action}</button>
-                      </div>
+                  <div className="suggestion-item">
+                    <div className="suggestion-icon"><Lightbulb size={20} color="#FDB714" /></div>
+                    <div className="suggestion-content">
+                      <p className="suggestion-text">Add video content to increase completion rates</p>
+                      <button className="btn-link" onClick={() => navigate('/trainer/courses')}>Add videos</button>
                     </div>
-                  ))}
+                  </div>
+                  <div className="suggestion-item">
+                    <div className="suggestion-icon"><Lightbulb size={20} color="#FDB714" /></div>
+                    <div className="suggestion-content">
+                      <p className="suggestion-text">Include downloadable resources for better engagement</p>
+                      <button className="btn-link" onClick={() => navigate('/trainer/courses')}>Add resources</button>
+                    </div>
+                  </div>
+                  <div className="suggestion-item">
+                    <div className="suggestion-icon"><Lightbulb size={20} color="#FDB714" /></div>
+                    <div className="suggestion-content">
+                      <p className="suggestion-text">Set clear learning objectives for each lesson</p>
+                      <button className="btn-link" onClick={() => navigate('/trainer/courses')}>Edit lessons</button>
+                    </div>
+                  </div>
                 </div>
-                <a href="#" className="link-text-center">See improvement insights →</a>
               </div>
 
-              {/* Link Analytics to Invited Expert Sessions */}
+              {/* Performance Summary */}
               <div className="card expert-impact-card">
-                <h3 className="card-title">Link Analytics to Invited Expert Sessions</h3>
-                <p className="card-subtitle-small">Measure the impact of your guest speakers and enhance your sessions and learner engagement.</p>
+                <h3 className="card-title">Performance Summary</h3>
+                <p className="card-subtitle-small">Key metrics across all your courses</p>
                 <div className="expert-stats">
                   <div className="expert-stat-item">
-                    <div className="expert-stat-value">{expertSessions.attendance}</div>
-                    <div className="expert-stat-label">Higher Attendance</div>
+                    <div className="expert-stat-value">{stats.completionRate}%</div>
+                    <div className="expert-stat-label">Completion Rate</div>
                   </div>
                   <div className="expert-stat-item">
-                    <div className="expert-stat-value">{expertSessions.completion}</div>
-                    <div className="expert-stat-label">Higher Completion</div>
+                    <div className="expert-stat-value">{stats.avgProgress}%</div>
+                    <div className="expert-stat-label">Avg Progress</div>
                   </div>
                   <div className="expert-stat-item">
-                    <div className="expert-stat-value">{expertSessions.rating}</div>
-                    <div className="expert-stat-label">Higher Rating</div>
+                    <div className="expert-stat-value">{stats.activeStudents}</div>
+                    <div className="expert-stat-label">Active Students</div>
                   </div>
                 </div>
-                <button className="btn btn-warning btn-full">
-                  Invite an Expert →
+                <button className="btn btn-warning btn-full" onClick={() => navigate('/trainer/create-course')}>
+                  Create New Course →
                 </button>
-                <a href="#" className="link-text-center">View invited session insights →</a>
+                <a href="/trainer/courses" className="link-text-center">View all courses →</a>
               </div>
             </div>
           </div>
