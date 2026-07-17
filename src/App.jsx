@@ -28,6 +28,7 @@ import CreateCourse from './pages/trainer/CreateCourse'
 import ManageLessons from './pages/trainer/ManageLessons'
 import ManageAssessments from './pages/trainer/ManageAssessments'
 import EditAssessment from './pages/trainer/EditAssessment'
+import Assessments from './pages/trainer/Assessments'
 import ManageSeminars from './pages/trainer/ManageSeminars'
 import ManagePaths from './pages/trainer/ManagePaths'
 import ManageResources from './pages/trainer/ManageResources'
@@ -92,6 +93,7 @@ function App() {
         <Route path="/trainer/dashboard" element={<ProtectedRoute requiredRole="trainer"><TrainerDashboard /></ProtectedRoute>} />
         <Route path="/trainer/create-course" element={<ProtectedRoute requiredRole="trainer"><CreateCourse /></ProtectedRoute>} />
         <Route path="/trainer/courses/:courseId/manage-lessons" element={<ProtectedRoute requiredRole="trainer"><ManageLessons /></ProtectedRoute>} />
+        <Route path="/trainer/assessments" element={<ProtectedRoute requiredRole="trainer"><Assessments /></ProtectedRoute>} />
         <Route path="/trainer/courses/:courseId/assessments" element={<ProtectedRoute requiredRole="trainer"><ManageAssessments /></ProtectedRoute>} />
         <Route path="/trainer/courses/:courseId/assessments/:assessmentId/edit" element={<ProtectedRoute requiredRole="trainer"><EditAssessment /></ProtectedRoute>} />
         <Route path="/trainer/courses" element={<ProtectedRoute requiredRole="trainer"><TrainerCourses /></ProtectedRoute>} />

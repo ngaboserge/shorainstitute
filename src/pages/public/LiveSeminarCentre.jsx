@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Clock, Users, Video, Bell, PlayCircle, Download, Share2, MessageSquare, ThumbsUp, BookOpen, GraduationCap, Award, TrendingUp, CheckCircle, BarChart3, Search } from 'lucide-react'
+import shoraLogo from '../../assets/shora-logo.png'
 import './LiveSeminarCentre.css'
 
 const LiveSeminarCentre = () => {
@@ -43,15 +44,7 @@ const LiveSeminarCentre = () => {
       <header className="public-header">
         <div className="header-container">
           <Link to="/" className="logo">
-            <div className="logo-icon">
-              <svg viewBox="0 0 100 100" width="40" height="40">
-                <rect fill="#FDB714" width="100" height="100" rx="8"/>
-                <path d="M 25 75 L 50 25 L 75 50" stroke="#0B4F9F" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="logo-text">
-              <div className="logo-title">SHORA INSTITUTE</div>
-            </div>
+            <img src={shoraLogo} alt="SHORA Institute" style={{ width: '120px', height: '70px', objectFit: 'contain' }} />
           </Link>
           <nav className="public-nav">
             <a href="/courses">Programs</a>
@@ -452,11 +445,7 @@ const LiveSeminarCentre = () => {
           <div className="footer-grid">
             <div className="footer-col">
               <div className="footer-logo">
-                <svg viewBox="0 0 100 100" width="40" height="40">
-                  <rect fill="#FDB714" width="100" height="100" rx="8"/>
-                  <path d="M 25 75 L 50 25 L 75 50" stroke="#0B4F9F" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <div className="footer-logo-text">SHORA INSTITUTE</div>
+                <img src={shoraLogo} alt="SHORA Institute" style={{ width: '100px', height: '60px', objectFit: 'contain' }} />
               </div>
               <p className="footer-tagline">Empowering minds. Building wealth.</p>
             </div>

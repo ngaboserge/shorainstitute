@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, GraduationCap, Building2, BookOpen, Radio, ClipboardCheck, TrendingUp, Award, UserPlus, Clock, MapPin, ChevronDown } from 'lucide-react'
+import shoraLogo from '../assets/shora-logo.png'
 import './HomePage.css'
 
 const HomePage = () => {
@@ -20,16 +21,7 @@ const HomePage = () => {
       <nav className="homepage-nav">
         <div className="nav-container">
           <Link to="/" className="nav-logo">
-            <div className="logo-square">
-              <svg viewBox="0 0 100 100" width="36" height="36">
-                <rect fill="#FDB714" width="100" height="100" rx="8"/>
-                <path d="M 25 75 L 50 25 L 75 50" stroke="#FFFFFF" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="logo-text">
-              <span className="logo-name">SHORA</span>
-              <span className="logo-sub">INSTITUTE</span>
-            </div>
+            <img src={shoraLogo} alt="SHORA Institute" style={{ width: '120px', height: '70px', objectFit: 'contain' }} />
           </Link>
           
           <div className="nav-menu">
@@ -430,11 +422,7 @@ const HomePage = () => {
           <div className="footer-grid">
             <div className="footer-brand">
               <div className="footer-logo">
-                <svg viewBox="0 0 100 100" width="32" height="32">
-                  <rect fill="#FDB714" width="100" height="100" rx="8"/>
-                  <path d="M 25 75 L 50 25 L 75 50" stroke="#0B4F9F" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span>SHORA INSTITUTE</span>
+                <img src={shoraLogo} alt="SHORA Institute" style={{ width: '100px', height: '60px', objectFit: 'contain' }} />
               </div>
               <p className="footer-tag">Empowering minds. Building wealth.</p>
             </div>

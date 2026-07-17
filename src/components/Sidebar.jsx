@@ -16,6 +16,7 @@ import {
   User,
   DollarSign
 } from 'lucide-react'
+import shoraLogo from '../assets/shora-logo.png'
 import './Sidebar.css'
 
 const Sidebar = ({ type = 'institutional' }) => {
@@ -45,6 +46,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/trainer/manage-seminars', icon: Video, label: 'Manage Seminars' },
     { path: '/trainer/manage-paths', icon: BarChart3, label: 'Learning Paths' },
     { path: '/trainer/manage-resources', icon: BookOpen, label: 'Manage Resources' },
+    { path: '/trainer/assessments', icon: Award, label: 'Assessments' },
     { path: '/trainer/payment-approvals', icon: DollarSign, label: 'Payment Approvals' },
     { path: '/trainer/proposals', icon: BookOpen, label: 'Proposals' },
     { path: '/trainer/qa', icon: HelpCircle, label: 'Learner Q&A' },
@@ -78,14 +80,7 @@ const Sidebar = ({ type = 'institutional' }) => {
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <div className="logo-icon">
-            <svg viewBox="0 0 100 100" width="40" height="40">
-              <rect fill="#FDB714" width="100" height="100" rx="8"/>
-              <path d="M 25 75 L 50 25 L 75 50" stroke="#0B4F9F" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="logo-text">
-            <div className="logo-title">SHORA</div>
-            <div className="logo-subtitle">INSTITUTE</div>
+            <img src={shoraLogo} alt="SHORA Institute" style={{ width: '120px', height: '80px', objectFit: 'contain' }} />
           </div>
         </div>
         <div className="sidebar-subtitle">

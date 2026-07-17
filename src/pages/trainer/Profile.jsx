@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import RevenueSettingsSection from '../../components/RevenueSettingsSection'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { Edit, Check, Star, Clock, Globe, Shield, Calendar, MapPin, Phone, Mail, Linkedin, GraduationCap, MoreVertical } from 'lucide-react'
@@ -477,6 +478,9 @@ const Profile = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Revenue Sharing & Payout Settings */}
+              <RevenueSettingsSection userId={user?.id} profile={profile} />
 
               {/* Qualifications & Credentials */}
               <div className="card">

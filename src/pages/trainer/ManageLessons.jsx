@@ -18,8 +18,6 @@ const ManageLessons = () => {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [editingLesson, setEditingLesson] = useState(null)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [lessonDetails, setLessonDetails] = useState(null)
   const [learningObjectives, setLearningObjectives] = useState([])
   const [newObjective, setNewObjective] = useState('')
   const [lessonResources, setLessonResources] = useState([])
@@ -73,32 +71,11 @@ const ManageLessons = () => {
       is_preview: false,
       status: 'draft'
     })
-    setShowAddLesson(true)
-  }
-
-  // Open lesson details editor
-  const handleEditDetails = async (lesson) => {
-    setLessonDetails(lesson)
-    setLearningObjectives(lesson.learning_objectives || [])
+    setLearningObjectives([])
+    setLessonResources([])
     setNewObjective('')
-    
-    // Load existing resources
-    try {
-      const { data, error } = await supabase
-        .from('lesson_resources')
-        .select('*')
-        .eq('lesson_id', lesson.id)
-        .order('order_number')
-      
-      if (error) throw error
-      setLessonResources(data || [])
-    } catch (error) {
-      console.error('Error loading resources:', error)
-      setLessonResources([])
-    }
-    
     setNewResource({ title: '', file_url: '', file_type: '', description: '' })
-    setShowDetailsModal(true)
+    setShowAddLesson(true)
   }
 
   // Add learning objective
@@ -120,11 +97,16 @@ const ManageLessons = () => {
       return
     }
 
+    if (!editingLesson || !editingLesson.id) {
+      alert('Please save the lesson first before adding resources')
+      return
+    }
+
     try {
       const { data, error } = await supabase
         .from('lesson_resources')
         .insert({
-          lesson_id: lessonDetails.id,
+          lesson_id: editingLesson.id,
           course_id: courseId,
           title: newResource.title.trim(),
           description: newResource.description.trim(),
@@ -167,35 +149,7 @@ const ManageLessons = () => {
     }
   }
 
-  // Save lesson details
-  const saveLessonDetails = async () => {
-    if (!lessonDetails.description.trim()) {
-      alert('Lesson description is required')
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('lessons')
-        .update({
-          description: lessonDetails.description,
-          learning_objectives: learningObjectives.length > 0 ? learningObjectives : null,
-          duration_seconds: lessonDetails.duration_seconds || 0
-        })
-        .eq('id', lessonDetails.id)
-
-      if (error) throw error
-
-      alert('Lesson details saved successfully!')
-      setShowDetailsModal(false)
-      loadData() // Refresh data
-    } catch (error) {
-      console.error('Error saving lesson details:', error)
-      alert('Failed to save lesson details')
-    }
-  }
-
-  // Save lesson
+  // Save lesson - Enhanced to save all details
   const saveLesson = async () => {
     if (!editingLesson.title.trim()) {
       alert('Lesson title is required')
@@ -204,17 +158,21 @@ const ManageLessons = () => {
 
     try {
       if (editingLesson.id) {
-        // Update existing lesson
+        // Update existing lesson with all details
         const { error } = await supabase
           .from('lessons')
           .update({
             title: editingLesson.title,
             description: editingLesson.description,
-            is_preview: editingLesson.is_preview
+            is_preview: editingLesson.is_preview,
+            learning_objectives: learningObjectives.length > 0 ? learningObjectives : null,
+            duration_seconds: editingLesson.duration_seconds || 0
           })
           .eq('id', editingLesson.id)
 
         if (error) throw error
+        
+        alert('Lesson updated successfully!')
       } else {
         // Insert new lesson
         const { data, error } = await supabase
@@ -226,7 +184,9 @@ const ManageLessons = () => {
             order_number: editingLesson.order_number,
             video_type: 'youtube', // Default, will be updated when video is added
             is_preview: editingLesson.is_preview,
-            status: 'draft'
+            status: 'draft',
+            learning_objectives: learningObjectives.length > 0 ? learningObjectives : null,
+            duration_seconds: editingLesson.duration_seconds || 0
           })
           .select()
           .single()
@@ -240,6 +200,8 @@ const ManageLessons = () => {
 
       setShowAddLesson(false)
       setEditingLesson(null)
+      setLearningObjectives([])
+      setLessonResources([])
       loadData()
     } catch (error) {
       console.error('Error saving lesson:', error)
@@ -247,10 +209,64 @@ const ManageLessons = () => {
     }
   }
 
-  // Edit lesson
+  // Edit lesson - Enhanced to match create flow
   const handleEditLesson = (lesson) => {
-    setEditingLesson({ ...lesson })
+    console.log('=== EDIT LESSON CLICKED ===')
+    console.log('Lesson object:', JSON.stringify(lesson, null, 2))
+    console.log('Lesson ID:', lesson.id)
+    console.log('Lesson title:', lesson.title)
+    console.log('Lesson description:', lesson.description)
+    console.log('Lesson duration_seconds:', lesson.duration_seconds)
+    console.log('Lesson is_preview:', lesson.is_preview)
+    console.log('Lesson learning_objectives:', lesson.learning_objectives)
+    
+    // Reset resources first
+    setLessonResources([])
+    setNewResource({ title: '', file_url: '', file_type: '', description: '' })
+    
+    // Load full lesson details including objectives and resources
+    const lessonCopy = {
+      id: lesson.id,
+      title: lesson.title || '',
+      description: lesson.description || '',
+      order_number: lesson.order_number || 0,
+      duration_seconds: lesson.duration_seconds || 0,
+      is_preview: lesson.is_preview || false,
+      status: lesson.status || 'draft',
+      video_url: lesson.video_url || null,
+      video_type: lesson.video_type || null
+    }
+    
+    console.log('Setting editingLesson to:', JSON.stringify(lessonCopy, null, 2))
+    setEditingLesson(lessonCopy)
+    
+    setLearningObjectives(lesson.learning_objectives || [])
+    setNewObjective('')
+    
+    // Load existing resources
+    if (lesson.id) {
+      loadLessonResources(lesson.id)
+    }
+    
     setShowAddLesson(true)
+    console.log('=== MODAL SHOULD NOW OPEN ===')
+  }
+
+  // Load lesson resources
+  const loadLessonResources = async (lessonId) => {
+    try {
+      const { data, error } = await supabase
+        .from('lesson_resources')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('order_number')
+      
+      if (error) throw error
+      setLessonResources(data || [])
+    } catch (error) {
+      console.error('Error loading resources:', error)
+      setLessonResources([])
+    }
   }
 
   // Delete lesson
@@ -500,29 +516,28 @@ const ManageLessons = () => {
                       </button>
                     )}
                     <button
-                      className="btn btn-secondary"
-                      onClick={() => handleEditDetails(lesson)}
-                      title="Edit lesson details, objectives & resources"
+                      onClick={() => handleEditLesson(lesson)}
+                      title="Edit all lesson details"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
-                        fontWeight: '500',
-                        whiteSpace: 'nowrap'
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        background: '#0B4F9F',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
                       }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#083a75'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#0B4F9F'}
                     >
-                      <FileText size={16} />
-                      <span>Edit Details</span>
-                    </button>
-                    <button
-                      className="action-btn"
-                      onClick={() => handleEditDetails(lesson)}
-                      title="Edit lesson details, objectives & resources"
-                      style={{display: 'none'}}
-                    >
-                      <FileText size={18} />
+                      <Edit2 size={16} />
+                      <span>Edit Lesson</span>
                     </button>
                     <button
                       className="action-btn"
@@ -530,13 +545,6 @@ const ManageLessons = () => {
                       title={lesson.video_url ? 'Change video' : 'Add video'}
                     >
                       <UploadIcon size={18} />
-                    </button>
-                    <button
-                      className="action-btn"
-                      onClick={() => handleEditLesson(lesson)}
-                      title="Edit lesson title"
-                    >
-                      <Edit2 size={18} />
                     </button>
                     <button
                       className="action-btn delete"
@@ -603,7 +611,7 @@ const ManageLessons = () => {
           </div>
 
           <div className="info-card tips">
-            <h3>💡 Tips</h3>
+            <h3>Tips</h3>
             <ul>
               <li>Keep lessons between 5-15 minutes</li>
               <li>Use clear, descriptive titles</li>
@@ -615,58 +623,317 @@ const ManageLessons = () => {
         </div>
       </div>
 
-      {/* Add/Edit Lesson Modal */}
+      {/* Add/Edit Lesson Modal - Simple scrollable form */}
       {showAddLesson && editingLesson && (
         <div className="modal-overlay" onClick={() => setShowAddLesson(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-container large" onClick={(e) => e.stopPropagation()} key={editingLesson?.id || 'new'}>
             <div className="modal-header">
-              <h3>{editingLesson.id ? 'Edit Lesson' : 'Add New Lesson'}</h3>
+              <div>
+                <h3>{editingLesson.id ? 'Edit Lesson' : 'Add New Lesson'}</h3>
+                <p style={{fontSize: '13px', color: '#666', margin: '4px 0 0 0'}}>
+                  {editingLesson.id ? `Editing: ${editingLesson.title || 'Untitled Lesson'}` : 'Create a new lesson'}
+                </p>
+              </div>
               <button className="modal-close" onClick={() => setShowAddLesson(false)}>
                 <X size={24} />
               </button>
             </div>
 
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Lesson Title *</label>
+            <div className="modal-body" style={{maxHeight: '600px', overflowY: 'auto', padding: '24px'}}>
+              
+              {/* Debug info */}
+              {console.log('=== MODAL RENDERING ===')}
+              {console.log('editingLesson state:', editingLesson)}
+              {console.log('editingLesson.title value:', editingLesson?.title)}
+              {console.log('editingLesson.description value:', editingLesson?.description)}
+              
+              {/* Lesson Title */}
+              <div className="form-group" style={{marginBottom: '24px'}}>
+                <label style={{fontWeight: 600, display: 'block', marginBottom: '8px'}}>Lesson Title *</label>
                 <input
                   type="text"
                   placeholder="e.g., Introduction to Financial Markets"
-                  value={editingLesson.title}
+                  value={editingLesson?.title || ''}
                   onChange={(e) => setEditingLesson({ ...editingLesson, title: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '8px',
+                    fontSize: '14px'
+                  }}
                   autoFocus
                 />
+                {/* Debug display */}
+                <div style={{fontSize: '11px', color: '#999', marginTop: '4px'}}>
+                  Debug: title = "{editingLesson?.title || 'EMPTY'}"
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Description</label>
+              {/* Description */}
+              <div className="form-group" style={{marginBottom: '24px'}}>
+                <label style={{fontWeight: 600, display: 'block', marginBottom: '8px'}}>Description</label>
                 <textarea
-                  placeholder="What will students learn in this lesson?"
-                  value={editingLesson.description}
+                  placeholder="Explain what learners will discover in this lesson..."
+                  value={editingLesson?.description || ''}
                   onChange={(e) => setEditingLesson({ ...editingLesson, description: e.target.value })}
                   rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #e0e0e0',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
                 />
               </div>
 
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
+              {/* Video Duration */}
+              <div className="form-group" style={{marginBottom: '24px'}}>
+                <label style={{fontWeight: 600, display: 'block', marginBottom: '8px'}}>Video Duration (minutes)</label>
+                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                  <input
+                    type="number"
+                    placeholder="15"
+                    value={editingLesson?.duration_seconds ? Math.round(editingLesson.duration_seconds / 60) : ''}
+                    onChange={(e) => {
+                      const minutes = parseInt(e.target.value) || 0
+                      setEditingLesson({...editingLesson, duration_seconds: minutes * 60})
+                    }}
+                    style={{
+                      width: '120px',
+                      padding: '12px',
+                      border: '2px solid #e0e0e0',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    min="0"
+                    max="300"
+                  />
+                  <span style={{fontSize: '14px', color: '#666'}}>
+                    minutes
+                    {editingLesson?.duration_seconds > 0 && (
+                      <span style={{color: '#0B4F9F', marginLeft: '8px'}}>
+                        ({Math.floor(editingLesson.duration_seconds / 60)}:{String(editingLesson.duration_seconds % 60).padStart(2, '0')})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Free Preview */}
+              <div className="form-group" style={{marginBottom: '32px'}}>
+                <label style={{display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer'}}>
                   <input
                     type="checkbox"
-                    checked={editingLesson.is_preview}
+                    checked={editingLesson?.is_preview || false}
                     onChange={(e) => setEditingLesson({ ...editingLesson, is_preview: e.target.checked })}
+                    style={{width: '18px', height: '18px', cursor: 'pointer'}}
                   />
-                  <span>Free preview (students can watch without enrolling)</span>
+                  <span style={{fontSize: '14px', fontWeight: 500}}>Free preview lesson</span>
                 </label>
+                <p style={{fontSize: '12px', color: '#666', marginLeft: '28px', marginTop: '4px', marginBottom: 0}}>
+                  Students can watch this without enrolling
+                </p>
               </div>
+
+              {/* Learning Objectives */}
+              <div style={{marginBottom: '32px', paddingTop: '24px', borderTop: '1px solid #e5e7eb'}}>
+                <h4 style={{margin: '0 0 8px 0', fontSize: '15px', fontWeight: 600}}>Learning Objectives</h4>
+                <p style={{fontSize: '12px', color: '#666', marginBottom: '16px'}}>
+                  What will learners gain from this lesson?
+                </p>
+                
+                {learningObjectives.length > 0 && (
+                  <div style={{marginBottom: '16px'}}>
+                    {learningObjectives.map((objective, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        background: '#f5f7fa',
+                        borderRadius: '6px',
+                        marginBottom: '8px',
+                        border: '1px solid #e0e7ff'
+                      }}>
+                        <span style={{flex: 1, fontSize: '14px'}}>{objective}</span>
+                        <button
+                          onClick={() => removeObjective(idx)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ef4444',
+                            cursor: 'pointer',
+                            fontSize: '20px',
+                            padding: '0 8px',
+                            fontWeight: 'bold'
+                          }}
+                          title="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{display: 'flex', gap: '8px'}}>
+                  <input
+                    type="text"
+                    placeholder="e.g., Understand the concept of diversification"
+                    value={newObjective}
+                    onChange={(e) => setNewObjective(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addObjective()
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      border: '2px solid #e0e0e0',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <button
+                    onClick={addObjective}
+                    className="btn btn-secondary"
+                    disabled={!newObjective.trim()}
+                    style={{padding: '12px 20px', whiteSpace: 'nowrap'}}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Resources - Only for existing lessons */}
+              {editingLesson.id && (
+                <div style={{marginBottom: '24px', paddingTop: '24px', borderTop: '1px solid #e5e7eb'}}>
+                  <h4 style={{margin: '0 0 8px 0', fontSize: '15px', fontWeight: 600}}>Downloadable Resources</h4>
+                  <p style={{fontSize: '12px', color: '#666', marginBottom: '16px'}}>
+                    Files that learners can download
+                  </p>
+
+                  {lessonResources.length > 0 && (
+                    <div style={{marginBottom: '16px'}}>
+                      {lessonResources.map((resource) => (
+                        <div key={resource.id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px',
+                          background: '#fff7ed',
+                          borderRadius: '8px',
+                          marginBottom: '8px',
+                          border: '1px solid #fed7aa'
+                        }}>
+                          <FileText size={20} color="#d97706" />
+                          <div style={{flex: 1}}>
+                            <div style={{fontWeight: '600', fontSize: '14px', marginBottom: '2px'}}>
+                              {resource.title}
+                            </div>
+                            <div style={{fontSize: '12px', color: '#666'}}>
+                              {resource.file_type} {resource.description && `• ${resource.description}`}
+                            </div>
+                            <a
+                              href={resource.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{fontSize: '12px', color: '#0B4F9F', textDecoration: 'none', fontWeight: 500}}
+                            >
+                              View file →
+                            </a>
+                          </div>
+                          <button
+                            onClick={() => deleteResource(resource.id)}
+                            style={{
+                              background: '#fee2e2',
+                              border: 'none',
+                              color: '#dc2626',
+                              padding: '8px 14px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '2px dashed #d1d5db'}}>
+                    <div style={{fontSize: '13px', marginBottom: '12px', fontWeight: 600, color: '#666'}}>
+                      Add New Resource
+                    </div>
+                    
+                    <div style={{display: 'grid', gap: '10px'}}>
+                      <input
+                        type="text"
+                        placeholder="Resource title (e.g., Lesson Slides)"
+                        value={newResource.title}
+                        onChange={(e) => setNewResource({...newResource, title: e.target.value})}
+                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px'}}
+                      />
+                      
+                      <input
+                        type="text"
+                        placeholder="File URL (https://...)"
+                        value={newResource.file_url}
+                        onChange={(e) => setNewResource({...newResource, file_url: e.target.value})}
+                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px'}}
+                      />
+                      
+                      <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px'}}>
+                        <input
+                          type="text"
+                          placeholder="Type (PDF, XLSX)"
+                          value={newResource.file_type}
+                          onChange={(e) => setNewResource({...newResource, file_type: e.target.value})}
+                          style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px'}}
+                        />
+                        
+                        <input
+                          type="text"
+                          placeholder="Description (optional)"
+                          value={newResource.description}
+                          onChange={(e) => setNewResource({...newResource, description: e.target.value})}
+                          style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '13px'}}
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={addResource}
+                        className="btn btn-primary"
+                        disabled={!newResource.title.trim() || !newResource.file_url.trim()}
+                        style={{marginTop: '8px'}}
+                      >
+                        Add Resource
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
 
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowAddLesson(false)}>
+            <div className="modal-footer" style={{padding: '16px 24px', borderTop: '2px solid #e5e7eb'}}>
+              <button className="btn btn-outline" onClick={() => {
+                setShowAddLesson(false)
+                setLearningObjectives([])
+                setLessonResources([])
+              }}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={saveLesson}>
+              <button className="btn btn-primary" onClick={saveLesson} style={{padding: '12px 24px'}}>
                 <Save size={18} />
-                <span>{editingLesson.id ? 'Update' : 'Save & Add Video'}</span>
+                <span>{editingLesson.id ? 'Update Lesson' : 'Save & Add Video'}</span>
               </button>
             </div>
           </div>
@@ -689,239 +956,6 @@ const ManageLessons = () => {
             setSelectedLesson(null)
           }}
         />
-      )}
-
-      {/* Lesson Details Modal */}
-      {showDetailsModal && lessonDetails && (
-        <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
-          <div className="modal-container large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Edit Lesson Details - {lessonDetails.title}</h3>
-              <button className="modal-close" onClick={() => setShowDetailsModal(false)}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="modal-body" style={{maxHeight: '600px', overflowY: 'auto'}}>
-              {/* Duration */}
-              <div className="form-group">
-                <label>Video Duration (in minutes)</label>
-                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
-                  Enter the video length in minutes
-                </p>
-                <input
-                  type="number"
-                  placeholder="e.g., 15"
-                  value={lessonDetails.duration_seconds ? Math.round(lessonDetails.duration_seconds / 60) : ''}
-                  onChange={(e) => {
-                    const minutes = parseInt(e.target.value) || 0
-                    setLessonDetails({...lessonDetails, duration_seconds: minutes * 60})
-                  }}
-                  style={{width: '200px', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                  min="0"
-                  max="300"
-                />
-                <span style={{marginLeft: '8px', fontSize: '13px', color: '#666'}}>
-                  minutes ({lessonDetails.duration_seconds ? Math.floor(lessonDetails.duration_seconds / 60) + ':' + String(lessonDetails.duration_seconds % 60).padStart(2, '0') : '0:00'})
-                </span>
-              </div>
-
-              {/* Description */}
-              <div className="form-group">
-                <label>Lesson Description *</label>
-                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
-                  Explain what learners will discover in this lesson
-                </p>
-                <textarea
-                  placeholder="In this lesson, you'll learn..."
-                  value={lessonDetails.description || ''}
-                  onChange={(e) => setLessonDetails({...lessonDetails, description: e.target.value})}
-                  rows={6}
-                  style={{width: '100%', padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                />
-              </div>
-
-              {/* Learning Objectives */}
-              <div className="form-group">
-                <label>Learning Objectives</label>
-                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
-                  What specific skills or knowledge will learners gain?
-                </p>
-                
-                {learningObjectives.length > 0 && (
-                  <div style={{marginBottom: '12px'}}>
-                    {learningObjectives.map((objective, idx) => (
-                      <div key={idx} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 12px',
-                        background: '#f5f7fa',
-                        borderRadius: '6px',
-                        marginBottom: '8px'
-                      }}>
-                        <span style={{flex: 1, fontSize: '14px'}}>{objective}</span>
-                        <button
-                          onClick={() => removeObjective(idx)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#f44336',
-                            cursor: 'pointer',
-                            fontSize: '18px',
-                            padding: '0 8px'
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{display: 'flex', gap: '8px'}}>
-                  <input
-                    type="text"
-                    placeholder="e.g., Understand the concept of diversification"
-                    value={newObjective}
-                    onChange={(e) => setNewObjective(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && addObjective()}
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '6px',
-                      fontSize: '14px'
-                    }}
-                  />
-                  <button
-                    onClick={addObjective}
-                    className="btn btn-secondary"
-                    disabled={!newObjective.trim()}
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              {/* Resources */}
-              <div className="form-group">
-                <label>Downloadable Resources</label>
-                <p style={{fontSize: '13px', color: '#666', marginBottom: '8px'}}>
-                  Attach files that learners can download (PDFs, spreadsheets, etc.)
-                </p>
-
-                {lessonResources.length > 0 && (
-                  <div style={{marginBottom: '16px'}}>
-                    {lessonResources.map((resource) => (
-                      <div key={resource.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        background: '#f5f7fa',
-                        borderRadius: '8px',
-                        marginBottom: '8px',
-                        border: '1px solid #e0e0e0'
-                      }}>
-                        <FileText size={20} color="#0B4F9F" />
-                        <div style={{flex: 1}}>
-                          <div style={{fontWeight: '600', fontSize: '14px', marginBottom: '4px'}}>
-                            {resource.title}
-                          </div>
-                          <div style={{fontSize: '12px', color: '#666'}}>
-                            {resource.file_type} • {resource.description || 'No description'}
-                          </div>
-                          <a
-                            href={resource.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{fontSize: '12px', color: '#0B4F9F', textDecoration: 'none'}}
-                          >
-                            View file →
-                          </a>
-                        </div>
-                        <button
-                          onClick={() => deleteResource(resource.id)}
-                          style={{
-                            background: '#ffebee',
-                            border: 'none',
-                            color: '#f44336',
-                            padding: '6px 12px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{padding: '16px', background: '#f9fafb', borderRadius: '8px', border: '1px dashed #d1d5db'}}>
-                  <h4 style={{fontSize: '14px', marginBottom: '12px', fontWeight: '600'}}>Add New Resource</h4>
-                  
-                  <div style={{display: 'grid', gap: '12px'}}>
-                    <input
-                      type="text"
-                      placeholder="Resource title (e.g., Lesson Slides)"
-                      value={newResource.title}
-                      onChange={(e) => setNewResource({...newResource, title: e.target.value})}
-                      style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                    />
-                    
-                    <input
-                      type="text"
-                      placeholder="File URL (https://...)"
-                      value={newResource.file_url}
-                      onChange={(e) => setNewResource({...newResource, file_url: e.target.value})}
-                      style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                    />
-                    
-                    <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px'}}>
-                      <input
-                        type="text"
-                        placeholder="Type (PDF, XLSX, etc.)"
-                        value={newResource.file_type}
-                        onChange={(e) => setNewResource({...newResource, file_type: e.target.value})}
-                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                      />
-                      
-                      <input
-                        type="text"
-                        placeholder="Description (optional)"
-                        value={newResource.description}
-                        onChange={(e) => setNewResource({...newResource, description: e.target.value})}
-                        style={{padding: '10px', border: '1px solid #e0e0e0', borderRadius: '6px', fontSize: '14px'}}
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={addResource}
-                      className="btn btn-primary"
-                      disabled={!newResource.title.trim() || !newResource.file_url.trim()}
-                    >
-                      Add Resource
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowDetailsModal(false)}>
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={saveLessonDetails}>
-                <Save size={18} />
-                <span>Save Lesson Details</span>
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )

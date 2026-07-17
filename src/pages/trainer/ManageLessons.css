@@ -422,6 +422,10 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+.modal-container.large {
+  max-width: 800px;
+}
+
 .modal-header {
   padding: 24px 24px 16px;
   border-bottom: 1px solid #e5e7eb;

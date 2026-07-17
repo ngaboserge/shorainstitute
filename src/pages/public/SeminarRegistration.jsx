@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Calendar, Clock, MapPin, CheckCircle, Info } from 'lucide-react'
+import shoraLogo from '../../assets/shora-logo.png'
 import './SeminarRegistration.css'
 
 const SeminarRegistration = () => {
@@ -9,15 +10,7 @@ const SeminarRegistration = () => {
       <header className="public-header">
         <div className="header-container">
           <Link to="/" className="logo">
-            <div className="logo-icon">
-              <svg viewBox="0 0 100 100" width="40" height="40">
-                <rect fill="#FDB714" width="100" height="100" rx="8"/>
-                <path d="M 25 75 L 50 25 L 75 50" stroke="#0B4F9F" strokeWidth="8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="logo-text">
-              <div className="logo-title">SHORA INSTITUTE</div>
-            </div>
+            <img src={shoraLogo} alt="SHORA Institute" style={{ width: '120px', height: '70px', objectFit: 'contain' }} />
           </Link>
           <div className="header-actions">
             <button className="btn btn-secondary">Log in</button>
