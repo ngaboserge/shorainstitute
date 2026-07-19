@@ -23,11 +23,12 @@ const Assessments = () => {
 
   const loadAssessments = async () => {
     try {
-      // Load enrolled courses
+      // Load enrolled courses with active access (exclude pending payments)
       const { data: enrollments, error: enrollError } = await supabase
         .from('enrollments')
         .select('course_id')
         .eq('user_id', user.id)
+        .in('payment_status', ['free', 'approved'])
 
       if (enrollError) throw enrollError
 

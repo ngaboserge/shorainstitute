@@ -1,80 +1,106 @@
-import React, { useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { X, Upload, DollarSign, CreditCard, AlertCircle } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import {
+  X, DollarSign, Smartphone, CreditCard, Phone,
+  CheckCircle, XCircle, Loader, AlertCircle
+} from 'lucide-react'
+import { initiatePayment, checkPaymentStatus, formatPrice } from '../services/paymentService'
 import './PaymentModal.css'
 
+/**
+ * XentriPay checkout modal.
+ * MoMo: sends a payment prompt to the learner's phone, then polls status.
+ * Card: redirects to the XentriPay hosted checkout page.
+ * Enrollment is created server-side only after the gateway confirms payment.
+ */
+
+const CARD_PAYMENT_ENABLED = import.meta.env.VITE_CARD_PAYMENT_ENABLED === 'true'
+const POLL_INTERVAL_MS = 5000
+const MAX_POLLS = 60 // ~5 minutes
+
 const PaymentModal = ({ course, user, onClose, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    payment_method: 'bank_transfer',
-    payment_reference: '',
-    notes: '',
-    payment_proof_url: ''
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [step, setStep] = useState('method') // method | processing | confirming | success | failed
+  const [paymentMethod, setPaymentMethod] = useState('momo')
+  const [phone, setPhone] = useState('')
+  const [referenceId, setReferenceId] = useState(null)
+  const [gatewayMessage, setGatewayMessage] = useState(null)
+  const [error, setError] = useState(null)
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    
-    try {
-      // Create payment record
-      const { data, error: paymentError } = await supabase
-        .from('course_payments')
-        .insert({
-          course_id: course.id,
-          user_id: user.id,
-          amount: course.price,
-          currency: course.currency || 'USD',
-          payment_method: formData.payment_method,
-          payment_reference: formData.payment_reference,
-          payment_proof_url: formData.payment_proof_url,
-          notes: formData.notes,
-          status: 'pending'
-        })
-        .select()
-        .single()
+  useEffect(() => {
+    if (step !== 'confirming' || !referenceId) return
 
-      if (paymentError) throw paymentError
+    let polls = 0
+    const interval = setInterval(async () => {
+      const status = await checkPaymentStatus(referenceId)
 
-      // Create pending enrollment
-      const { error: enrollmentError } = await supabase
-        .from('enrollments')
-        .insert({
-          user_id: user.id,
-          course_id: course.id,
-          payment_id: data.id,
-          payment_status: 'pending',
-          payment_required: true
-        })
+      if (status.status === 'success') {
+        clearInterval(interval)
+        setStep('success')
+      } else if (status.status === 'failed') {
+        clearInterval(interval)
+        setError('Payment was not completed. Please try again.')
+        setStep('failed')
+      }
 
-      if (enrollmentError) throw enrollmentError
+      polls += 1
+      if (polls >= MAX_POLLS) {
+        clearInterval(interval)
+      }
+    }, POLL_INTERVAL_MS)
 
-      alert('✅ Payment submitted successfully! You will be notified once the trainer approves your payment.')
-      onSuccess()
-      onClose()
-    } catch (error) {
-      console.error('Error submitting payment:', error)
-      setError('Failed to submit payment. Please try again.')
-    } finally {
-      setLoading(false)
+    return () => clearInterval(interval)
+  }, [step, referenceId])
+
+  const handlePay = async () => {
+    if (!phone.trim()) {
+      setError('Please enter your phone number')
+      return
+    }
+
+    setError(null)
+    setGatewayMessage(null)
+    setStep('processing')
+
+    const result = await initiatePayment({
+      courseId: course.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.email,
+      phone,
+      paymentMethod
+    })
+
+    if (result.success && result.referenceId) {
+      setReferenceId(result.referenceId)
+      setGatewayMessage(
+        result.confirmationMessage ||
+          (paymentMethod === 'momo'
+            ? 'Approve the payment prompt on your phone to continue.'
+            : 'Complete your payment on the secure checkout page.')
+      )
+      setStep('confirming')
+
+      if (paymentMethod === 'card' && result.redirectUrl) {
+        window.location.href = result.redirectUrl
+      }
+    } else {
+      if (result.referenceId) setReferenceId(result.referenceId)
+      setError(result.error || 'Failed to initiate payment')
+      setStep('failed')
     }
   }
 
-  const formatPrice = (price, currency) => {
-    const symbol = currency === 'USD' ? '$' : currency === 'RWF' ? 'FRw' : '€'
-    return `${symbol}${parseFloat(price).toFixed(2)}`
-  }
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={step === 'confirming' ? undefined : onClose}>
       <div className="modal-content payment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2>Complete Payment</h2>
-            <p style={{fontSize: '14px', color: '#666', marginTop: '4px'}}>
-              Submit your payment details for verification
+            <h2>
+              {step === 'success' ? 'Payment Successful!'
+                : step === 'failed' ? 'Payment Failed'
+                : step === 'confirming' ? 'Confirm Your Payment'
+                : 'Complete Payment'}
+            </h2>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+              Secure payment via XentriPay
             </p>
           </div>
           <button className="close-btn" onClick={onClose}>
@@ -105,153 +131,180 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
             </div>
           </div>
 
-          {/* Payment Instructions */}
-          <div className="payment-instructions">
-            <h4>📋 Payment Instructions</h4>
-            <ol>
-              <li>Make payment using your preferred method below</li>
-              <li>Keep your transaction reference/ID</li>
-              <li>Upload proof of payment (optional but recommended)</li>
-              <li>Submit this form for trainer approval</li>
-              <li>You'll be notified once approved (usually within 24 hours)</li>
-            </ol>
-          </div>
+          {step === 'method' && (
+            <>
+              <div className="form-group">
+                <label>Payment Method *</label>
 
-          {error && (
-            <div className="alert alert-error">
-              <AlertCircle size={20} />
-              <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('momo')}
+                  className={`method-option ${paymentMethod === 'momo' ? 'selected' : ''}`}
+                >
+                  <div className="method-icon momo">
+                    <Smartphone size={20} />
+                  </div>
+                  <div className="method-info">
+                    <strong>MTN Mobile Money</strong>
+                    <span>Rwanda MoMo (RWF)</span>
+                  </div>
+                  {paymentMethod === 'momo' && <CheckCircle size={20} className="method-check" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => CARD_PAYMENT_ENABLED && setPaymentMethod('card')}
+                  disabled={!CARD_PAYMENT_ENABLED}
+                  className={`method-option ${paymentMethod === 'card' ? 'selected' : ''} ${!CARD_PAYMENT_ENABLED ? 'disabled' : ''}`}
+                >
+                  <div className="method-icon card">
+                    <CreditCard size={20} />
+                  </div>
+                  <div className="method-info">
+                    <strong>Card Payment</strong>
+                    <span>{CARD_PAYMENT_ENABLED ? 'Visa, Mastercard via XentriPay' : 'Coming soon — use MoMo for now'}</span>
+                  </div>
+                  {CARD_PAYMENT_ENABLED && paymentMethod === 'card' && <CheckCircle size={20} className="method-check" />}
+                </button>
+              </div>
+
+              <div className="form-group">
+                <label>
+                  {paymentMethod === 'momo' ? 'MTN MoMo Phone Number *' : 'Phone Number *'}
+                </label>
+                <div className="input-with-icon">
+                  <Phone size={20} />
+                  <input
+                    type="tel"
+                    className="form-input"
+                    placeholder={paymentMethod === 'momo' ? '0788123456' : '+250 788 123 456'}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    style={{ paddingLeft: '44px' }}
+                  />
+                </div>
+                <small className="help-text">
+                  {paymentMethod === 'momo'
+                    ? 'Rwanda MTN/Airtel number (e.g. 0788123456 or +250788123456)'
+                    : 'Any phone number — local or international'}
+                </small>
+              </div>
+
+              {error && (
+                <div className="alert alert-error">
+                  <AlertCircle size={20} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="form-notice">
+                <AlertCircle size={18} />
+                <div>
+                  <strong>Pay before you enroll:</strong> Your course is unlocked automatically
+                  as soon as your payment is confirmed by XentriPay.
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handlePay}>
+                  <CreditCard size={18} />
+                  Pay {formatPrice(course.price, course.currency)}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'processing' && (
+            <div className="payment-state">
+              <Loader size={48} className="spinning state-icon processing" />
+              <p className="state-title">Starting payment…</p>
             </div>
           )}
 
-          {/* Payment Form */}
-          <form onSubmit={handleSubmit} className="payment-form">
-            <div className="form-group">
-              <label>Payment Method *</label>
-              <select
-                className="form-select"
-                value={formData.payment_method}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  payment_method: e.target.value
-                })}
-                required
+          {step === 'confirming' && (
+            <div className="payment-state">
+              <div className="state-circle confirming">
+                {paymentMethod === 'momo' ? <Smartphone size={32} /> : <CreditCard size={32} />}
+              </div>
+              <p className="state-title">Confirm your payment</p>
+              {paymentMethod === 'momo' ? (
+                <p className="state-text">
+                  A payment prompt has been sent to your phone.<br />
+                  <strong>Open MTN MoMo</strong> and approve the request to complete your purchase.
+                </p>
+              ) : (
+                <p className="state-text">
+                  Complete your payment on the secure card checkout page.
+                </p>
+              )}
+              {gatewayMessage && <p className="gateway-message">{gatewayMessage}</p>}
+              <div className="state-waiting">
+                <Loader size={16} className="spinning" />
+                Waiting for payment confirmation…
+              </div>
+              {referenceId && <span className="payment-ref">Ref: {referenceId}</span>}
+            </div>
+          )}
+
+          {step === 'success' && (
+            <div className="payment-state">
+              <div className="state-circle success">
+                <CheckCircle size={40} />
+              </div>
+              <p className="state-title">Payment Complete!</p>
+              <p className="state-text">
+                You have been enrolled in the course. You can now access all course content.
+              </p>
+              <button
+                className="btn btn-primary btn-full"
+                onClick={() => {
+                  onSuccess()
+                  onClose()
+                }}
               >
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="mobile_money">Mobile Money (MTN/Airtel)</option>
-                <option value="cash">Cash Payment</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-
-            {formData.payment_method === 'bank_transfer' && (
-              <div className="bank-details">
-                <h4>Bank Account Details</h4>
-                <p><strong>Bank:</strong> Bank of Kigali</p>
-                <p><strong>Account Name:</strong> Shora Institute</p>
-                <p><strong>Account Number:</strong> 123456789</p>
-                <p><strong>Branch:</strong> Kigali Main</p>
-              </div>
-            )}
-
-            {formData.payment_method === 'mobile_money' && (
-              <div className="bank-details">
-                <h4>Mobile Money Details</h4>
-                <p><strong>MTN MoMo:</strong> *182*8*1*XXXXXX#</p>
-                <p><strong>Airtel Money:</strong> *500*XXXXXX#</p>
-                <p><strong>Name:</strong> Shora Institute</p>
-              </div>
-            )}
-
-            <div className="form-group">
-              <label>Transaction Reference / ID *</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g., TXN123456789 or screenshot reference"
-                value={formData.payment_reference}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  payment_reference: e.target.value
-                })}
-                required
-              />
-              <small className="help-text">
-                Enter the transaction ID from your payment confirmation
-              </small>
-            </div>
-
-            <div className="form-group">
-              <label>Payment Proof URL (Optional)</label>
-              <div className="input-with-icon">
-                <Upload size={20} />
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://example.com/payment-proof.jpg"
-                  value={formData.payment_proof_url}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    payment_proof_url: e.target.value
-                  })}
-                  style={{paddingLeft: '44px'}}
-                />
-              </div>
-              <small className="help-text">
-                Upload screenshot to Google Drive/Dropbox and paste public link here
-              </small>
-            </div>
-
-            <div className="form-group">
-              <label>Additional Notes (Optional)</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                placeholder="Any additional information about your payment..."
-                value={formData.notes}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  notes: e.target.value
-                })}
-              />
-            </div>
-
-            <div className="form-notice">
-              <AlertCircle size={18} />
-              <div>
-                <strong>Important:</strong> Your enrollment will be pending until the trainer verifies your payment. 
-                You'll receive an email notification once approved.
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button 
-                type="button" 
-                className="btn btn-secondary" 
-                onClick={onClose}
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <CreditCard size={18} className="spinning" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={18} />
-                    Submit Payment
-                  </>
-                )}
+                Start Learning
               </button>
             </div>
-          </form>
+          )}
+
+          {step === 'failed' && (
+            <div className="payment-state">
+              <div className="state-circle failed">
+                <XCircle size={40} />
+              </div>
+              <p className="state-title">Payment Failed</p>
+              <div className="alert alert-error" style={{ textAlign: 'left' }}>
+                <AlertCircle size={20} />
+                <div>
+                  <span>{error || 'Something went wrong. Please try again.'}</span>
+                  {referenceId && (
+                    <div className="payment-ref" style={{ marginTop: '6px' }}>Ref: {referenceId}</div>
+                  )}
+                </div>
+              </div>
+              <p className="help-text">
+                If the problem persists, contact support with the reference above.
+              </p>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setStep('method')
+                    setError(null)
+                  }}
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

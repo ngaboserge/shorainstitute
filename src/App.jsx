@@ -51,6 +51,7 @@ import CourseLesson from './pages/learner/CourseLesson'
 import LearningPathway from './pages/learner/LearningPathway'
 import LearningPaths from './pages/learner/LearningPaths'
 import OnboardingAssessment from './pages/public/OnboardingAssessment'
+import PaymentSuccess from './pages/public/PaymentSuccess'
 import './App.css'
 
 function App() {
@@ -77,6 +78,7 @@ function App() {
         <Route path="/seminars" element={<Navigate to="/learner/seminars" replace />} />
         <Route path="/seminars/register/:id" element={<SeminarRegistration />} />
         <Route path="/onboarding" element={<OnboardingAssessment />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
         
         {/* Institutional Portal Routes */}
         <Route path="/institutional/overview" element={<InstitutionalOverview />} />

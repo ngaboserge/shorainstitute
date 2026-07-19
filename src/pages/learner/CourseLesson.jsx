@@ -240,12 +240,14 @@ const CourseLesson = () => {
     setLoading(true)
     
     try {
-      // Check if user is enrolled
+      // Check if user is enrolled with active access (paid or free —
+      // pending/rejected payments do not unlock course content)
       const { data: enrollment, error: enrollError } = await supabase
         .from('enrollments')
         .select('*')
         .eq('user_id', user.id)
         .eq('course_id', id)
+        .in('payment_status', ['free', 'approved'])
         .maybeSingle()
 
       if (enrollError) throw enrollError

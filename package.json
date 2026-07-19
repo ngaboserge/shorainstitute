@@ -2,10 +2,13 @@
   "name": "shora-institute-platform",
   "version": "1.0.0",
   "description": "SHORA Institute Educational Platform",
+  "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "node scripts/local-api-server.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:migrate:payment": "node scripts/apply-payment-migration.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
@@ -22,6 +25,7 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
+    "pg": "^8.22.0",
     "vite": "^5.0.8"
   }
 }

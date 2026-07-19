@@ -80,44 +80,23 @@ const BrowseCourses = () => {
       return
     }
 
-    // Check if already enrolled (excluding rejected)
+    // Check if already enrolled with active access
     const { data: existingEnrollment } = await supabase
       .from('enrollments')
-      .select('id, payment_status, payment_id')
+      .select('id, payment_status')
       .eq('user_id', user.id)
       .eq('course_id', course.id)
-      .neq('payment_status', 'rejected')  // Exclude rejected enrollments
-      .maybeSingle()  // Use maybeSingle() to avoid error if no rows
+      .in('payment_status', ['free', 'approved'])
+      .maybeSingle()
 
     if (existingEnrollment) {
-      if (existingEnrollment.payment_status === 'pending') {
-        alert('Your payment is pending approval. You will be notified once approved.')
-      } else {
-        navigate(`/learner/courses`)
-      }
+      navigate(`/learner/courses`)
       return
     }
 
-    // Also check if there's a rejected payment (shouldn't exist but double check)
-    const { data: rejectedPayment } = await supabase
-      .from('course_payments')
-      .select('id, status')
-      .eq('user_id', user.id)
-      .eq('course_id', course.id)
-      .eq('status', 'rejected')
-      .maybeSingle()
-
-    if (rejectedPayment) {
-      // Clean up the rejected payment record to allow re-enrollment
-      await supabase
-        .from('course_payments')
-        .delete()
-        .eq('id', rejectedPayment.id)
-    }
-
-    // Check if course is paid
+    // Paid course → XentriPay checkout. Enrollment is created server-side
+    // only after the gateway confirms the payment.
     if (course.is_paid && course.price > 0) {
-      // Open payment modal for paid courses
       setSelectedCourse(course)
       setShowPaymentModal(true)
       return
@@ -344,7 +323,7 @@ const BrowseCourses = () => {
             setSelectedCourse(null)
           }}
           onSuccess={() => {
-            loadPublishedCourses()
+            navigate('/learner/courses')
           }}
         />
       )}

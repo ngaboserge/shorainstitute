@@ -54,6 +54,24 @@ const TakeAssessment = () => {
         .single()
 
       if (assessmentError) throw assessmentError
+
+      // Require active enrollment (paid or free) in the assessment's course
+      if (assessmentData.course_id) {
+        const { data: enrollment } = await supabase
+          .from('enrollments')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('course_id', assessmentData.course_id)
+          .in('payment_status', ['free', 'approved'])
+          .maybeSingle()
+
+        if (!enrollment) {
+          alert('You must be enrolled in this course to take the assessment.')
+          navigate('/learner/assessments')
+          return
+        }
+      }
+
       setAssessment(assessmentData)
 
       // Load questions with options
