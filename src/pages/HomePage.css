@@ -329,13 +329,63 @@
 }
 
 .hero-right {
+  position: relative;
+}
+
+.hero-carousel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
 }
 
 .hero-img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: auto;
   border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  object-fit: cover;
+}
+
+.hero-img:first-child {
+  position: relative;
+}
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.carousel-indicators .indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.carousel-indicators .indicator:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.2);
+}
+
+.carousel-indicators .indicator.active {
+  background: white;
+  width: 24px;
+  border-radius: 5px;
 }
 
 /* ===== FEATURES BAR ===== */
