@@ -43,8 +43,8 @@ const HomePage = () => {
         .from('seminars')
         .select('*')
         .eq('status', 'published')
-        .gte('scheduled_at', now)
-        .order('scheduled_at', { ascending: true })
+        .gte('date', now)
+        .order('date', { ascending: true })
         .limit(1)
 
       if (error) throw error
@@ -57,8 +57,12 @@ const HomePage = () => {
     }
   }
 
-  const formatSeminarDate = (dateString) => {
+  const formatSeminarDate = (dateString, timeString) => {
     const date = new Date(dateString)
+    // Parse time (HH:MM:SS format)
+    const [hours, minutes] = timeString.split(':')
+    date.setHours(parseInt(hours), parseInt(minutes))
+    
     return {
       month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
       day: date.getDate().toString().padStart(2, '0'),
@@ -360,7 +364,7 @@ const HomePage = () => {
             </div>
           ) : (
             upcomingSeminars.map(seminar => {
-              const dateInfo = formatSeminarDate(seminar.scheduled_at)
+              const dateInfo = formatSeminarDate(seminar.date, seminar.start_time)
               return (
                 <div key={seminar.id} className="seminar-box">
                   <span className="tag-free">FREE LIVE SEMINAR</span>

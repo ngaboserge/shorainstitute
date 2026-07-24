@@ -49,7 +49,7 @@ const SeminarRegistrations = () => {
         .from('seminar_registrations')
         .select('*')
         .eq('seminar_id', seminarId)
-        .order('registered_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (regError) throw regError
 
@@ -89,7 +89,7 @@ const SeminarRegistrations = () => {
         reg.user_name || '',
         reg.user_email || '',
         reg.registration_status || 'registered',
-        new Date(reg.registered_at).toLocaleString()
+        new Date(reg.created_at).toLocaleString()
       ]
 
       // Add answers
@@ -353,7 +353,7 @@ const SeminarRegistrations = () => {
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Clock size={14} color="#666" />
-                            {formatDate(reg.registered_at)}
+                            {formatDate(reg.created_at)}
                           </div>
                         </td>
                         {seminar.registration_questions?.map(q => (
