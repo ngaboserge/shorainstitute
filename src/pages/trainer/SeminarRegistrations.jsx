@@ -217,7 +217,7 @@ const SeminarRegistrations = () => {
           }
         />
 
-        <div className="content-wrapper">
+        <div className="content-wrapper" style={{ maxWidth: '100%', padding: '24px' }}>
           {/* Stats Cards */}
           <div className="stats-grid">
             <div className="stat-card">
@@ -291,8 +291,8 @@ const SeminarRegistrations = () => {
           </div>
 
           {/* Registrations Table */}
-          <div className="card">
-            <div className="table-container">
+          <div className="card" style={{ padding: 0 }}>
+            <div className="table-container-full">
               {filteredRegistrations.length === 0 ? (
                 <div style={{ padding: '60px 20px', textAlign: 'center' }}>
                   <Users size={48} color="#ccc" />
@@ -307,7 +307,7 @@ const SeminarRegistrations = () => {
                   </p>
                 </div>
               ) : (
-                <table className="registrations-table">
+                <table className="registrations-table-full">
                   <thead>
                     <tr>
                       <th>Learner</th>
@@ -334,7 +334,8 @@ const SeminarRegistrations = () => {
                               justifyContent: 'center',
                               color: 'white',
                               fontSize: '14px',
-                              fontWeight: '600'
+                              fontWeight: '600',
+                              flexShrink: 0
                             }}>
                               {reg.user_name?.charAt(0) || 'L'}
                             </div>
@@ -357,8 +358,15 @@ const SeminarRegistrations = () => {
                           </div>
                         </td>
                         {seminar.registration_questions?.map(q => (
-                          <td key={q.id}>
-                            {reg.registration_answers?.[q.id] || '-'}
+                          <td key={q.id} style={{ maxWidth: '300px' }}>
+                            <div style={{ 
+                              whiteSpace: 'pre-wrap', 
+                              wordBreak: 'break-word',
+                              fontSize: '13px',
+                              lineHeight: '1.5'
+                            }}>
+                              {reg.registration_answers?.[q.id] || '-'}
+                            </div>
                           </td>
                         ))}
                       </tr>
