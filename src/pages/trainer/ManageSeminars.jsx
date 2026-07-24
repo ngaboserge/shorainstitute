@@ -121,14 +121,14 @@ const ManageSeminars = () => {
 
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
-        .from('course-assets')
+        .from('course-thumbnails')
         .upload(filePath, thumbnailFile)
 
       if (error) throw error
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('course-assets')
+        .from('course-thumbnails')
         .getPublicUrl(filePath)
 
       return urlData.publicUrl

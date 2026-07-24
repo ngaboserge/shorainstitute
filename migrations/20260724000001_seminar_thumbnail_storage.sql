@@ -1,29 +1,28 @@
 -- Migration: Setup Supabase Storage for Seminar Thumbnails
 -- Created: 2026-07-24
 
--- Note: This is a reference guide for setting up storage in Supabase Dashboard
--- Storage buckets must be created through the Supabase Dashboard UI
+-- Note: This uses the existing 'course-thumbnails' bucket
+-- Courses and Seminars share the same storage bucket for simplicity
 
 -- INSTRUCTIONS:
 -- 1. Go to Supabase Dashboard → Storage
--- 2. Check if 'course-assets' bucket exists
--- 3. If not, create it with these settings:
---    - Name: course-assets
+-- 2. Verify 'course-thumbnails' bucket exists (it should already exist)
+-- 3. Bucket settings should be:
+--    - Name: course-thumbnails
 --    - Public: Yes (for public access to thumbnails)
 --    - File size limit: 5MB
 --    - Allowed MIME types: image/*
 
--- ALTERNATIVE: If you prefer a separate bucket for seminars:
--- Create a new bucket called 'seminar-assets' with same settings
+-- If bucket doesn't exist, create it with the above settings
 
--- Storage policies (to be added in Supabase Dashboard → Storage → Policies):
+-- Storage policies (should already be configured):
 
 -- Policy 1: Public Read Access (Anyone can view images)
 -- Name: Public Read Access
 -- Policy: 
 -- CREATE POLICY "Public Read Access"
 -- ON storage.objects FOR SELECT
--- USING (bucket_id = 'course-assets');
+-- USING (bucket_id = 'course-thumbnails');
 
 -- Policy 2: Authenticated Upload (Logged in users can upload)
 -- Name: Authenticated Upload
@@ -31,7 +30,7 @@
 -- CREATE POLICY "Authenticated Upload"
 -- ON storage.objects FOR INSERT
 -- WITH CHECK (
---   bucket_id = 'course-assets' 
+--   bucket_id = 'course-thumbnails' 
 --   AND auth.role() = 'authenticated'
 -- );
 
@@ -41,7 +40,7 @@
 -- CREATE POLICY "Owner Update"
 -- ON storage.objects FOR UPDATE
 -- USING (
---   bucket_id = 'course-assets' 
+--   bucket_id = 'course-thumbnails' 
 --   AND auth.uid() = owner
 -- );
 
@@ -51,12 +50,17 @@
 -- CREATE POLICY "Owner Delete"
 -- ON storage.objects FOR DELETE
 -- USING (
---   bucket_id = 'course-assets' 
+--   bucket_id = 'course-thumbnails' 
 --   AND auth.uid() = owner
 -- );
 
--- VERIFICATION:
--- After setup, verify by uploading a test image through the UI
+-- FOLDER STRUCTURE:
+-- courses/{filename}   → For course thumbnails
+-- seminars/{filename}  → For seminar thumbnails
+-- This keeps them organized while using the same bucket
 
--- If using existing 'course-assets' bucket, no action needed!
--- The bucket should already exist from course thumbnails feature.
+-- VERIFICATION:
+-- After setup, verify by uploading a test seminar image through the UI
+
+-- If 'course-thumbnails' bucket already exists from courses, you're all set!
+-- Seminars will use the same bucket with 'seminars/' prefix for organization.

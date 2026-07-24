@@ -102,7 +102,7 @@ Trainers can now upload custom thumbnail images for their seminars. The thumbnai
 ## Technical Details
 
 ### Storage Location:
-- **Bucket**: `course-assets` (same as course thumbnails)
+- **Bucket**: `course-thumbnails` (shared with course thumbnails)
 - **Path**: `seminars/{filename}`
 - **Filename Format**: `seminar-{timestamp}-{random}.{ext}`
 
@@ -110,6 +110,23 @@ Trainers can now upload custom thumbnail images for their seminars. The thumbnai
 ```
 seminars/seminar-1721825734123-a7x9k2.jpg
 ```
+
+### Folder Structure:
+```
+course-thumbnails/
+├── courses/           ← Course thumbnails
+│   ├── course-123.jpg
+│   └── course-456.png
+└── seminars/          ← Seminar thumbnails
+    ├── seminar-789.jpg
+    └── seminar-012.png
+```
+
+### Why Share the Same Bucket?
+- ✅ Simpler management (one bucket to configure)
+- ✅ Same policies apply to both
+- ✅ Organized with folder prefixes
+- ✅ Consistent URL structure
 
 ### Database:
 - **Table**: `seminars`
@@ -153,7 +170,7 @@ seminars/seminar-1721825734123-a7x9k2.jpg
 **Cause**: Storage bucket not public or policies missing  
 **Solution**:
 1. Go to Supabase Dashboard → Storage
-2. Find `course-assets` bucket
+2. Find `course-thumbnails` bucket
 3. Ensure bucket is **Public**
 4. Check storage policies are set up
 5. See `migrations/20260724000001_seminar_thumbnail_storage.sql`
@@ -173,13 +190,13 @@ seminars/seminar-1721825734123-a7x9k2.jpg
 ### For Developers:
 
 **1. Supabase Storage Bucket**
-Must have `course-assets` bucket configured:
+Must have `course-thumbnails` bucket configured:
 - Public access enabled
 - Policies for read/write set up
 - See migration file for details
 
-**2. File Already Exists?**
-If you have course thumbnails working, you're all set! Seminars use the same bucket.
+**2. Bucket Already Exists?**
+If you have course thumbnails working, you're all set! Seminars share the same `course-thumbnails` bucket, just with a `seminars/` folder prefix.
 
 **3. New Installation?**
 Follow instructions in:
