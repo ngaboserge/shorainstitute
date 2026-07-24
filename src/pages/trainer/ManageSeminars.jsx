@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye } from 'lucide-react'
+import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { useAuth } from '../../contexts/AuthContext'
@@ -15,6 +15,9 @@ const ManageSeminars = () => {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeminar, setEditingSeminar] = useState(null)
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false)
+  const [selectedSeminar, setSelectedSeminar] = useState(null)
+  const [questions, setQuestions] = useState([])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -185,6 +188,51 @@ const ManageSeminars = () => {
     })
   }
 
+  const handleManageQuestions = (seminar) => {
+    setSelectedSeminar(seminar)
+    setQuestions(seminar.registration_questions || [])
+    setShowQuestionsModal(true)
+  }
+
+  const addQuestion = () => {
+    const newQuestion = {
+      id: `q${Date.now()}`,
+      question: '',
+      type: 'text',
+      required: false,
+      options: []
+    }
+    setQuestions([...questions, newQuestion])
+  }
+
+  const updateQuestion = (id, field, value) => {
+    setQuestions(questions.map(q => 
+      q.id === id ? { ...q, [field]: value } : q
+    ))
+  }
+
+  const deleteQuestion = (id) => {
+    setQuestions(questions.filter(q => q.id !== id))
+  }
+
+  const saveQuestions = async () => {
+    try {
+      const { error } = await supabase
+        .from('seminars')
+        .update({ registration_questions: questions })
+        .eq('id', selectedSeminar.id)
+
+      if (error) throw error
+
+      alert('✅ Registration questions saved successfully!')
+      setShowQuestionsModal(false)
+      loadSeminars()
+    } catch (error) {
+      console.error('Error saving questions:', error)
+      alert('Failed to save questions')
+    }
+  }
+
   if (loading) {
     return (
       <div className="dashboard-layout">
@@ -273,6 +321,20 @@ const ManageSeminars = () => {
                       <p className="seminar-description">{seminar.description}</p>
                     </div>
                     <div className="seminar-actions">
+                      <button 
+                        className="btn btn-icon"
+                        onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
+                        title="View Registrations"
+                      >
+                        <List size={18} />
+                      </button>
+                      <button 
+                        className="btn btn-icon"
+                        onClick={() => handleManageQuestions(seminar)}
+                        title="Manage Registration Questions"
+                      >
+                        <HelpCircle size={18} />
+                      </button>
                       <button 
                         className="btn btn-icon"
                         onClick={() => handleEdit(seminar)}
@@ -512,6 +574,137 @@ const ManageSeminars = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Registration Questions Modal */}
+      {showQuestionsModal && (
+        <div className="modal-overlay" onClick={() => setShowQuestionsModal(false)}>
+          <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Registration Questions</h2>
+              <button 
+                className="modal-close"
+                onClick={() => setShowQuestionsModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ marginBottom: '20px', color: '#666' }}>
+                Add custom questions for learners to answer when registering for this seminar.
+              </p>
+
+              {questions.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px' }}>
+                  <HelpCircle size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                  <p style={{ color: '#666', marginBottom: '20px' }}>No registration questions yet</p>
+                  <button 
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={addQuestion}
+                  >
+                    <Plus size={18} />
+                    Add First Question
+                  </button>
+                </div>
+              ) : (
+                <div className="questions-list">
+                  {questions.map((q, index) => (
+                    <div key={q.id} className="question-item">
+                      <div className="question-header">
+                        <h4>Question {index + 1}</h4>
+                        <button 
+                          type="button"
+                          className="btn btn-icon btn-sm"
+                          onClick={() => deleteQuestion(q.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Question Text *</label>
+                        <input
+                          type="text"
+                          value={q.question}
+                          onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
+                          placeholder="e.g., What topics are you most interested in?"
+                        />
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Answer Type *</label>
+                          <select
+                            value={q.type}
+                            onChange={(e) => updateQuestion(q.id, 'type', e.target.value)}
+                          >
+                            <option value="text">Text (Short Answer)</option>
+                            <option value="textarea">Text Area (Long Answer)</option>
+                            <option value="select">Dropdown</option>
+                            <option value="radio">Multiple Choice</option>
+                            <option value="checkbox">Checkboxes</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={q.required}
+                              onChange={(e) => updateQuestion(q.id, 'required', e.target.checked)}
+                              style={{ marginRight: '8px' }}
+                            />
+                            Required Question
+                          </label>
+                        </div>
+                      </div>
+
+                      {(q.type === 'select' || q.type === 'radio' || q.type === 'checkbox') && (
+                        <div className="form-group">
+                          <label>Options (one per line)</label>
+                          <textarea
+                            value={q.options?.join('\n') || ''}
+                            onChange={(e) => updateQuestion(q.id, 'options', e.target.value.split('\n').filter(o => o.trim()))}
+                            rows={4}
+                            placeholder="Option 1&#10;Option 2&#10;Option 3"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <button 
+                    type="button"
+                    className="btn btn-secondary btn-full"
+                    onClick={addQuestion}
+                  >
+                    <Plus size={18} />
+                    Add Another Question
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowQuestionsModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                className="btn btn-primary"
+                onClick={saveQuestions}
+              >
+                Save Questions
+              </button>
+            </div>
           </div>
         </div>
       )}

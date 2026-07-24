@@ -30,6 +30,7 @@ import ManageAssessments from './pages/trainer/ManageAssessments'
 import EditAssessment from './pages/trainer/EditAssessment'
 import Assessments from './pages/trainer/Assessments'
 import ManageSeminars from './pages/trainer/ManageSeminars'
+import SeminarRegistrations from './pages/trainer/SeminarRegistrations'
 import ManagePaths from './pages/trainer/ManagePaths'
 import ManageResources from './pages/trainer/ManageResources'
 import PaymentApprovals from './pages/trainer/PaymentApprovals'
@@ -105,6 +106,7 @@ function App() {
         <Route path="/trainer/qa" element={<ProtectedRoute requiredRole="trainer"><TrainerQA /></ProtectedRoute>} />
         <Route path="/trainer/sessions" element={<ProtectedRoute requiredRole="trainer"><TrainerSessions /></ProtectedRoute>} />
         <Route path="/trainer/manage-seminars" element={<ProtectedRoute requiredRole="trainer"><ManageSeminars /></ProtectedRoute>} />
+        <Route path="/trainer/seminars/:seminarId/registrations" element={<ProtectedRoute requiredRole="trainer"><SeminarRegistrations /></ProtectedRoute>} />
         <Route path="/trainer/manage-paths" element={<ProtectedRoute requiredRole="trainer"><ManagePaths /></ProtectedRoute>} />
         <Route path="/trainer/manage-resources" element={<ProtectedRoute requiredRole="trainer"><ManageResources /></ProtectedRoute>} />
         <Route path="/trainer/payment-approvals" element={<ProtectedRoute requiredRole="trainer"><PaymentApprovals /></ProtectedRoute>} />
