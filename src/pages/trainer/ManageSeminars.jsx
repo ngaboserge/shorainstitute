@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List } from 'lucide-react'
+import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List, Upload } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { useAuth } from '../../contexts/AuthContext'
@@ -18,6 +18,9 @@ const ManageSeminars = () => {
   const [showQuestionsModal, setShowQuestionsModal] = useState(false)
   const [selectedSeminar, setSelectedSeminar] = useState(null)
   const [questions, setQuestions] = useState([])
+  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState(null)
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -79,12 +82,81 @@ const ManageSeminars = () => {
     }))
   }
 
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB')
+        return
+      }
+
+      setThumbnailFile(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadThumbnail = async () => {
+    if (!thumbnailFile) return null
+
+    try {
+      setUploadingThumbnail(true)
+
+      // Generate unique filename
+      const fileExt = thumbnailFile.name.split('.').pop()
+      const fileName = `seminar-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `seminars/${fileName}`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('course-assets')
+        .upload(filePath, thumbnailFile)
+
+      if (error) throw error
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('course-assets')
+        .getPublicUrl(filePath)
+
+      return urlData.publicUrl
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error)
+      alert('Failed to upload thumbnail')
+      return null
+    } finally {
+      setUploadingThumbnail(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
     try {
+      // Upload thumbnail if new one selected
+      let thumbnailUrl = formData.thumbnail_url || editingSeminar?.thumbnail_url || null
+      if (thumbnailFile) {
+        const uploadedUrl = await uploadThumbnail()
+        if (uploadedUrl) {
+          thumbnailUrl = uploadedUrl
+        }
+      }
+
       const seminarData = {
         ...formData,
+        thumbnail_url: thumbnailUrl,
         instructor_id: user.id,
         instructor_name: profile?.full_name || 'Trainer',
         duration_minutes: calculateDuration(formData.start_time, formData.end_time)
@@ -133,8 +205,11 @@ const ManageSeminars = () => {
       capacity: seminar.capacity || 100,
       category: seminar.category || 'Finance & Investment',
       level: seminar.level || 'all',
-      status: seminar.status
+      status: seminar.status,
+      thumbnail_url: seminar.thumbnail_url || null
     })
+    setThumbnailFile(null)
+    setThumbnailPreview(seminar.thumbnail_url || null)
     setShowCreateModal(true)
   }
 
@@ -176,8 +251,11 @@ const ManageSeminars = () => {
       capacity: 100,
       category: 'Finance & Investment',
       level: 'all',
-      status: 'upcoming'
+      status: 'upcoming',
+      thumbnail_url: null
     })
+    setThumbnailFile(null)
+    setThumbnailPreview(null)
   }
 
   const formatDate = (dateStr) => {
@@ -403,6 +481,51 @@ const ManageSeminars = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="seminar-form">
+              {/* Thumbnail Upload */}
+              <div className="form-group">
+                <label>Seminar Thumbnail</label>
+                <div className="thumbnail-upload-container">
+                  {thumbnailPreview ? (
+                    <div className="thumbnail-preview">
+                      <img src={thumbnailPreview} alt="Thumbnail preview" />
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setThumbnailFile(null)
+                          setThumbnailPreview(null)
+                          setFormData(prev => ({ ...prev, thumbnail_url: null }))
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="thumbnail-upload-placeholder">
+                      <Upload size={32} color="#999" />
+                      <p>Click to upload thumbnail</p>
+                      <p style={{ fontSize: '12px', color: '#999' }}>
+                        Recommended: 800x600px, Max 5MB
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailChange}
+                    style={{ display: 'none' }}
+                    id="thumbnail-upload"
+                  />
+                  <label 
+                    htmlFor="thumbnail-upload" 
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '12px', cursor: 'pointer' }}
+                  >
+                    {thumbnailPreview ? 'Change Image' : 'Choose Image'}
+                  </label>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Title *</label>
                 <input
@@ -566,11 +689,16 @@ const ManageSeminars = () => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowCreateModal(false)}
+                  disabled={uploadingThumbnail}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingSeminar ? 'Update Seminar' : 'Create Seminar'}
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={uploadingThumbnail}
+                >
+                  {uploadingThumbnail ? 'Uploading...' : editingSeminar ? 'Update Seminar' : 'Create Seminar'}
                 </button>
               </div>
             </form>
