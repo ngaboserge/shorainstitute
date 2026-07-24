@@ -34,7 +34,7 @@ const Seminars = () => {
         .order('date', { ascending: true })
 
       if (activeTab === 'upcoming') {
-        query.gte('date', today).in('status', ['upcoming', 'live'])
+        query.gte('date', today).in('status', ['published', 'upcoming', 'live'])
       } else {
         query.lt('date', today).eq('status', 'completed')
       }
@@ -96,29 +96,47 @@ const Seminars = () => {
         return
       }
 
-      // Register
-      const { error: regError } = await supabase
+      // Check if user already has a registration (including cancelled ones)
+      const { data: existingRegs, error: checkError } = await supabase
         .from('seminar_registrations')
-        .insert({
-          seminar_id: seminarId,
-          user_id: user.id,
-          user_name: profile?.full_name || 'Learner',
-          user_email: user.email,
-          registration_status: 'registered',
-          registration_answers: registrationAnswers
-        })
+        .select('*')
+        .eq('seminar_id', seminarId)
+        .eq('user_id', user.id)
 
-      if (regError) throw regError
+      if (checkError) throw checkError
 
-      // Update seminar count
-      await supabase
-        .from('seminars')
-        .update({ 
-          current_registrations: (seminar.current_registrations || 0) + 1 
-        })
-        .eq('id', seminarId)
+      const existingReg = existingRegs && existingRegs.length > 0 ? existingRegs[0] : null
 
-      // Reload data
+      if (existingReg) {
+        // Update existing registration (re-register after cancellation)
+        const { error: updateError } = await supabase
+          .from('seminar_registrations')
+          .update({
+            registration_status: 'registered',
+            registration_answers: registrationAnswers,
+            user_name: profile?.full_name || 'Learner',
+            user_email: user.email
+          })
+          .eq('id', existingReg.id)
+
+        if (updateError) throw updateError
+      } else {
+        // Create new registration
+        const { error: insertError } = await supabase
+          .from('seminar_registrations')
+          .insert({
+            seminar_id: seminarId,
+            user_id: user.id,
+            user_name: profile?.full_name || 'Learner',
+            user_email: user.email,
+            registration_status: 'registered',
+            registration_answers: registrationAnswers
+          })
+
+        if (insertError) throw insertError
+      }
+
+      // Reload data (count is automatic from the relationship)
       await loadSeminars()
       await loadRegistrations()
       
@@ -158,17 +176,6 @@ const Seminars = () => {
         .eq('user_id', user.id)
 
       if (error) throw error
-
-      // Update seminar count
-      const seminar = seminars.find(s => s.id === seminarId)
-      if (seminar) {
-        await supabase
-          .from('seminars')
-          .update({ 
-            current_registrations: Math.max(0, (seminar.current_registrations || 0) - 1)
-          })
-          .eq('id', seminarId)
-      }
 
       await loadSeminars()
       await loadRegistrations()
@@ -257,7 +264,7 @@ const Seminars = () => {
                         <Video size={48} color="white" />
                       </div>
                     )}
-                    {seminar.status === 'upcoming' && registered && (
+                    {(seminar.status === 'upcoming' || seminar.status === 'published') && registered && (
                       <div className="registered-badge">
                         <CheckCircle size={14} />
                         Registered
@@ -323,7 +330,7 @@ const Seminars = () => {
                         <Video size={16} />
                         <span>Live on {seminar.platform || 'Zoom'}</span>
                       </div>
-                      {seminar.status === 'upcoming' && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && (
                         <div className="detail-row">
                           <Users size={16} />
                           <span style={{ color: spotsLeft < 20 ? '#f59e0b' : '#666' }}>
@@ -334,7 +341,7 @@ const Seminars = () => {
                     </div>
 
                     <div className="seminar-actions">
-                      {seminar.status === 'upcoming' && !registered && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && !registered && (
                         <button 
                           className="btn btn-warning btn-full"
                           onClick={() => handleRegister(seminar.id)}
@@ -343,7 +350,7 @@ const Seminars = () => {
                           {spotsLeft > 0 ? 'Register Free' : 'Full'}
                         </button>
                       )}
-                      {seminar.status === 'upcoming' && registered && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && registered && (
                         <>
                           {seminar.meeting_link && (
                             <a 
@@ -405,7 +412,7 @@ const Seminars = () => {
           {/* Registration Modal */}
           {showRegisterModal && selectedSeminar && (
             <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-content modal-fullpage" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                   <h2>Register for Seminar</h2>
                   <button 
@@ -416,7 +423,7 @@ const Seminars = () => {
                   </button>
                 </div>
 
-                <div className="modal-body">
+                <div className="modal-body modal-body-fullpage">
                   <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B4F9F', marginBottom: '8px' }}>
                       {selectedSeminar.title}

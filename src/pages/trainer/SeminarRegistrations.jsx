@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Mail, Calendar, Clock, Download, Search, Filter, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Users, Mail, Calendar, Clock, Download, Search, Filter, CheckCircle, XCircle, FileText } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import shoraLogo from '../../assets/shora-logo.png'
 import './SeminarRegistrations.css'
 
 const SeminarRegistrations = () => {
@@ -52,7 +55,7 @@ const SeminarRegistrations = () => {
         .order('created_at', { ascending: false })
 
       if (regError) throw regError
-
+      
       setRegistrations(registrationsData || [])
     } catch (error) {
       console.error('Error loading data:', error)
@@ -95,7 +98,8 @@ const SeminarRegistrations = () => {
       // Add answers
       const answers = reg.registration_answers || {}
       questions.forEach(q => {
-        row.push(answers[q.id] || '')
+        const answer = answers[q.id]
+        row.push(Array.isArray(answer) ? answer.join(', ') : answer || '')
       })
 
       return row
@@ -113,6 +117,192 @@ const SeminarRegistrations = () => {
     a.download = `${seminar?.title || 'seminar'}-registrations-${new Date().toISOString().split('T')[0]}.csv`
     a.click()
     window.URL.revokeObjectURL(url)
+  }
+
+  const exportToPDF = () => {
+    if (filteredRegistrations.length === 0) {
+      alert('No registrations to export')
+      return
+    }
+
+    const doc = new jsPDF()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    
+    // Colors
+    const primaryColor = [11, 79, 159] // #0B4F9F
+    const lightBlue = [227, 242, 253] // #E3F2FD
+    const gray = [102, 102, 102] // #666666
+    
+    // Header Section
+    doc.setFillColor(...primaryColor)
+    doc.rect(0, 0, pageWidth, 50, 'F')
+    
+    // Add Logo
+    const logoImg = new Image()
+    logoImg.src = shoraLogo
+    
+    // Wait for logo to load and add it
+    const addLogoAndContent = () => {
+      try {
+        // Add logo - positioned on the left side of the header
+        const logoWidth = 35
+        const logoHeight = 35
+        const logoX = 15
+        const logoY = 7.5
+        
+        doc.addImage(logoImg, 'PNG', logoX, logoY, logoWidth, logoHeight)
+        
+        // Title next to logo
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(22)
+        doc.setFont('helvetica', 'bold')
+        doc.text('SHORA INSTITUTE', logoX + logoWidth + 8, 22)
+        
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Seminar Registration Report', logoX + logoWidth + 8, 32)
+      } catch (error) {
+        // Fallback if logo fails to load
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(24)
+        doc.setFont('helvetica', 'bold')
+        doc.text('SHORA INSTITUTE', pageWidth / 2, 22, { align: 'center' })
+        
+        doc.setFontSize(16)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Seminar Registration Report', pageWidth / 2, 35, { align: 'center' })
+      }
+      
+      // Seminar Information Box
+      let yPos = 60
+      doc.setFillColor(...lightBlue)
+      doc.roundedRect(15, yPos, pageWidth - 30, 50, 3, 3, 'F')
+      
+      doc.setTextColor(...primaryColor)
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      yPos += 10
+      doc.text(seminar.title, 20, yPos)
+      
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...gray)
+      yPos += 8
+      doc.text(`Date: ${new Date(seminar.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, 20, yPos)
+      yPos += 6
+      doc.text(`Time: ${seminar.start_time.slice(0, 5)} - ${seminar.end_time.slice(0, 5)}`, 20, yPos)
+      yPos += 6
+      doc.text(`Platform: ${seminar.platform || 'Zoom'}`, 20, yPos)
+      yPos += 6
+      doc.text(`Instructor: ${seminar.instructor_name}`, 20, yPos)
+      
+      // Statistics
+      yPos += 6
+      doc.setTextColor(...primaryColor)
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Total Registrations: ${stats.total} / ${seminar.capacity}`, 20, yPos)
+      
+      // Registration Table
+      yPos += 15
+      
+      const questions = seminar?.registration_questions || []
+      const tableColumns = [
+        { header: '#', dataKey: 'num' },
+        { header: 'Name', dataKey: 'name' },
+        { header: 'Email', dataKey: 'email' },
+        { header: 'Status', dataKey: 'status' },
+        { header: 'Registered', dataKey: 'date' }
+      ]
+      
+      // Add question columns
+      questions.forEach((q, i) => {
+        tableColumns.push({
+          header: q.question.length > 30 ? q.question.substring(0, 27) + '...' : q.question,
+          dataKey: `q${i}`
+        })
+      })
+      
+      const tableRows = filteredRegistrations.map((reg, index) => {
+        const row = {
+          num: index + 1,
+          name: reg.user_name || 'Unknown',
+          email: reg.user_email || '',
+          status: (reg.registration_status || 'registered').toUpperCase(),
+          date: new Date(reg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        }
+        
+        // Add answers
+        const answers = reg.registration_answers || {}
+        questions.forEach((q, i) => {
+          const answer = answers[q.id]
+          row[`q${i}`] = Array.isArray(answer) ? answer.join(', ') : answer || '-'
+        })
+        
+        return row
+      })
+      
+      autoTable(doc, {
+        startY: yPos,
+        columns: tableColumns,
+        body: tableRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontSize: 9,
+          fontStyle: 'bold',
+          halign: 'left'
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [51, 51, 51]
+        },
+        alternateRowStyles: {
+          fillColor: [245, 247, 250]
+        },
+        columnStyles: {
+          num: { cellWidth: 10, halign: 'center' },
+          name: { cellWidth: 25 },
+          email: { cellWidth: 35 },
+          status: { cellWidth: 20, halign: 'center' },
+          date: { cellWidth: 25 }
+        },
+        margin: { left: 15, right: 15 },
+        didDrawPage: (data) => {
+          // Add logo to each page
+          if (doc.internal.getCurrentPageInfo().pageNumber > 1) {
+            try {
+              doc.addImage(logoImg, 'PNG', 15, 5, 20, 20)
+            } catch (error) {
+              // Skip logo on additional pages if it fails
+            }
+          }
+          
+          // Footer
+          doc.setFontSize(8)
+          doc.setTextColor(...gray)
+          doc.text(
+            `Generated on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+            pageWidth / 2,
+            pageHeight - 10,
+            { align: 'center' }
+          )
+        }
+      })
+      
+      // Save PDF
+      const fileName = `${seminar.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_registrations_${new Date().toISOString().split('T')[0]}.pdf`
+      doc.save(fileName)
+    }
+    
+    // Load logo and generate PDF
+    if (logoImg.complete) {
+      addLogoAndContent()
+    } else {
+      logoImg.onload = addLogoAndContent
+      logoImg.onerror = addLogoAndContent // Fallback if logo fails
+    }
   }
 
   const formatDate = (dateStr) => {
@@ -206,14 +396,26 @@ const SeminarRegistrations = () => {
           }
           subtitle={seminar.title}
           actions={
-            <button 
-              className="btn btn-primary"
-              onClick={exportToCSV}
-              disabled={filteredRegistrations.length === 0}
-            >
-              <Download size={18} />
-              Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={exportToCSV}
+                disabled={filteredRegistrations.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <Download size={18} />
+                Export CSV
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={exportToPDF}
+                disabled={filteredRegistrations.length === 0}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <FileText size={18} />
+                Export PDF
+              </button>
+            </div>
           }
         />
 

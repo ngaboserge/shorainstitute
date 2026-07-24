@@ -439,7 +439,7 @@ const HomePage = () => {
                         </div>
                       </div>
                       
-                      <Link to={`/seminars/register/${seminar.id}`} className="btn-register">Register Free</Link>
+                      <Link to="/auth/learner/login" className="btn-register">Register Free</Link>
                     </div>
                   </div>
                 </div>

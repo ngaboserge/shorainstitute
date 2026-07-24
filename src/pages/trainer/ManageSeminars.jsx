@@ -35,7 +35,7 @@ const ManageSeminars = () => {
     capacity: 100,
     category: 'Finance & Investment',
     level: 'all',
-    status: 'upcoming'
+    status: 'draft'
   })
 
   useEffect(() => {
@@ -48,25 +48,42 @@ const ManageSeminars = () => {
     try {
       const today = new Date().toISOString().split('T')[0]
       
-      const query = supabase
+      // First get seminars
+      let query = supabase
         .from('seminars')
-        .select(`
-          *,
-          seminar_registrations (count)
-        `)
+        .select('*')
         .eq('instructor_id', user.id)
         .order('date', { ascending: true })
 
       if (activeTab === 'upcoming') {
-        query.gte('date', today).in('status', ['upcoming', 'draft'])
+        query.gte('date', today).in('status', ['published', 'draft'])
       } else if (activeTab === 'completed') {
         query.eq('status', 'completed')
       }
 
-      const { data, error } = await query
+      const { data: seminarsData, error: seminarsError } = await query
 
-      if (error) throw error
-      setSeminars(data || [])
+      if (seminarsError) throw seminarsError
+
+      // Get registration counts for each seminar
+      const seminarsWithCounts = await Promise.all(
+        (seminarsData || []).map(async (seminar) => {
+          const { count, error: countError } = await supabase
+            .from('seminar_registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('seminar_id', seminar.id)
+            .eq('registration_status', 'registered')
+
+          if (countError) {
+            console.error('Error counting registrations for seminar', seminar.id, ':', countError)
+            return { ...seminar, current_registrations: 0 }
+          }
+
+          return { ...seminar, current_registrations: count || 0 }
+        })
+      )
+
+      setSeminars(seminarsWithCounts)
     } catch (error) {
       console.error('Error loading seminars:', error)
     } finally {
@@ -232,6 +249,28 @@ const ManageSeminars = () => {
     }
   }
 
+  const handleTogglePublish = async (seminar) => {
+    const newStatus = seminar.status === 'published' ? 'draft' : 'published'
+    const action = newStatus === 'published' ? 'publish' : 'unpublish'
+    
+    if (!confirm(`Are you sure you want to ${action} this seminar?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('seminars')
+        .update({ status: newStatus })
+        .eq('id', seminar.id)
+
+      if (error) throw error
+      
+      alert(`✅ Seminar ${action}ed successfully! ${newStatus === 'published' ? 'It is now visible to learners.' : 'It is now hidden from learners.'}`)
+      loadSeminars()
+    } catch (error) {
+      console.error(`Error ${action}ing seminar:`, error)
+      alert(`Failed to ${action} seminar`)
+    }
+  }
+
   const calculateDuration = (start, end) => {
     const [startHour, startMin] = start.split(':').map(Number)
     const [endHour, endMin] = end.split(':').map(Number)
@@ -251,7 +290,7 @@ const ManageSeminars = () => {
       capacity: 100,
       category: 'Finance & Investment',
       level: 'all',
-      status: 'upcoming',
+      status: 'draft',
       thumbnail_url: null
     })
     setThumbnailFile(null)
@@ -453,6 +492,25 @@ const ManageSeminars = () => {
 
                   {/* Actions */}
                   <div className="seminar-actions-compact">
+                    {seminar.status === 'draft' ? (
+                      <button 
+                        className="action-btn-compact publish"
+                        onClick={() => handleTogglePublish(seminar)}
+                        title="Publish Seminar"
+                      >
+                        <Eye size={16} />
+                        <span>Publish</span>
+                      </button>
+                    ) : (
+                      <button 
+                        className="action-btn-compact unpublish"
+                        onClick={() => handleTogglePublish(seminar)}
+                        title="Unpublish Seminar"
+                      >
+                        <Eye size={16} />
+                        <span>Unpublish</span>
+                      </button>
+                    )}
                     <button 
                       className="action-btn-compact primary"
                       onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
@@ -702,11 +760,17 @@ const ManageSeminars = () => {
                     value={formData.status}
                     onChange={handleInputChange}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="upcoming">Publish (Upcoming)</option>
+                    <option value="draft">Draft (Not visible to learners)</option>
+                    <option value="published">Published (Visible on homepage)</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
+                  <small style={{ display: 'block', marginTop: '6px', color: '#666', fontSize: '12px' }}>
+                    {formData.status === 'draft' && '📝 Only you can see this seminar'}
+                    {formData.status === 'published' && '✅ Learners can discover and register for this seminar'}
+                    {formData.status === 'completed' && '✔️ Seminar has ended'}
+                    {formData.status === 'cancelled' && '❌ Seminar was cancelled'}
+                  </small>
                 </div>
               </div>
 
@@ -824,16 +888,160 @@ const ManageSeminars = () => {
                         </div>
                       </div>
 
-                      {(q.type === 'select' || q.type === 'radio' || q.type === 'checkbox') && (
-                        <div className="form-group">
-                          <label>Options (one per line)</label>
-                          <textarea
-                            value={q.options?.join('\n') || ''}
-                            onChange={(e) => updateQuestion(q.id, 'options', e.target.value.split('\n').filter(o => o.trim()))}
-                            rows={5}
-                            placeholder="Option 1&#10;Option 2&#10;Option 3"
-                            style={{ width: '100%' }}
-                          />
+                      {/* Dropdown UI */}
+                      {q.type === 'select' && (
+                        <div className="answer-type-ui dropdown-ui">
+                          <label className="ui-label">
+                            <List size={16} />
+                            Dropdown Options
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <span className="option-number">{i + 1}</span>
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Option ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Dropdown Option
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Multiple Choice (Radio) UI */}
+                      {q.type === 'radio' && (
+                        <div className="answer-type-ui radio-ui">
+                          <label className="ui-label">
+                            <HelpCircle size={16} />
+                            Multiple Choice Options (select one)
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <input type="radio" disabled className="option-preview-icon" />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Choice ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Choice
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Checkboxes UI */}
+                      {q.type === 'checkbox' && (
+                        <div className="answer-type-ui checkbox-ui">
+                          <label className="ui-label">
+                            <List size={16} />
+                            Checkbox Options (select multiple)
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <input type="checkbox" disabled className="option-preview-icon" />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Option ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Checkbox Option
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text/Textarea - No additional UI needed */}
+                      {(q.type === 'text' || q.type === 'textarea') && (
+                        <div className="answer-type-ui text-ui">
+                          <div className="text-preview">
+                            {q.type === 'text' ? (
+                              <>
+                                <input type="text" placeholder="Learner will type answer here..." disabled className="preview-field" />
+                                <small>Short text answer</small>
+                              </>
+                            ) : (
+                              <>
+                                <textarea rows={3} placeholder="Learner will type answer here..." disabled className="preview-field" />
+                                <small>Long text answer</small>
+                              </>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -848,6 +1056,19 @@ const ManageSeminars = () => {
                     <Plus size={18} />
                     Add Another Question
                   </button>
+
+                  {/* Preview Box - Bottom Horizontal */}
+                  {questions.length > 0 && (
+                    <div className="bottom-preview-box">
+                      {questions.map((q, index) => (
+                        <span key={q.id} className="preview-question-text">
+                          <strong>Q{index + 1}:</strong> {q.question || '(empty)'}
+                          {q.required && <span className="required-star">*</span>}
+                          {index < questions.length - 1 && ' | '}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
