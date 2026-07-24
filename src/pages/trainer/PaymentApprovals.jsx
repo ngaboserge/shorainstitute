@@ -13,7 +13,7 @@ const PaymentApprovals = () => {
   const { user } = useAuth()
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState('pending')
+  const [filterStatus, setFilterStatus] = useState('confirmed')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
@@ -43,8 +43,15 @@ const PaymentApprovals = () => {
         .order('created_at', { ascending: false })
 
       // Filter by status
+      // 'confirmed' = XentriPay confirmed payment, awaiting trainer approval
+      // 'pending' = Payment initiated but not yet confirmed by gateway
       if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus)
+        if (filterStatus === 'pending') {
+          // Show both 'pending' (gateway pending) and 'confirmed' (awaiting approval)
+          query = query.in('status', ['pending', 'confirmed'])
+        } else {
+          query = query.eq('status', filterStatus)
+        }
       }
 
       const { data, error } = await query
@@ -83,31 +90,32 @@ const PaymentApprovals = () => {
   }
 
   const handleApprove = async (payment) => {
-    if (!confirm(`Approve payment of ${formatPrice(payment.amount, payment.currency)} from ${getUserEmail(payment)}?`)) {
+    if (!confirm(`Approve payment of ${formatPrice(payment.amount, payment.currency)} from ${getUserEmail(payment)}?\n\nThis will enroll the learner in the course.`)) {
       return
     }
 
     setActionLoading(true)
     try {
-      const { error } = await supabase
-        .from('course_payments')
-        .update({
-          status: 'approved',
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-          admin_notes: adminNotes || null
-        })
-        .eq('id', payment.id)
+      // Use the new approve_course_payment RPC function
+      const { data, error } = await supabase.rpc('approve_course_payment', {
+        p_payment_id: payment.id,
+        p_approved_by: user.id,
+        p_admin_notes: adminNotes || null
+      })
 
       if (error) throw error
+      
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to approve payment')
+      }
 
-      alert('✅ Payment approved! Learner has been enrolled automatically.')
+      alert('✅ Payment approved! Learner has been enrolled in the course.')
       setAdminNotes('')
       setShowDetailsModal(false)
       loadPayments()
     } catch (error) {
       console.error('Error approving payment:', error)
-      alert('Failed to approve payment. Please try again.')
+      alert(`Failed to approve payment: ${error.message}`)
     } finally {
       setActionLoading(false)
     }
@@ -157,9 +165,10 @@ const PaymentApprovals = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: { icon: Clock, color: '#fbbf24', bg: '#fef3c7', text: '#92400e' },
-      approved: { icon: CheckCircle, color: '#10b981', bg: '#d1fae5', text: '#065f46' },
-      rejected: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', text: '#991b1b' }
+      pending: { icon: Clock, color: '#f59e0b', bg: '#fef3c7', text: '#92400e', label: 'Initiated' },
+      confirmed: { icon: AlertCircle, color: '#3b82f6', bg: '#dbeafe', text: '#1e40af', label: 'Awaiting Approval' },
+      approved: { icon: CheckCircle, color: '#10b981', bg: '#d1fae5', text: '#065f46', label: 'Approved' },
+      rejected: { icon: XCircle, color: '#ef4444', bg: '#fee2e2', text: '#991b1b', label: 'Rejected' }
     }
     
     const badge = badges[status] || badges.pending
@@ -175,7 +184,7 @@ const PaymentApprovals = () => {
         }}
       >
         <Icon size={14} />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {badge.label}
       </span>
     )
   }
@@ -187,7 +196,8 @@ const PaymentApprovals = () => {
   )
 
   const stats = {
-    pending: payments.filter(p => p.status === 'pending').length,
+    pending: payments.filter(p => p.status === 'pending' || p.status === 'confirmed').length,
+    confirmed: payments.filter(p => p.status === 'confirmed').length,
     approved: payments.filter(p => p.status === 'approved').length,
     rejected: payments.filter(p => p.status === 'rejected').length,
     total_revenue: payments
@@ -221,13 +231,23 @@ const PaymentApprovals = () => {
         <div className="content-wrapper">
           {/* Stats Cards */}
           <div className="stats-grid">
+            <div className="stat-card pending" style={{background: '#dbeafe', borderColor: '#3b82f6'}}>
+              <div className="stat-icon" style={{color: '#1e40af'}}>
+                <AlertCircle size={24} />
+              </div>
+              <div className="stat-details">
+                <div className="stat-value">{stats.confirmed}</div>
+                <div className="stat-label">Awaiting Approval</div>
+              </div>
+            </div>
+
             <div className="stat-card pending">
               <div className="stat-icon">
                 <Clock size={24} />
               </div>
               <div className="stat-details">
-                <div className="stat-value">{stats.pending}</div>
-                <div className="stat-label">Pending Review</div>
+                <div className="stat-value">{stats.pending - stats.confirmed}</div>
+                <div className="stat-label">Payment Initiated</div>
               </div>
             </div>
 
@@ -238,16 +258,6 @@ const PaymentApprovals = () => {
               <div className="stat-details">
                 <div className="stat-value">{stats.approved}</div>
                 <div className="stat-label">Approved</div>
-              </div>
-            </div>
-
-            <div className="stat-card rejected">
-              <div className="stat-icon">
-                <XCircle size={24} />
-              </div>
-              <div className="stat-details">
-                <div className="stat-value">{stats.rejected}</div>
-                <div className="stat-label">Rejected</div>
               </div>
             </div>
 
@@ -282,10 +292,17 @@ const PaymentApprovals = () => {
                 All
               </button>
               <button
+                className={`filter-btn ${filterStatus === 'confirmed' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('confirmed')}
+                style={{background: filterStatus === 'confirmed' ? '#3b82f6' : undefined}}
+              >
+                Awaiting Approval ({stats.confirmed})
+              </button>
+              <button
                 className={`filter-btn ${filterStatus === 'pending' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('pending')}
               >
-                Pending ({stats.pending})
+                All Pending ({stats.pending})
               </button>
               <button
                 className={`filter-btn ${filterStatus === 'approved' ? 'active' : ''}`}
@@ -311,7 +328,9 @@ const PaymentApprovals = () => {
                 <AlertCircle size={48} />
                 <h4>No payments found</h4>
                 <p>
-                  {filterStatus === 'pending' 
+                  {filterStatus === 'confirmed'
+                    ? 'No payments awaiting your approval'
+                    : filterStatus === 'pending' 
                     ? 'No pending payments to review'
                     : `No ${filterStatus} payments found`
                   }
@@ -356,8 +375,8 @@ const PaymentApprovals = () => {
                           </span>
                         </td>
                         <td>
-                          <code className="reference-code">
-                            {payment.payment_reference}
+                          <code className="reference-code" title={`XentriPay: ${payment.provider_ref_id || 'N/A'}`}>
+                            {payment.reference_id || payment.payment_reference}
                           </code>
                         </td>
                         <td>{getStatusBadge(payment.status)}</td>
@@ -376,7 +395,7 @@ const PaymentApprovals = () => {
                             >
                               <Eye size={16} />
                             </button>
-                            {payment.status === 'pending' && (
+                            {(payment.status === 'pending' || payment.status === 'confirmed') && (
                               <>
                                 <button
                                   className="btn-icon success"
@@ -449,15 +468,35 @@ const PaymentApprovals = () => {
                 <div className="detail-section">
                   <h4>Payment Information</h4>
                   <div className="detail-row">
+                    <span>Payment Gateway:</span>
+                    <strong style={{color: '#6366f1', textTransform: 'uppercase'}}>
+                      {selectedPayment.payment_provider || 'XentriPay'}
+                    </strong>
+                  </div>
+                  <div className="detail-row">
                     <span>Method:</span>
                     <strong>{selectedPayment.payment_method?.replace('_', ' ')}</strong>
                   </div>
                   <div className="detail-row">
-                    <span>Reference:</span>
-                    <code style={{background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px'}}>
-                      {selectedPayment.payment_reference}
+                    <span>SHORA Reference:</span>
+                    <code style={{background: '#f3f4f6', padding: '4px 8px', borderRadius: '4px', fontSize: '12px'}}>
+                      {selectedPayment.reference_id || selectedPayment.payment_reference}
                     </code>
                   </div>
+                  {selectedPayment.provider_ref_id && (
+                    <div className="detail-row">
+                      <span>XentriPay Transaction ID:</span>
+                      <code style={{background: '#eff6ff', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', color: '#6366f1'}}>
+                        {selectedPayment.provider_ref_id}
+                      </code>
+                    </div>
+                  )}
+                  {selectedPayment.payer_phone && (
+                    <div className="detail-row">
+                      <span>Payer Phone:</span>
+                      <span>{selectedPayment.payer_phone}</span>
+                    </div>
+                  )}
                   {selectedPayment.payment_proof_url && (
                     <div className="detail-row">
                       <span>Proof:</span>
@@ -480,14 +519,14 @@ const PaymentApprovals = () => {
                   </div>
                 )}
 
-                {selectedPayment.status !== 'pending' && selectedPayment.admin_notes && (
+                {!['pending', 'confirmed'].includes(selectedPayment.status) && selectedPayment.admin_notes && (
                   <div className="detail-section full-width">
                     <h4>Admin Notes</h4>
                     <p className="notes-content">{selectedPayment.admin_notes}</p>
                   </div>
                 )}
 
-                {selectedPayment.status === 'pending' && (
+                {(selectedPayment.status === 'pending' || selectedPayment.status === 'confirmed') && (
                   <div className="detail-section full-width">
                     <h4>Admin Notes (Optional)</h4>
                     <textarea
@@ -510,7 +549,7 @@ const PaymentApprovals = () => {
               >
                 Close
               </button>
-              {selectedPayment.status === 'pending' && (
+              {(selectedPayment.status === 'pending' || selectedPayment.status === 'confirmed') && (
                 <>
                   <button 
                     className="btn btn-danger" 

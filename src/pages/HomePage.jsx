@@ -1,11 +1,71 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Users, GraduationCap, Building2, BookOpen, Radio, ClipboardCheck, TrendingUp, Award, UserPlus, Clock, MapPin, ChevronDown } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import shoraLogo from '../assets/shora-logo.png'
 import './HomePage.css'
 
 const HomePage = () => {
   const [openDropdown, setOpenDropdown] = useState(null)
+  const [upcomingSeminars, setUpcomingSeminars] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  const heroImages = [
+    '/landing1.jpeg',
+    '/landing2.jpeg',
+    '/landing3.jpeg',
+    '/landing4.jpeg',
+    '/landing5.jpeg',
+    '/landing6.jpeg'
+  ]
+
+  useEffect(() => {
+    loadUpcomingSeminars()
+  }, [])
+
+  // Auto-rotate hero images every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => 
+        prevIndex === heroImages.length - 1 ? 0 : prevIndex + 1
+      )
+    }, 5000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const loadUpcomingSeminars = async () => {
+    try {
+      const now = new Date().toISOString()
+      
+      const { data, error } = await supabase
+        .from('seminars')
+        .select('*')
+        .eq('status', 'published')
+        .gte('scheduled_at', now)
+        .order('scheduled_at', { ascending: true })
+        .limit(1)
+
+      if (error) throw error
+      
+      setUpcomingSeminars(data || [])
+    } catch (error) {
+      console.error('Error loading seminars:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatSeminarDate = (dateString) => {
+    const date = new Date(dateString)
+    return {
+      month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+      day: date.getDate().toString().padStart(2, '0'),
+      weekday: date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase(),
+      time: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+    }
+  }
 
   const toggleDropdown = (dropdown) => {
     setOpenDropdown(openDropdown === dropdown ? null : dropdown)
@@ -193,38 +253,35 @@ const HomePage = () => {
                 Explore Programs
               </Link>
             </div>
-            
-            <div className="hero-stats-row">
-              <div className="stat-box">
-                <Users size={28} strokeWidth={1.5} />
-                <div className="stat-info">
-                  <div className="stat-num">20,000+</div>
-                  <div className="stat-text">Learners</div>
-                </div>
-              </div>
-              <div className="stat-box">
-                <GraduationCap size={28} strokeWidth={1.5} />
-                <div className="stat-info">
-                  <div className="stat-num">150+</div>
-                  <div className="stat-text">Expert Speakers</div>
-                </div>
-              </div>
-              <div className="stat-box">
-                <Building2 size={28} strokeWidth={1.5} />
-                <div className="stat-info">
-                  <div className="stat-num">200+</div>
-                  <div className="stat-text">Institutional Partners</div>
-                </div>
-              </div>
-            </div>
           </div>
           
           <div className="hero-right">
-            <img 
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&h=650&fit=crop&q=80" 
-              alt="Professionals collaborating"
-              className="hero-img"
-            />
+            <div className="hero-carousel">
+              {heroImages.map((image, index) => (
+                <img 
+                  key={index}
+                  src={image} 
+                  alt={`SHORA Institute ${index + 1}`}
+                  className={`hero-img ${index === currentImageIndex ? 'active' : ''}`}
+                  style={{
+                    opacity: index === currentImageIndex ? 1 : 0,
+                    transition: 'opacity 1s ease-in-out'
+                  }}
+                />
+              ))}
+              
+              {/* Carousel Indicators */}
+              <div className="carousel-indicators">
+                {heroImages.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`indicator ${index === currentImageIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentImageIndex(index)}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -290,62 +347,101 @@ const HomePage = () => {
             <Link to="/learner/seminars" className="link-view">View all seminars →</Link>
           </div>
           
-          <div className="seminar-box">
-            <span className="tag-free">FREE LIVE SEMINAR</span>
-            
-            <div className="seminar-layout">
-              <div className="seminar-visual">
-                <div className="date-card">
-                  <div className="date-m">JUL</div>
-                  <div className="date-d">08</div>
-                  <div className="date-w">WEDNESDAY</div>
-                  <div className="date-t">6:00 PM (EAT)</div>
-                </div>
-                <img 
-                  src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=380&h=280&fit=crop&q=80" 
-                  alt="Financial foundations"
-                  className="seminar-img"
-                />
-              </div>
-              
-              <div className="seminar-content">
-                <h3 className="seminar-h">Building Financial Foundations that Create Generational Wealth</h3>
-                <p className="seminar-p">
-                  A practical session on money management, investing,<br/>
-                  and building a secure financial future.
-                </p>
-                
-                <div className="seminar-author">
-                  <img 
-                    src="/alex-ntale.jpg" 
-                    alt="Alex Ntale"
-                    className="author-img"
-                  />
-                  <div>
-                    <div className="author-name">Alex Ntale</div>
-                    <div className="author-role">CEO, SHORA Institute</div>
-                  </div>
-                </div>
-                
-                <div className="seminar-details">
-                  <div className="detail-item">
-                    <MapPin size={16} />
-                    <span>Live on Zoom</span>
-                  </div>
-                  <div className="detail-item">
-                    <Clock size={16} />
-                    <span>60 Minutes</span>
-                  </div>
-                  <div className="detail-item">
-                    <Users size={16} />
-                    <span>Open to All</span>
-                  </div>
-                </div>
-                
-                <Link to="/learner/seminars" className="btn-register">Register Free</Link>
-              </div>
+          {loading ? (
+            <div className="seminar-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <p style={{ color: '#666' }}>Loading upcoming seminars...</p>
             </div>
-          </div>
+          ) : upcomingSeminars.length === 0 ? (
+            <div className="seminar-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <Radio size={48} strokeWidth={1.5} style={{ color: '#ccc', marginBottom: '16px' }} />
+              <h3 style={{ marginBottom: '8px', color: '#666' }}>No Upcoming Seminars</h3>
+              <p style={{ color: '#999', marginBottom: '20px' }}>Check back soon for new live sessions!</p>
+              <Link to="/learner/seminars" className="btn-register">View Past Seminars</Link>
+            </div>
+          ) : (
+            upcomingSeminars.map(seminar => {
+              const dateInfo = formatSeminarDate(seminar.scheduled_at)
+              return (
+                <div key={seminar.id} className="seminar-box">
+                  <span className="tag-free">FREE LIVE SEMINAR</span>
+                  
+                  <div className="seminar-layout">
+                    <div className="seminar-visual">
+                      <div className="date-card">
+                        <div className="date-m">{dateInfo.month}</div>
+                        <div className="date-d">{dateInfo.day}</div>
+                        <div className="date-w">{dateInfo.weekday}</div>
+                        <div className="date-t">{dateInfo.time}</div>
+                      </div>
+                      {seminar.thumbnail_url ? (
+                        <img 
+                          src={seminar.thumbnail_url} 
+                          alt={seminar.title}
+                          className="seminar-img"
+                        />
+                      ) : (
+                        <div style={{
+                          width: '380px',
+                          height: '280px',
+                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          borderRadius: '12px'
+                        }}>
+                          <Radio size={64} strokeWidth={1.5} />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="seminar-content">
+                      <h3 className="seminar-h">{seminar.title}</h3>
+                      <p className="seminar-p">{seminar.description}</p>
+                      
+                      <div className="seminar-author">
+                        <div style={{
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '18px',
+                          fontWeight: '600'
+                        }}>
+                          {seminar.instructor_name?.charAt(0) || 'S'}
+                        </div>
+                        <div>
+                          <div className="author-name">{seminar.instructor_name || 'SHORA Institute'}</div>
+                          <div className="author-role">{seminar.instructor_title || 'Expert Speaker'}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="seminar-details">
+                        <div className="detail-item">
+                          <MapPin size={16} />
+                          <span>{seminar.location || 'Live on Zoom'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <Clock size={16} />
+                          <span>{seminar.duration ? `${seminar.duration} Minutes` : '60 Minutes'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <Users size={16} />
+                          <span>Open to All</span>
+                        </div>
+                      </div>
+                      
+                      <Link to={`/seminars/register/${seminar.id}`} className="btn-register">Register Free</Link>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
       </section>
 
