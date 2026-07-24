@@ -386,79 +386,105 @@ const ManageSeminars = () => {
               </div>
             ) : (
               seminars.map((seminar) => (
-                <div key={seminar.id} className="seminar-item">
-                  <div className="seminar-item-header">
-                    <div>
-                      <span className="seminar-type-badge">
+                <div key={seminar.id} className="seminar-card-new">
+                  {/* Thumbnail Section */}
+                  <div className="seminar-card-thumbnail">
+                    {seminar.thumbnail_url ? (
+                      <img src={seminar.thumbnail_url} alt={seminar.title} />
+                    ) : (
+                      <div className="seminar-card-thumbnail-placeholder">
+                        <Video size={48} color="#999" />
+                      </div>
+                    )}
+                    <div className="seminar-card-badges">
+                      <span className={`seminar-badge ${seminar.seminar_type || 'webinar'}`}>
                         {seminar.seminar_type || 'webinar'}
                       </span>
                       {seminar.status === 'draft' && (
-                        <span className="draft-badge">Draft</span>
+                        <span className="seminar-badge draft">Draft</span>
                       )}
-                      <h3>{seminar.title}</h3>
-                      <p className="seminar-description">{seminar.description}</p>
                     </div>
-                    <div className="seminar-actions">
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="seminar-card-content">
+                    <h3 className="seminar-card-title">{seminar.title}</h3>
+                    <p className="seminar-card-description">
+                      {seminar.description || 'No description provided'}
+                    </p>
+
+                    {/* Info Grid */}
+                    <div className="seminar-info-grid">
+                      <div className="info-item">
+                        <Calendar size={16} />
+                        <span>{formatDate(seminar.date)}</span>
+                      </div>
+                      <div className="info-item">
+                        <Clock size={16} />
+                        <span>{seminar.start_time.slice(0, 5)} - {seminar.end_time.slice(0, 5)}</span>
+                      </div>
+                      <div className="info-item">
+                        <Users size={16} />
+                        <span>{seminar.current_registrations || 0} / {seminar.capacity}</span>
+                      </div>
+                      <div className="info-item">
+                        <Video size={16} />
+                        <span>{seminar.platform || 'Zoom'}</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {seminar.current_registrations > 0 && (
+                      <div className="seminar-progress">
+                        <div className="progress-bar-bg">
+                          <div 
+                            className="progress-bar-fill"
+                            style={{ 
+                              width: `${Math.min((seminar.current_registrations / seminar.capacity) * 100, 100)}%` 
+                            }}
+                          />
+                        </div>
+                        <span className="progress-text">
+                          {Math.round((seminar.current_registrations / seminar.capacity) * 100)}% full
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="seminar-card-actions">
                       <button 
-                        className="btn btn-icon"
+                        className="action-btn primary"
                         onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
                         title="View Registrations"
                       >
-                        <List size={18} />
+                        <Users size={18} />
+                        Registrations
                       </button>
                       <button 
-                        className="btn btn-icon"
+                        className="action-btn secondary"
                         onClick={() => handleManageQuestions(seminar)}
-                        title="Manage Registration Questions"
+                        title="Manage Questions"
                       >
                         <HelpCircle size={18} />
+                        Questions
                       </button>
                       <button 
-                        className="btn btn-icon"
+                        className="action-btn secondary"
                         onClick={() => handleEdit(seminar)}
-                        title="Edit"
+                        title="Edit Seminar"
                       >
                         <Edit size={18} />
+                        Edit
                       </button>
                       <button 
-                        className="btn btn-icon"
+                        className="action-btn danger"
                         onClick={() => handleDelete(seminar.id)}
-                        title="Delete"
+                        title="Delete Seminar"
                       >
                         <Trash2 size={18} />
                       </button>
                     </div>
                   </div>
-
-                  <div className="seminar-item-details">
-                    <div className="detail-item">
-                      <Calendar size={16} />
-                      <span>{formatDate(seminar.date)}</span>
-                    </div>
-                    <div className="detail-item">
-                      <Clock size={16} />
-                      <span>{seminar.start_time.slice(0, 5)} - {seminar.end_time.slice(0, 5)}</span>
-                    </div>
-                    <div className="detail-item">
-                      <Users size={16} />
-                      <span>{seminar.current_registrations || 0} / {seminar.capacity} registered</span>
-                    </div>
-                    <div className="detail-item">
-                      <Video size={16} />
-                      <span>{seminar.platform || 'Zoom'}</span>
-                    </div>
-                  </div>
-
-                  {seminar.current_registrations > 0 && (
-                    <div className="seminar-progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{ 
-                          width: `${(seminar.current_registrations / seminar.capacity) * 100}%` 
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               ))
             )}
