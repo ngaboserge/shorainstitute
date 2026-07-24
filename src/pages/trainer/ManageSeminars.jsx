@@ -386,104 +386,104 @@ const ManageSeminars = () => {
               </div>
             ) : (
               seminars.map((seminar) => (
-                <div key={seminar.id} className="seminar-card-new">
-                  {/* Thumbnail Section */}
-                  <div className="seminar-card-thumbnail">
+                <div key={seminar.id} className="seminar-card-compact">
+                  {/* Thumbnail */}
+                  <div className="seminar-thumbnail-compact">
                     {seminar.thumbnail_url ? (
                       <img src={seminar.thumbnail_url} alt={seminar.title} />
                     ) : (
-                      <div className="seminar-card-thumbnail-placeholder">
-                        <Video size={48} color="#999" />
+                      <div className="thumbnail-placeholder-compact">
+                        <Video size={32} color="#999" />
                       </div>
                     )}
-                    <div className="seminar-card-badges">
-                      <span className={`seminar-badge ${seminar.seminar_type || 'webinar'}`}>
+                    <div className="seminar-badges-overlay">
+                      <span className={`type-badge ${seminar.seminar_type || 'webinar'}`}>
                         {seminar.seminar_type || 'webinar'}
                       </span>
                       {seminar.status === 'draft' && (
-                        <span className="seminar-badge draft">Draft</span>
+                        <span className="type-badge draft">Draft</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Content Section */}
-                  <div className="seminar-card-content">
-                    <h3 className="seminar-card-title">{seminar.title}</h3>
-                    <p className="seminar-card-description">
-                      {seminar.description || 'No description provided'}
+                  {/* Content */}
+                  <div className="seminar-content-compact">
+                    <h3 className="seminar-title-compact">{seminar.title}</h3>
+                    <p className="seminar-desc-compact">
+                      {seminar.description?.substring(0, 120) || 'No description'}
+                      {seminar.description?.length > 120 ? '...' : ''}
                     </p>
 
-                    {/* Info Grid */}
-                    <div className="seminar-info-grid">
-                      <div className="info-item">
-                        <Calendar size={16} />
+                    <div className="seminar-meta-compact">
+                      <div className="meta-item-compact">
+                        <Calendar size={14} />
                         <span>{formatDate(seminar.date)}</span>
                       </div>
-                      <div className="info-item">
-                        <Clock size={16} />
-                        <span>{seminar.start_time.slice(0, 5)} - {seminar.end_time.slice(0, 5)}</span>
+                      <div className="meta-item-compact">
+                        <Clock size={14} />
+                        <span>{seminar.start_time.slice(0, 5)}</span>
                       </div>
-                      <div className="info-item">
-                        <Users size={16} />
-                        <span>{seminar.current_registrations || 0} / {seminar.capacity}</span>
+                      <div className="meta-item-compact">
+                        <Users size={14} />
+                        <span>{seminar.current_registrations || 0}/{seminar.capacity}</span>
                       </div>
-                      <div className="info-item">
-                        <Video size={16} />
+                      <div className="meta-item-compact">
+                        <Video size={14} />
                         <span>{seminar.platform || 'Zoom'}</span>
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    {seminar.current_registrations > 0 && (
-                      <div className="seminar-progress">
-                        <div className="progress-bar-bg">
+                    {/* Progress */}
+                    {(seminar.current_registrations || 0) > 0 && (
+                      <div className="seminar-progress-compact">
+                        <div className="progress-bg-compact">
                           <div 
-                            className="progress-bar-fill"
+                            className="progress-fill-compact"
                             style={{ 
                               width: `${Math.min((seminar.current_registrations / seminar.capacity) * 100, 100)}%` 
                             }}
                           />
                         </div>
-                        <span className="progress-text">
+                        <span className="progress-label-compact">
                           {Math.round((seminar.current_registrations / seminar.capacity) * 100)}% full
                         </span>
                       </div>
                     )}
+                  </div>
 
-                    {/* Action Buttons */}
-                    <div className="seminar-card-actions">
-                      <button 
-                        className="action-btn primary"
-                        onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
-                        title="View Registrations"
-                      >
-                        <Users size={18} />
-                        Registrations
-                      </button>
-                      <button 
-                        className="action-btn secondary"
-                        onClick={() => handleManageQuestions(seminar)}
-                        title="Manage Questions"
-                      >
-                        <HelpCircle size={18} />
-                        Questions
-                      </button>
-                      <button 
-                        className="action-btn secondary"
-                        onClick={() => handleEdit(seminar)}
-                        title="Edit Seminar"
-                      >
-                        <Edit size={18} />
-                        Edit
-                      </button>
-                      <button 
-                        className="action-btn danger"
-                        onClick={() => handleDelete(seminar.id)}
-                        title="Delete Seminar"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                  {/* Actions */}
+                  <div className="seminar-actions-compact">
+                    <button 
+                      className="action-btn-compact primary"
+                      onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
+                      title="View Registrations"
+                    >
+                      <Users size={16} />
+                      <span>Registrations</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact secondary"
+                      onClick={() => handleManageQuestions(seminar)}
+                      title="Manage Questions"
+                    >
+                      <HelpCircle size={16} />
+                      <span>Questions</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact secondary"
+                      onClick={() => handleEdit(seminar)}
+                      title="Edit"
+                    >
+                      <Edit size={16} />
+                      <span>Edit</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact danger"
+                      onClick={() => handleDelete(seminar.id)}
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               ))
