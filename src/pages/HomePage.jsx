@@ -494,24 +494,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Dev Portals */}
-      <section style={{background: '#f0f0f0', padding: '40px', borderTop: '3px dashed #ccc'}}>
-        <div style={{maxWidth: '1200px', margin: '0 auto'}}>
-          <h3 style={{marginBottom: '20px', color: '#666'}}>Development Quick Access</h3>
-          <div style={{display: 'flex', gap: '16px'}}>
-            <Link to="/institutional/overview" style={{padding: '12px 24px', background: '#0B4F9F', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: '600'}}>
-              Institutional
-            </Link>
-            <Link to="/trainer/dashboard" style={{padding: '12px 24px', background: '#0B4F9F', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: '600'}}>
-              Trainer
-            </Link>
-            <Link to="/learner/dashboard" style={{padding: '12px 24px', background: '#0B4F9F', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: '600'}}>
-              Learner
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="footer">
         <div className="footer-wrapper">
