@@ -735,9 +735,14 @@ const ManageSeminars = () => {
       {/* Registration Questions Modal */}
       {showQuestionsModal && (
         <div className="modal-overlay" onClick={() => setShowQuestionsModal(false)}>
-          <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Registration Questions</h2>
+              <div>
+                <h2>Registration Questions</h2>
+                <p style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+                  {selectedSeminar?.title}
+                </p>
+              </div>
               <button 
                 className="modal-close"
                 onClick={() => setShowQuestionsModal(false)}
@@ -746,15 +751,15 @@ const ManageSeminars = () => {
               </button>
             </div>
 
-            <div className="modal-body">
-              <p style={{ marginBottom: '20px', color: '#666' }}>
+            <div className="modal-body modal-body-large">
+              <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
                 Add custom questions for learners to answer when registering for this seminar.
               </p>
 
               {questions.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px' }}>
+                <div style={{ padding: '60px 20px', textAlign: 'center', background: '#f9fafb', borderRadius: '12px' }}>
                   <HelpCircle size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
-                  <p style={{ color: '#666', marginBottom: '20px' }}>No registration questions yet</p>
+                  <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>No registration questions yet</p>
                   <button 
                     type="button"
                     className="btn btn-primary"
@@ -786,15 +791,17 @@ const ManageSeminars = () => {
                           value={q.question}
                           onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
                           placeholder="e.g., What topics are you most interested in?"
+                          style={{ width: '100%' }}
                         />
                       </div>
 
                       <div className="form-row">
-                        <div className="form-group">
+                        <div className="form-group" style={{ flex: 1 }}>
                           <label>Answer Type *</label>
                           <select
                             value={q.type}
                             onChange={(e) => updateQuestion(q.id, 'type', e.target.value)}
+                            style={{ width: '100%' }}
                           >
                             <option value="text">Text (Short Answer)</option>
                             <option value="textarea">Text Area (Long Answer)</option>
@@ -804,15 +811,15 @@ const ManageSeminars = () => {
                           </select>
                         </div>
 
-                        <div className="form-group">
-                          <label>
+                        <div className="form-group" style={{ flex: 0, minWidth: '200px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px' }}>Options</label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={q.required}
                               onChange={(e) => updateQuestion(q.id, 'required', e.target.checked)}
-                              style={{ marginRight: '8px' }}
                             />
-                            Required Question
+                            <span>Required Question</span>
                           </label>
                         </div>
                       </div>
@@ -823,8 +830,9 @@ const ManageSeminars = () => {
                           <textarea
                             value={q.options?.join('\n') || ''}
                             onChange={(e) => updateQuestion(q.id, 'options', e.target.value.split('\n').filter(o => o.trim()))}
-                            rows={4}
+                            rows={5}
                             placeholder="Option 1&#10;Option 2&#10;Option 3"
+                            style={{ width: '100%' }}
                           />
                         </div>
                       )}
@@ -835,6 +843,7 @@ const ManageSeminars = () => {
                     type="button"
                     className="btn btn-secondary btn-full"
                     onClick={addQuestion}
+                    style={{ marginTop: '16px' }}
                   >
                     <Plus size={18} />
                     Add Another Question
