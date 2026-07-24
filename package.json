@@ -9,11 +9,13 @@
     "dev:vite:delay": "node -e \"setTimeout(() => {}, 2000)\" && vite",
     "dev:api": "node scripts/local-api-server.mjs",
     "build": "vite build",
+    "start": "node server.js",
     "preview": "vite preview",
     "db:migrate:payment": "node scripts/apply-payment-migration.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
+    "express": "^4.22.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.294.0",
