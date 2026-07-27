@@ -8,9 +8,9 @@ const QRCodeModal = ({ seminar, onClose }) => {
   const [copied, setCopied] = useState(false)
   const canvasRef = useRef(null)
 
-  // Generate the direct registration URL using production site URL
-  const siteUrl = import.meta.env.VITE_SITE_URL || window.location.origin
-  const seminarUrl = `${siteUrl}/seminar/${seminar.id}/register`
+  // Generate the homepage URL with seminar parameter for production
+  const productionUrl = 'https://www.shorainstitute.com'
+  const seminarUrl = `${productionUrl}/?seminar=${seminar.id}`
 
   useEffect(() => {
     generateQRCode()
@@ -79,13 +79,13 @@ const QRCodeModal = ({ seminar, onClose }) => {
           <div className="qr-code-container">
             <canvas ref={canvasRef} />
             <p className="qr-code-help">
-              Scan this QR code to go directly to the seminar registration page
+              Scan this QR code to go to the homepage and see this seminar
             </p>
           </div>
 
           {/* URL Display */}
           <div className="url-section">
-            <label>Direct Registration URL</label>
+            <label>Homepage URL with Seminar</label>
             <div className="url-display">
               <input 
                 type="text" 
@@ -112,10 +112,9 @@ const QRCodeModal = ({ seminar, onClose }) => {
             <ol>
               <li>Download the QR code using the button below</li>
               <li>Print it on posters, flyers, or display it on screens</li>
-              <li>When scanned, users go directly to the registration form</li>
-              <li>If not logged in, they'll signup/login first</li>
-              <li>Then immediately see the registration questionnaire</li>
-              <li>After registration, they can discover other seminars</li>
+              <li>When scanned, users go to homepage and see this seminar highlighted</li>
+              <li>Your seminar will be centered and highlighted with animation</li>
+              <li>They can register directly or browse other seminars</li>
             </ol>
           </div>
 
