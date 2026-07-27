@@ -8,9 +8,10 @@ const QRCodeModal = ({ seminar, onClose }) => {
   const [copied, setCopied] = useState(false)
   const canvasRef = useRef(null)
 
-  // Generate the homepage URL with seminar parameter for production
-  const productionUrl = 'https://www.shorainstitute.com'
-  const seminarUrl = `${productionUrl}/?seminar=${seminar.id}`
+  // Generate the homepage URL with seminar parameter
+  // Production URL for www.shorainstitute.com
+  const baseUrl = 'https://www.shorainstitute.com'
+  const seminarUrl = `${baseUrl}/?seminar=${seminar.id}`
 
   useEffect(() => {
     generateQRCode()
