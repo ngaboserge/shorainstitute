@@ -10,6 +10,7 @@ const HomePage = () => {
   const [upcomingSeminars, setUpcomingSeminars] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [highlightedSeminarId, setHighlightedSeminarId] = useState(null)
 
   const heroImages = [
     '/landing1.jpeg',
@@ -22,6 +23,23 @@ const HomePage = () => {
 
   useEffect(() => {
     loadUpcomingSeminars()
+    
+    // Check if there's a seminar ID in URL query params
+    const urlParams = new URLSearchParams(window.location.search)
+    const seminarId = urlParams.get('seminar')
+    if (seminarId) {
+      setHighlightedSeminarId(seminarId)
+      // Scroll to seminars section after a short delay to let page load
+      setTimeout(() => {
+        const element = document.getElementById(`seminar-${seminarId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } else {
+          // If specific seminar not found, scroll to seminars section
+          document.getElementById('upcoming-seminars')?.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 500)
+    }
   }, [])
 
   // Auto-rotate hero images every 5 seconds
@@ -45,7 +63,7 @@ const HomePage = () => {
         .eq('status', 'published')
         .gte('date', now)
         .order('date', { ascending: true })
-        .limit(1)
+        .limit(10) // Show up to 10 upcoming seminars
 
       if (error) throw error
       
@@ -247,12 +265,12 @@ const HomePage = () => {
               entrepreneurs and institutions to build long-term wealth.
             </p>
             <div className="hero-actions">
-              <Link to="/learner/seminars" className="hero-btn-primary">
+              <a href="#upcoming-seminars" className="hero-btn-primary">
                 Join a Free Seminar
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
-              </Link>
+              </a>
               <Link to="/learner/courses" className="hero-btn-outline">
                 Explore Programs
               </Link>
@@ -344,7 +362,7 @@ const HomePage = () => {
       </section>
 
       {/* Upcoming Seminars */}
-      <section className="seminars">
+      <section className="seminars" id="upcoming-seminars">
         <div className="seminars-wrapper">
           <div className="section-top">
             <h2 className="section-heading">Upcoming Live Seminars</h2>
@@ -363,88 +381,90 @@ const HomePage = () => {
               <Link to="/learner/seminars" className="btn-register">View Past Seminars</Link>
             </div>
           ) : (
-            upcomingSeminars.map(seminar => {
-              const dateInfo = formatSeminarDate(seminar.date, seminar.start_time)
-              return (
-                <div key={seminar.id} className="seminar-box">
-                  <span className="tag-free">FREE LIVE SEMINAR</span>
-                  
-                  <div className="seminar-layout">
-                    <div className="seminar-visual">
-                      <div className="date-card">
-                        <div className="date-m">{dateInfo.month}</div>
-                        <div className="date-d">{dateInfo.day}</div>
-                        <div className="date-w">{dateInfo.weekday}</div>
-                        <div className="date-t">{dateInfo.time}</div>
-                      </div>
+            <div className="seminars-grid">
+              {upcomingSeminars.map(seminar => {
+                const dateInfo = formatSeminarDate(seminar.date, seminar.start_time)
+                const isHighlighted = highlightedSeminarId === seminar.id
+                return (
+                  <div 
+                    key={seminar.id} 
+                    id={`seminar-${seminar.id}`}
+                    className={`seminar-box ${isHighlighted ? 'highlighted' : ''}`}
+                    style={isHighlighted ? {
+                      animation: 'highlight-pulse 2s ease-in-out 3',
+                      border: '3px solid #0B4F9F',
+                      boxShadow: '0 8px 24px rgba(11, 79, 159, 0.3)'
+                    } : {}}
+                  >
+                    <span className="tag-free">FREE LIVE SEMINAR</span>
+                    
+                    {/* Thumbnail */}
+                    <div className="seminar-thumbnail">
                       {seminar.thumbnail_url ? (
-                        <img 
-                          src={seminar.thumbnail_url} 
-                          alt={seminar.title}
-                          className="seminar-img"
-                        />
+                        <img src={seminar.thumbnail_url} alt={seminar.title} />
                       ) : (
-                        <div style={{
-                          width: '380px',
-                          height: '280px',
-                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          borderRadius: '12px'
-                        }}>
-                          <Radio size={64} strokeWidth={1.5} />
+                        <div className="seminar-thumbnail-placeholder">
+                          <Radio size={48} strokeWidth={1.5} />
                         </div>
                       )}
+                      
+                      {/* Compact date card */}
+                      <div className="date-card-compact">
+                        <div className="date-compact-month">{dateInfo.month}</div>
+                        <div className="date-compact-day">{dateInfo.day}</div>
+                        <div className="date-compact-time">{dateInfo.time}</div>
+                      </div>
                     </div>
                     
-                    <div className="seminar-content">
-                      <h3 className="seminar-h">{seminar.title}</h3>
-                      <p className="seminar-p">{seminar.description}</p>
+                    {/* Content */}
+                    <div className="seminar-content-compact">
+                      <h3 className="seminar-h-compact">{seminar.title}</h3>
+                      <p className="seminar-p-compact">{seminar.description}</p>
                       
-                      <div className="seminar-author">
-                        <div style={{
-                          width: '48px',
-                          height: '48px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '18px',
-                          fontWeight: '600'
-                        }}>
+                      {/* Instructor */}
+                      <div className="seminar-instructor-compact">
+                        <div className="instructor-avatar-compact">
                           {seminar.instructor_name?.charAt(0) || 'S'}
                         </div>
-                        <div>
-                          <div className="author-name">{seminar.instructor_name || 'SHORA Institute'}</div>
-                          <div className="author-role">{seminar.instructor_title || 'Expert Speaker'}</div>
+                        <div className="instructor-info-compact">
+                          <div className="instructor-name-compact">
+                            {seminar.instructor_name || 'SHORA Institute'}
+                          </div>
+                          <div className="instructor-role-compact">
+                            {seminar.instructor_title || 'Expert Speaker'}
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="seminar-details">
-                        <div className="detail-item">
-                          <MapPin size={16} />
-                          <span>{seminar.location || 'Live on Zoom'}</span>
+                      {/* Details */}
+                      <div className="seminar-details-compact">
+                        <div className="detail-item-compact">
+                          <MapPin size={14} />
+                          <span>{seminar.location || 'Zoom'}</span>
                         </div>
-                        <div className="detail-item">
-                          <Clock size={16} />
-                          <span>{seminar.duration ? `${seminar.duration} Minutes` : '60 Minutes'}</span>
-                        </div>
-                        <div className="detail-item">
-                          <Users size={16} />
-                          <span>Open to All</span>
+                        <div className="detail-item-compact">
+                          <Clock size={14} />
+                          <span>{seminar.duration || '60'} Min</span>
                         </div>
                       </div>
                       
-                      <Link to="/auth/learner/login" className="btn-register">Register Free</Link>
+                      {/* Register button */}
+                      <Link 
+                        to="/auth/seminar/signup"
+                        state={{
+                          seminarId: seminar.id,
+                          returnTo: `/seminar/${seminar.id}/register`,
+                          directToForm: true
+                        }}
+                        className="btn-register-compact"
+                      >
+                        Register Free
+                      </Link>
                     </div>
                   </div>
-                </div>
-              )
-            })
+                )
+              })}
+            </div>
           )}
         </div>
       </section>

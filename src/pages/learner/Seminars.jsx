@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Clock, Users, Video, Bell, CheckCircle, Award, ExternalLink } from 'lucide-react'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
 
@@ -9,6 +9,7 @@ import './Seminars.css'
 
 const Seminars = () => {
   const { user, profile } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('upcoming')
   const [seminars, setSeminars] = useState([])
   const [registrations, setRegistrations] = useState([])
@@ -18,8 +19,8 @@ const Seminars = () => {
   const [answers, setAnswers] = useState({})
 
   useEffect(() => {
+    loadSeminars()
     if (user) {
-      loadSeminars()
       loadRegistrations()
     }
   }, [user, activeTab])
@@ -73,6 +74,18 @@ const Seminars = () => {
   }
 
   const handleRegister = async (seminarId) => {
+    // Check if user is logged in
+    if (!user) {
+      // Redirect to seminar signup page
+      navigate('/auth/seminar/signup', {
+        state: {
+          returnTo: '/learner/seminars',
+          seminarId: seminarId
+        }
+      })
+      return
+    }
+
     const seminar = seminars.find(s => s.id === seminarId)
     
     // Check if seminar has registration questions

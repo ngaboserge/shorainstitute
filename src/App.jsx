@@ -2,12 +2,16 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import InstitutionalAuthGuard from './components/InstitutionalAuthGuard'
 import ScrollToTop from './components/ScrollToTop'
 import HomePage from './pages/HomePage'
 import TrainerSignup from './pages/auth/TrainerSignup'
 import TrainerLogin from './pages/auth/TrainerLogin'
 import LearnerSignup from './pages/auth/LearnerSignup'
 import LearnerLogin from './pages/auth/LearnerLogin'
+import SeminarSignup from './pages/auth/SeminarSignup'
+import SeminarLogin from './pages/auth/SeminarLogin'
+import InstitutionalLogin from './pages/auth/InstitutionalLogin'
 import InstitutionalOverview from './pages/institutional/Overview'
 import InstitutionalLearners from './pages/institutional/Learners'
 import InstitutionalProgrammes from './pages/institutional/Programmes'
@@ -53,6 +57,7 @@ import LearningPathway from './pages/learner/LearningPathway'
 import LearningPaths from './pages/learner/LearningPaths'
 import OnboardingAssessment from './pages/public/OnboardingAssessment'
 import PaymentSuccess from './pages/public/PaymentSuccess'
+import SeminarRegistrationForm from './pages/public/SeminarRegistrationForm'
 import './App.css'
 
 function App() {
@@ -69,11 +74,20 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           
+          {/* Seminar Registration Route */}
+          <Route path="/seminar/:id/register" element={<SeminarRegistrationForm />} />
+          
           {/* Auth Routes */}
           <Route path="/auth/trainer/signup" element={<TrainerSignup />} />
           <Route path="/auth/trainer/login" element={<TrainerLogin />} />
           <Route path="/auth/learner/signup" element={<LearnerSignup />} />
           <Route path="/auth/learner/login" element={<LearnerLogin />} />
+          
+          {/* Seminar-specific Auth (simplified, no learner/trainer choice) */}
+          <Route path="/auth/seminar/signup" element={<SeminarSignup />} />
+          <Route path="/auth/seminar/login" element={<SeminarLogin />} />
+          
+          <Route path="/auth/institutional/login" element={<InstitutionalLogin />} />
         {/* Redirect public courses/seminars to learner portal */}
         <Route path="/courses" element={<Navigate to="/learner/courses" replace />} />
         <Route path="/seminars" element={<Navigate to="/learner/seminars" replace />} />
@@ -81,16 +95,16 @@ function App() {
         <Route path="/onboarding" element={<OnboardingAssessment />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
         
-        {/* Institutional Portal Routes */}
-        <Route path="/institutional/overview" element={<InstitutionalOverview />} />
-        <Route path="/institutional/learners" element={<InstitutionalLearners />} />
-        <Route path="/institutional/programmes" element={<InstitutionalProgrammes />} />
-        <Route path="/institutional/programmes/:id" element={<ProgrammeDetails />} />
-        <Route path="/institutional/live-seminars" element={<InstitutionalLiveSeminars />} />
-        <Route path="/institutional/reports" element={<InstitutionalReports />} />
-        <Route path="/institutional/certificates" element={<InstitutionalCertificates />} />
-        <Route path="/institutional/billing" element={<InstitutionalBilling />} />
-        <Route path="/institutional/settings" element={<InstitutionalSettings />} />
+        {/* Institutional Portal Routes - Protected with InstitutionalAuthGuard */}
+        <Route path="/institutional/overview" element={<InstitutionalAuthGuard><InstitutionalOverview /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/learners" element={<InstitutionalAuthGuard><InstitutionalLearners /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/programmes" element={<InstitutionalAuthGuard><InstitutionalProgrammes /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/programmes/:id" element={<InstitutionalAuthGuard><ProgrammeDetails /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/live-seminars" element={<InstitutionalAuthGuard><InstitutionalLiveSeminars /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/reports" element={<InstitutionalAuthGuard><InstitutionalReports /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/certificates" element={<InstitutionalAuthGuard><InstitutionalCertificates /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/billing" element={<InstitutionalAuthGuard><InstitutionalBilling /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/settings" element={<InstitutionalAuthGuard><InstitutionalSettings /></InstitutionalAuthGuard>} />
         
         {/* Trainer Portal Routes - Protected */}
         <Route path="/trainer/dashboard" element={<ProtectedRoute requiredRole="trainer"><TrainerDashboard /></ProtectedRoute>} />

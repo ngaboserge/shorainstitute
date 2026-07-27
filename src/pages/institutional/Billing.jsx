@@ -1,40 +1,135 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Download, Plus } from 'lucide-react'
+import InvoiceDetailsModal from '../../components/modals/InvoiceDetailsModal'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Billing.css'
 
 const Billing = () => {
-  const invoices = [
-    {
-      number: 'INV-2025-00045',
-      period: 'Jan 1, 2025 - May 31, 2027',
-      amount: '7,200,000',
-      status: 'Paid',
-      paymentDate: 'Jan 1, 2025'
-    },
-    {
-      number: 'INV-2025-00032',
-      period: 'Jan 1, 2024 - May 31, 2026',
-      amount: '6,600,000',
-      status: 'Paid',
-      paymentDate: 'Jun 1, 2025'
-    },
-    {
-      number: 'INV-2024-00021',
-      period: 'Jan 1, 2024 - May 31, 2025',
-      amount: '6,000,000',
-      status: 'Paid',
-      paymentDate: 'Jun 1, 2024'
-    },
-    {
-      number: 'INV-2023-00013',
-      period: 'Jan 1, 2023 - May 31, 2024',
-      amount: '5,400,000',
-      status: 'Paid',
-      paymentDate: 'Jun 1, 2023'
+  const { institutionId } = useShoraInstitute()
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
+  const [selectedInvoice, setSelectedInvoice] = useState(null)
+  const [invoices, setInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [subscriptionStats, setSubscriptionStats] = useState({
+    seatsUsed: 0,
+    totalSeats: 0,
+    subscriptionValue: 0,
+    outstanding: 0
+  })
+
+  useEffect(() => {
+    fetchBillingData()
+  }, [])
+
+  const fetchBillingData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch learner count for seats used
+      const { count: learnersCount, error: learnersError } = await supabase
+        .from('institution_learners')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (learnersError) throw learnersError
+
+      // Fetch institution subscription info
+      const { data: institutionData, error: institutionError } = await supabase
+        .from('institutions')
+        .select('*')
+        .eq('id', institutionId)
+        .single()
+
+      if (institutionError) throw institutionError
+
+      setSubscriptionStats({
+        seatsUsed: learnersCount || 0,
+        totalSeats: 0, // TODO: Get from subscription plan - showing 0 instead of fake 1600
+        subscriptionValue: 0, // TODO: Get from subscription plan - showing 0 instead of fake 7.2M
+        outstanding: 0
+      })
+
+      await fetchInvoices()
+
+    } catch (error) {
+      console.error('Error fetching billing data:', error)
+      setSubscriptionStats({
+        seatsUsed: 0,
+        totalSeats: 0,
+        subscriptionValue: 0,
+        outstanding: 0
+      })
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch invoices from database
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('institution_invoices')
+        .select('*')
+        .eq('institution_id', institutionId)
+        .order('created_at', { ascending: false })
+        .limit(12)
+
+      if (invoicesError) throw invoicesError
+
+      // Transform data for display
+      const transformedInvoices = invoicesData.map(inv => ({
+        invoiceNumber: inv.invoice_number,
+        billingPeriod: `${new Date(inv.billing_start).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        })} - ${new Date(inv.billing_end).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        })}`,
+        issueDate: new Date(inv.created_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        dueDate: new Date(inv.due_date).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        amount: inv.subtotal,
+        status: inv.status === 'paid' ? 'Paid' : 'Pending',
+        paidDate: inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }) : null,
+        institutionName: 'Your Institution',
+        address: 'KG 123 St, Kigali',
+        city: 'Kigali, Rwanda',
+        tin: '123456789',
+        contactEmail: 'billing@institution.rw'
+      }))
+
+      setInvoices(transformedInvoices)
+
+    } catch (error) {
+      console.error('Error fetching invoices:', error)
+      setInvoices([])
+    }
+  }
+
+  const handleInvoiceClick = (invoice) => {
+    setSelectedInvoice(invoice)
+    setShowInvoiceModal(true)
+  }
 
   return (
     <div className="dashboard-layout">
@@ -74,14 +169,19 @@ const Billing = () => {
               </div>
               <div className="stat-details">
                 <div className="stat-label">Seats Used</div>
-                <div className="stat-value">1,248</div>
-                <div className="stat-subtext">of 1,600</div>
+                <div className="stat-value">{loading ? '...' : subscriptionStats.seatsUsed.toLocaleString()}</div>
+                <div className="stat-subtext">of {loading ? '...' : subscriptionStats.totalSeats.toLocaleString()}</div>
                 <div className="progress-bar-container">
-                  <div className="progress-bar-fill" style={{width: '78%', backgroundColor: '#0B4F9F'}}></div>
+                  <div className="progress-bar-fill" style={{
+                    width: `${subscriptionStats.totalSeats > 0 ? (subscriptionStats.seatsUsed / subscriptionStats.totalSeats * 100) : 0}%`, 
+                    backgroundColor: '#0B4F9F'
+                  }}></div>
                 </div>
                 <div className="stat-meta">
                   <span className="active-learners">👥 Active learners</span>
-                  <span className="percentage">78%</span>
+                  <span className="percentage">
+                    {subscriptionStats.totalSeats > 0 ? Math.round(subscriptionStats.seatsUsed / subscriptionStats.totalSeats * 100) : 0}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -97,14 +197,19 @@ const Billing = () => {
               </div>
               <div className="stat-details">
                 <div className="stat-label">Available Seats</div>
-                <div className="stat-value">352</div>
-                <div className="stat-subtext">of 4,600</div>
+                <div className="stat-value">{loading ? '...' : (subscriptionStats.totalSeats - subscriptionStats.seatsUsed).toLocaleString()}</div>
+                <div className="stat-subtext">of {loading ? '...' : subscriptionStats.totalSeats.toLocaleString()}</div>
                 <div className="progress-bar-container">
-                  <div className="progress-bar-fill" style={{width: '22%', backgroundColor: '#FFA726'}}></div>
+                  <div className="progress-bar-fill" style={{
+                    width: `${subscriptionStats.totalSeats > 0 ? ((subscriptionStats.totalSeats - subscriptionStats.seatsUsed) / subscriptionStats.totalSeats * 100) : 0}%`, 
+                    backgroundColor: '#FFA726'
+                  }}></div>
                 </div>
                 <div className="stat-meta">
                   <span className="seats-remaining">📊 Seats remaining</span>
-                  <span className="percentage">22%</span>
+                  <span className="percentage">
+                    {subscriptionStats.totalSeats > 0 ? Math.round((subscriptionStats.totalSeats - subscriptionStats.seatsUsed) / subscriptionStats.totalSeats * 100) : 0}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -118,7 +223,7 @@ const Billing = () => {
               </div>
               <div className="stat-details">
                 <div className="stat-label">Current Subscription Value</div>
-                <div className="stat-value">7,200,000 RWF</div>
+                <div className="stat-value">{loading ? '...' : `${subscriptionStats.subscriptionValue.toLocaleString()} RWF`}</div>
                 <div className="stat-subtext">Annual Plan</div>
                 <div className="stat-meta single">
                   <span className="paid-full">✓ Paid in full</span>
@@ -138,7 +243,7 @@ const Billing = () => {
               </div>
               <div className="stat-details">
                 <div className="stat-label">Outstanding Invoice</div>
-                <div className="stat-value">0 RWF</div>
+                <div className="stat-value">{loading ? '...' : `${subscriptionStats.outstanding.toLocaleString()} RWF`}</div>
                 <div className="stat-subtext">No outstanding balance</div>
                 <div className="stat-meta single">
                   <span className="all-paid">✓ All invoices paid</span>
@@ -149,6 +254,17 @@ const Billing = () => {
 
           {/* Current Plan and Benefits Grid */}
           <div className="billing-content-grid">
+            {subscriptionStats.totalSeats === 0 && subscriptionStats.subscriptionValue === 0 ? (
+              <div className="card" style={{ gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                <h3 style={{ marginBottom: '8px', color: '#1a1a1a' }}>No Subscription Plan Configured</h3>
+                <p style={{ color: '#666', marginBottom: '24px' }}>
+                  Set up your institution's subscription plan to manage seats, billing, and access.
+                </p>
+                <button className="btn btn-primary">Configure Subscription Plan</button>
+              </div>
+            ) : (
+              <>
             <div className="card plan-overview-card">
               <h3 className="section-title">Current Plan Overview</h3>
               
@@ -170,15 +286,15 @@ const Billing = () => {
                 <div className="section-label">SEAT ALLOCATION</div>
                 <div className="allocation-item">
                   <span className="allocation-label">Licensed Seats</span>
-                  <span className="allocation-value">1,600</span>
+                  <span className="allocation-value">{loading ? '...' : subscriptionStats.totalSeats.toLocaleString()}</span>
                 </div>
                 <div className="allocation-item">
                   <span className="allocation-label">Active Learners</span>
-                  <span className="allocation-value">1,248</span>
+                  <span className="allocation-value">{loading ? '...' : subscriptionStats.seatsUsed.toLocaleString()}</span>
                 </div>
                 <div className="allocation-item">
                   <span className="allocation-label">Available Seats</span>
-                  <span className="allocation-value">352</span>
+                  <span className="allocation-value">{loading ? '...' : (subscriptionStats.totalSeats - subscriptionStats.seatsUsed).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -186,7 +302,7 @@ const Billing = () => {
                 <div className="section-label">FINANCIAL SUMMARY</div>
                 <div className="allocation-item">
                   <span className="allocation-label">Plan Amount</span>
-                  <span className="allocation-value">7,200,000 RWF</span>
+                  <span className="allocation-value">{loading ? '...' : `${subscriptionStats.subscriptionValue.toLocaleString()} RWF`}</span>
                 </div>
                 <div className="allocation-item">
                   <span className="allocation-label">Billing Cycle</span>
@@ -194,20 +310,20 @@ const Billing = () => {
                 </div>
                 <div className="allocation-item">
                   <span className="allocation-label">Next Renewal</span>
-                  <span className="allocation-value">May 31, 2027</span>
+                  <span className="allocation-value">Not set</span>
                 </div>
                 <div className="allocation-item">
                   <span className="allocation-label">Payment Status</span>
-                  <span className="allocation-value status-paid">Paid in Full</span>
+                  <span className="allocation-value">Not configured</span>
                 </div>
               </div>
 
-              <div className="renewal-info">
+              <div className="renewal-info" style={{ opacity: 0.5 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <circle cx="12" cy="12" r="10"/>
                   <path d="M12 8v4l3 3" stroke="white" strokeWidth="2" fill="none"/>
                 </svg>
-                <span>142 days remaining</span>
+                <span>No renewal date set</span>
               </div>
             </div>
 
@@ -280,6 +396,8 @@ const Billing = () => {
                 Manage Add-ons →
               </button>
             </div>
+              </>
+            )}
           </div>
 
           {/* Invoices Table */}
@@ -301,23 +419,40 @@ const Billing = () => {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice, index) => (
-                  <tr key={index}>
-                    <td className="invoice-number">{invoice.number}</td>
-                    <td>{invoice.period}</td>
-                    <td className="invoice-amount">{invoice.amount}</td>
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                      Loading invoices...
+                    </td>
+                  </tr>
+                ) : invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '40px' }}>
+                      No invoices found
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((invoice, index) => (
+                  <tr 
+                    key={index}
+                    onClick={() => handleInvoiceClick(invoice)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td className="invoice-number">{invoice.invoiceNumber}</td>
+                    <td>{invoice.billingPeriod}</td>
+                    <td className="invoice-amount">RWF {invoice.amount.toLocaleString()}</td>
                     <td>
                       <span className="status-badge paid">{invoice.status}</span>
                     </td>
-                    <td>{invoice.paymentDate}</td>
-                    <td>
+                    <td>{invoice.paidDate}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <button className="btn-download">
                         <Download size={16} />
                         Download
                       </button>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
@@ -327,69 +462,42 @@ const Billing = () => {
             <div className="card payment-method-card">
               <h3 className="section-title">Payment Method</h3>
               
-              <div className="payment-card-display">
-                <div className="visa-card">
-                  <div className="card-type">VISA</div>
-                  <div className="card-number">•••• •••• •••• 4242</div>
-                  <div className="card-expiry">Expires 05/28</div>
-                </div>
+              <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>💳</div>
+                <p style={{ color: '#666', marginBottom: '20px' }}>No payment method configured</p>
+                <button className="btn btn-primary btn-sm">Add Payment Method</button>
               </div>
-
-              <div className="payment-info-row">
-                <span>Primary</span>
-              </div>
-
-              <button className="btn-edit-full">Edit</button>
             </div>
 
             <div className="card billing-contact-card">
               <h3 className="section-title">Billing Contact</h3>
               
-              <div className="contact-info">
-                <div className="contact-row">
-                  <span className="contact-label">Name</span>
-                  <span className="contact-value">Jean Claude Niyonzima</span>
-                </div>
-                <div className="contact-row">
-                  <span className="contact-label">Title</span>
-                  <span className="contact-value">Finance Manager</span>
-                </div>
-                <div className="contact-row">
-                  <span className="contact-label">Email</span>
-                  <span className="contact-value">jean.claude@rdb.rw</span>
-                </div>
-                <div className="contact-row">
-                  <span className="contact-label">Phone</span>
-                  <span className="contact-value">+250 788 543 0101</span>
-                </div>
+              <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>👤</div>
+                <p style={{ color: '#666', marginBottom: '20px' }}>No billing contact configured</p>
+                <button className="btn btn-primary btn-sm">Add Billing Contact</button>
               </div>
-
-              <button className="btn-edit-full">Edit</button>
             </div>
 
             <div className="card tax-info-card">
               <h3 className="section-title">Tax Information</h3>
               
-              <div className="tax-info">
-                <div className="tax-row">
-                  <span className="tax-label">TIN</span>
-                  <span className="tax-value">100511011</span>
-                </div>
-                <div className="tax-row">
-                  <span className="tax-label">VAT Number</span>
-                  <span className="tax-value">107616101</span>
-                </div>
-                <div className="tax-row">
-                  <span className="tax-label">Tax Exempt</span>
-                  <span className="tax-value">No</span>
-                </div>
+              <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
+                <p style={{ color: '#666', marginBottom: '20px' }}>No tax information configured</p>
+                <button className="btn btn-primary btn-sm">Add Tax Information</button>
               </div>
-
-              <button className="btn-edit-full">Edit</button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Invoice Details Modal */}
+      <InvoiceDetailsModal 
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        invoice={selectedInvoice}
+      />
     </div>
   )
 }

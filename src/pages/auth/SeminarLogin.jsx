@@ -1,13 +1,12 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, AlertCircle, Eye, EyeOff, Calendar } from 'lucide-react'
 import './Auth.css'
 
-const TrainerLogin = () => {
+const SeminarLogin = () => {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const location = useLocation()
   
   const [formData, setFormData] = useState({
     email: '',
@@ -17,6 +16,27 @@ const TrainerLogin = () => {
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  // Get return URL from state or default to seminars
+  const returnTo = location.state?.returnTo || '/learner/seminars'
+  const seminarId = location.state?.seminarId
+  const directToForm = location.state?.directToForm || false
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // If coming from QR code flow, go directly to registration form
+        if (directToForm && seminarId) {
+          navigate(`/seminar/${seminarId}/register`)
+        } else {
+          navigate(returnTo)
+        }
+      }
+    }
+    checkUser()
+  }, [navigate, returnTo, directToForm, seminarId])
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -51,41 +71,39 @@ const TrainerLogin = () => {
     setErrors({})
 
     try {
-      const { user, error } = await signIn(formData.email, formData.password)
+      // Sign in with Supabase Auth
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      })
 
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
+      if (signInError) {
+        if (signInError.message.includes('Invalid login credentials')) {
           setErrors({ general: 'Invalid email or password' })
         } else {
-          setErrors({ general: error.message })
+          setErrors({ general: signInError.message })
         }
         return
       }
 
-      // Wait for profile to load
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Verify role
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .maybeSingle()
-
-        // Only check role if profile exists
-        if (profileData && profileData.role !== 'trainer') {
-          setErrors({ 
-            general: `This is a ${profileData.role} account. Please use the ${profileData.role} login page.` 
-          })
-          await supabase.auth.signOut()
-          return
-        }
+      if (!authData.user) {
+        setErrors({ general: 'Login failed' })
+        return
       }
 
-      // Navigate to dashboard
-      navigate('/trainer/dashboard')
+      // Success! Redirect appropriately
+      if (directToForm && seminarId) {
+        // Go directly to registration form
+        navigate(`/seminar/${seminarId}/register`)
+      } else {
+        // Go to seminars list
+        navigate(returnTo, { 
+          state: { 
+            message: 'Welcome back!',
+            seminarId: seminarId 
+          } 
+        })
+      }
 
     } catch (error) {
       console.error('Login error:', error)
@@ -98,22 +116,10 @@ const TrainerLogin = () => {
   return (
     <div className="auth-page">
       <div className="auth-container">
-        {/* Role Switcher at Top */}
-        <div className="role-switcher">
-          <Link to="/auth/learner/login" className="role-btn">
-            Learner
-          </Link>
-          <Link to="/auth/trainer/login" className="role-btn active">
-            Trainer
-          </Link>
-          <Link to="/auth/institutional/login" className="role-btn">
-            Institution
-          </Link>
-        </div>
-
         <div className="auth-header">
-          <h1>Trainer Login</h1>
-          <p>Welcome back! Continue inspiring learners</p>
+          <Calendar size={48} color="#0B4F9F" />
+          <h1>Sign In</h1>
+          <p>Access your account to register for seminars</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -185,23 +191,35 @@ const TrainerLogin = () => {
             className="btn btn-primary btn-full"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login to Dashboard'}
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         <div className="auth-footer">
           <p>
             Don't have an account?{' '}
-            <Link to="/auth/trainer/signup">Create Trainer Account</Link>
+            <Link 
+              to="/auth/seminar/signup" 
+              state={{ returnTo, seminarId }}
+            >
+              Create Account
+            </Link>
           </p>
-          <p className="switch-role">
-            Are you a learner?{' '}
-            <Link to="/auth/learner/login">Login as Learner</Link>
-          </p>
+        </div>
+
+        <div className="auth-benefits">
+          <h3>Free Access Includes:</h3>
+          <ul>
+            <li>✓ Join live seminars with expert speakers</li>
+            <li>✓ Ask questions in real-time</li>
+            <li>✓ Network with other learners</li>
+            <li>✓ Download session materials</li>
+            <li>✓ Access to all upcoming seminars</li>
+          </ul>
         </div>
       </div>
     </div>
   )
 }
 
-export default TrainerLogin
+export default SeminarLogin

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List, Upload } from 'lucide-react'
+import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List, Upload, QrCode } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import QRCodeModal from '../../components/QRCodeModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './ManageSeminars.css'
@@ -16,6 +17,7 @@ const ManageSeminars = () => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeminar, setEditingSeminar] = useState(null)
   const [showQuestionsModal, setShowQuestionsModal] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
   const [selectedSeminar, setSelectedSeminar] = useState(null)
   const [questions, setQuestions] = useState([])
   const [thumbnailFile, setThumbnailFile] = useState(null)
@@ -511,6 +513,17 @@ const ManageSeminars = () => {
                         <span>Unpublish</span>
                       </button>
                     )}
+                    <button 
+                      className="action-btn-compact primary"
+                      onClick={() => {
+                        setSelectedSeminar(seminar)
+                        setShowQRModal(true)
+                      }}
+                      title="Generate QR Code"
+                    >
+                      <QrCode size={16} />
+                      <span>QR Code</span>
+                    </button>
                     <button 
                       className="action-btn-compact primary"
                       onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
@@ -1091,6 +1104,17 @@ const ManageSeminars = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && selectedSeminar && (
+        <QRCodeModal 
+          seminar={selectedSeminar}
+          onClose={() => {
+            setShowQRModal(false)
+            setSelectedSeminar(null)
+          }}
+        />
       )}
     </div>
   )

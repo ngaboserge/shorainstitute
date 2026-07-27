@@ -48,6 +48,13 @@
   gap: 24px;
 }
 
+.table-container tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table-container tbody tr:hover {
+  background-color: #f8f9fa;
+}
 .programme-name-cell {
   display: flex;
   align-items: center;

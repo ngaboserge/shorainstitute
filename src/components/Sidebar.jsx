@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useInstitutionalAuth } from '../hooks/useInstitutionalAuth'
 import { 
   LayoutDashboard, 
   Users, 
@@ -23,6 +24,14 @@ const Sidebar = ({ type = 'institutional' }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, profile, signOut } = useAuth()
+  const { institution } = useInstitutionalAuth()
+  const [institutionName, setInstitutionName] = useState('Your Institution')
+
+  useEffect(() => {
+    if (type === 'institutional' && institution) {
+      setInstitutionName(institution.name || 'Your Institution')
+    }
+  }, [institution, type])
 
   const handleLogout = async () => {
     await signOut()
@@ -96,7 +105,7 @@ const Sidebar = ({ type = 'institutional' }) => {
           <div className="org-badge">
             <div className="org-icon">🛡️</div>
             <div className="org-info">
-              <div className="org-name">Rwanda Development Bank</div>
+              <div className="org-name">{institutionName}</div>
               <div className="org-status">Premium Partner</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -159,23 +168,37 @@ const Sidebar = ({ type = 'institutional' }) => {
           </div>
         )}
 
-        {type === 'institutional' && (
+        {type === 'institutional' && profile && (
           <div className="account-manager">
-            <div className="manager-label">Your Account Manager</div>
+            <div className="manager-label">Your Account</div>
             <div className="manager-card">
-              <img 
-                src="https://i.pravatar.cc/150?img=33" 
-                alt="Eric Mugisha" 
-                className="manager-avatar"
-              />
+              <div className="manager-avatar" style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '18px',
+                fontWeight: '600'
+              }}>
+                {profile.full_name?.charAt(0) || 'A'}
+              </div>
               <div className="manager-info">
-                <div className="manager-name">Eric Mugisha</div>
-                <div className="manager-contact">+250 788 123 456</div>
-                <div className="manager-email">eric.mugisha@shora.rw</div>
+                <div className="manager-name">{profile.full_name || 'Admin'}</div>
+                <div className="manager-contact">{user?.email || ''}</div>
+                <div className="manager-email" style={{ fontSize: '11px', color: '#FDB714' }}>
+                  Institutional Admin
+                </div>
               </div>
             </div>
-            <button className="btn btn-secondary btn-sm contact-btn">
-              <span>📧</span> Contact Eric
+            <button 
+              className="btn btn-secondary btn-sm contact-btn"
+              onClick={() => navigate('/institutional/settings')}
+            >
+              <Settings size={16} /> Settings
             </button>
           </div>
         )}

@@ -1,13 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, AlertCircle, Eye, EyeOff, Building2 } from 'lucide-react'
 import './Auth.css'
 
-const TrainerLogin = () => {
+const InstitutionalLogin = () => {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
   
   const [formData, setFormData] = useState({
     email: '',
@@ -51,7 +49,11 @@ const TrainerLogin = () => {
     setErrors({})
 
     try {
-      const { user, error } = await signIn(formData.email, formData.password)
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      })
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
@@ -62,30 +64,31 @@ const TrainerLogin = () => {
         return
       }
 
-      // Wait for profile to load
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Verify role
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .maybeSingle()
+      // Check if user is institutional admin
+      const { data: institutionData, error: institutionError } = await supabase
+        .from('institutions')
+        .select('id, name')
+        .eq('admin_user_id', data.user.id)
+        .eq('status', 'active')
+        .maybeSingle()
 
-        // Only check role if profile exists
-        if (profileData && profileData.role !== 'trainer') {
-          setErrors({ 
-            general: `This is a ${profileData.role} account. Please use the ${profileData.role} login page.` 
-          })
-          await supabase.auth.signOut()
-          return
-        }
+      if (institutionError) {
+        console.error('Error checking institution:', institutionError)
+        setErrors({ general: 'Error verifying institutional access' })
+        await supabase.auth.signOut()
+        return
       }
 
-      // Navigate to dashboard
-      navigate('/trainer/dashboard')
+      if (!institutionData) {
+        setErrors({ 
+          general: 'This account is not authorized for institutional access. Please contact your administrator.' 
+        })
+        await supabase.auth.signOut()
+        return
+      }
+
+      // Success! Navigate to institutional portal
+      navigate('/institutional/overview')
 
     } catch (error) {
       console.error('Login error:', error)
@@ -101,19 +104,22 @@ const TrainerLogin = () => {
         {/* Role Switcher at Top */}
         <div className="role-switcher">
           <Link to="/auth/learner/login" className="role-btn">
-            Learner
+            Learner Login
           </Link>
-          <Link to="/auth/trainer/login" className="role-btn active">
-            Trainer
+          <Link to="/auth/trainer/login" className="role-btn">
+            Trainer Login
           </Link>
-          <Link to="/auth/institutional/login" className="role-btn">
-            Institution
+          <Link to="/auth/institutional/login" className="role-btn active">
+            Institutional Login
           </Link>
         </div>
 
         <div className="auth-header">
-          <h1>Trainer Login</h1>
-          <p>Welcome back! Continue inspiring learners</p>
+          <div className="auth-icon institutional">
+            <Building2 size={32} />
+          </div>
+          <h1>Institutional Portal</h1>
+          <p>Sign in to manage your institution's learning programs</p>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
@@ -125,12 +131,12 @@ const TrainerLogin = () => {
           )}
 
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Institutional Email</label>
             <div className="input-with-icon">
               <Mail size={20} />
               <input
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="admin@yourinstitution.com"
                 value={formData.email}
                 onChange={(e) => handleChange('email', e.target.value)}
                 className={errors.email ? 'error' : ''}
@@ -161,6 +167,7 @@ const TrainerLogin = () => {
                 type="button"
                 className="toggle-password"
                 onClick={() => setShowPassword(!showPassword)}
+                tabIndex="-1"
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
@@ -185,18 +192,18 @@ const TrainerLogin = () => {
             className="btn btn-primary btn-full"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login to Dashboard'}
+            {loading ? 'Signing in...' : 'Access Institutional Portal'}
           </button>
         </form>
 
         <div className="auth-footer">
-          <p>
-            Don't have an account?{' '}
-            <Link to="/auth/trainer/signup">Create Trainer Account</Link>
+          <p className="info-text">
+            <AlertCircle size={16} />
+            Institutional portal access is restricted to authorized administrators only.
           </p>
           <p className="switch-role">
-            Are you a learner?{' '}
-            <Link to="/auth/learner/login">Login as Learner</Link>
+            Need institutional access?{' '}
+            <a href="mailto:support@shorainstitute.rw">Contact Support</a>
           </p>
         </div>
       </div>
@@ -204,4 +211,4 @@ const TrainerLogin = () => {
   )
 }
 
-export default TrainerLogin
+export default InstitutionalLogin

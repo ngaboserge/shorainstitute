@@ -1,11 +1,98 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Users, GraduationCap, BookOpen, Calendar, TrendingUp, Download } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Overview.css'
 
 const Overview = () => {
+  const { institutionId } = useShoraInstitute()
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    avgProgress: 0,
+    activeProgrammes: 0,
+    upcomingSessions: 0
+  })
+  const [userName, setUserName] = useState('Admin')
+
+  useEffect(() => {
+    fetchOverviewData()
+    fetchUserName()
+  }, [])
+
+  const fetchUserName = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileData?.full_name) {
+          setUserName(profileData.full_name.split(' ')[0])
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user name:', error)
+    }
+  }
+
+  const fetchOverviewData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch total learners
+      const { count: learnersCount, error: learnersError } = await supabase
+        .from('institution_learners')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (learnersError) throw learnersError
+
+      // Fetch active programmes
+      const { count: programmesCount, error: programmesError } = await supabase
+        .from('institutional_programmes')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (programmesError) throw programmesError
+
+      // Fetch upcoming seminars
+      const { count: seminarsCount, error: seminarsError } = await supabase
+        .from('seminars')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .gte('scheduled_at', new Date().toISOString())
+
+      if (seminarsError) throw seminarsError
+
+      setStats({
+        totalLearners: learnersCount || 0,
+        avgProgress: 0, // TODO: Calculate from course_progress
+        activeProgrammes: programmesCount || 0,
+        upcomingSessions: seminarsCount || 0
+      })
+
+    } catch (error) {
+      console.error('Error fetching overview data:', error)
+      setStats({
+        totalLearners: 0,
+        avgProgress: 0,
+        activeProgrammes: 0,
+        upcomingSessions: 0
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const progressData = [
     { name: 'Credit & Risk', completed: 84, inProgress: 12, notStarted: 4 },
     { name: 'Finance', completed: 79, inProgress: 16, notStarted: 5 },
@@ -60,7 +147,7 @@ const Overview = () => {
       <Sidebar type="institutional" />
       <div className="main-content">
         <Header 
-          title="Welcome back, Jane!"
+          title={`Welcome back, ${userName}!`}
           subtitle="Here's what's happening in your institution."
           actions={
             <>
@@ -85,7 +172,7 @@ const Overview = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Total Learners</div>
-                <div className="stat-value">1,248</div>
+                <div className="stat-value">{loading ? '...' : stats.totalLearners.toLocaleString()}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>12% vs last month</span>
@@ -99,7 +186,7 @@ const Overview = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Average Progress</div>
-                <div className="stat-value">75%</div>
+                <div className="stat-value">{loading ? '...' : `${stats.avgProgress}%`}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>5% vs last month</span>
@@ -113,7 +200,7 @@ const Overview = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Active Programmes</div>
-                <div className="stat-value">18</div>
+                <div className="stat-value">{loading ? '...' : stats.activeProgrammes}</div>
                 <div className="stat-change neutral">
                   <span>No change</span>
                 </div>
@@ -126,7 +213,7 @@ const Overview = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Upcoming Live Sessions</div>
-                <div className="stat-value">7</div>
+                <div className="stat-value">{loading ? '...' : stats.upcomingSessions}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>2 vs last month</span>
@@ -136,6 +223,19 @@ const Overview = () => {
           </div>
 
           {/* Charts Section */}
+          {stats.totalLearners === 0 ? (
+            <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
+              <h3 style={{ marginBottom: '8px', color: '#1a1a1a' }}>No Data Available Yet</h3>
+              <p style={{ color: '#666', marginBottom: '24px' }}>
+                Start adding learners and assigning programmes to see detailed analytics and insights.
+              </p>
+              <button className="btn btn-primary" onClick={() => window.location.href = '/institutional/learners'}>
+                Add Learners
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="charts-grid">
             <div className="card chart-card">
               <div className="card-header">
@@ -300,6 +400,8 @@ const Overview = () => {
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

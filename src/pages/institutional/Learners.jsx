@@ -1,111 +1,131 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Users, TrendingUp, AlertTriangle, Award, Download, Plus, Search, Filter } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
+import InviteLearnersModal from '../../components/modals/InviteLearnersModal'
+import BulkImportModal from '../../components/modals/BulkImportModal'
+import LearnerDetailsModal from '../../components/modals/LearnerDetailsModal'
+import AssignProgrammeModal from '../../components/modals/AssignProgrammeModal'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Learners.css'
 
 const Learners = () => {
+  const { institutionId } = useShoraInstitute()
   const [searchTerm, setSearchTerm] = useState('')
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [selectedLearner, setSelectedLearner] = useState(null)
+  const [learners, setLearners] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    atRisk: 0,
+    certificates: 0
+  })
 
-  const segmentData = [
-    { name: 'Credit & Risk', value: 334, percentage: '26%', color: '#0B4F9F' },
-    { name: 'Finance', value: 309, percentage: '24%', color: '#1976D2' },
-    { name: 'Operations', value: 312, percentage: '25%', color: '#42A5F5' },
-    { name: 'HR & Admin', value: 187, percentage: '15%', color: '#64B5F6' },
-    { name: 'IT', value: 106, percentage: '8%', color: '#90CAF9' },
-  ]
+  useEffect(() => {
+    fetchLearners()
+  }, [])
 
-  const learners = [
-    {
-      id: 'RDB-1001',
-      name: 'Juanee Mukamana',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      department: 'Credit & Risk',
-      programme: 'Financial Foundation',
-      progress: 72,
-      lastActive: 'May 30, 2026',
-      certificates: 1,
-      status: 'Active'
-    },
-    {
-      id: 'RDB-1002',
-      name: 'Maria Ndayishimiye',
-      avatar: 'https://i.pravatar.cc/150?img=5',
-      department: 'Finance',
-      programme: 'Financial Planning Basics',
-      progress: 48,
-      lastActive: 'May 29, 2026',
-      certificates: 0,
-      status: 'Active'
-    },
-    {
-      id: 'RDB-1003',
-      name: 'Emmanuel Kaziwe',
-      avatar: 'https://i.pravatar.cc/150?img=12',
-      department: 'Operations',
-      programme: 'Investment Foundations',
-      progress: 40,
-      lastActive: 'May 28, 2026',
-      certificates: 1,
-      status: 'Active'
-    },
-    {
-      id: 'RDB-1004',
-      name: 'Aline Cyuenza',
-      avatar: 'https://i.pravatar.cc/150?img=9',
-      department: 'HR & Admin',
-      programme: 'Capital Markets Essentials',
-      progress: 35,
-      lastActive: 'May 27, 2026',
-      certificates: 0,
-      status: 'Active'
-    },
-    {
-      id: 'RDB-1005',
-      name: 'Dieudonné Bahigize',
-      avatar: 'https://i.pravatar.cc/150?img=13',
-      department: 'IT',
-      programme: 'Risk Management Basics',
-      progress: 30,
-      lastActive: 'May 26, 2026',
-      certificates: 1,
-      status: 'Active'
-    },
-    {
-      id: 'RDB-1006',
-      name: 'Gloria Nzirakamanzi',
-      avatar: 'https://i.pravatar.cc/150?img=10',
-      department: 'Finance',
-      programme: 'Financial Foundation',
-      progress: 32,
-      lastActive: 'May 24, 2026',
-      certificates: 0,
-      status: 'At Risk'
-    },
-    {
-      id: 'RDB-1007',
-      name: 'Patrick Twizeyange',
-      avatar: 'https://i.pravatar.cc/150?img=14',
-      department: 'Credit & Risk',
-      programme: 'Financial Planning Basics',
-      progress: 20,
-      lastActive: 'May 19, 2026',
-      certificates: 0,
-      status: 'At Risk'
-    },
-    {
-      id: 'RDB-1008',
-      name: 'Jocine Mukachimana',
-      avatar: 'https://i.pravatar.cc/150?img=8',
-      department: 'Operations',
-      programme: 'Investment Foundations',
-      progress: 30,
-      lastActive: 'May 14, 2026',
-      certificates: 0,
-      status: 'Inactive'
-    },
-  ]
+  const fetchLearners = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch learners with profile and department info
+      const { data: learnersData, error: learnersError } = await supabase
+        .from('institution_learners')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email,
+            avatar_url
+          ),
+          institution_departments:department_id (
+            name
+          )
+        `)
+        .eq('institution_id', institutionId)
+        .order('enrolled_at', { ascending: false })
+        .limit(50)
+
+      if (learnersError) throw learnersError
+
+      // Transform data for display
+      const transformedLearners = learnersData.map(learner => ({
+        id: learner.employee_id || `LEARNER-${learner.id.substring(0, 8).toUpperCase()}`,
+        name: learner.profiles?.full_name || 'Unknown Learner',
+        email: learner.profiles?.email || '',
+        avatar: learner.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${learner.user_id}`,
+        department: learner.institution_departments?.name || 'Unassigned',
+        programme: 'Not Assigned', // TODO: Get from programme_assignments
+        progress: 0, // TODO: Calculate from course_progress - showing 0 instead of random
+        lastActive: new Date(learner.last_active_at || learner.enrolled_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }),
+        certificates: 0, // TODO: Count from certificates table
+        status: learner.status === 'active' ? 'Active' : learner.status === 'at_risk' ? 'At Risk' : 'Inactive'
+      }))
+
+      setLearners(transformedLearners)
+
+      // Calculate stats
+      const activeCount = transformedLearners.filter(l => l.status === 'Active').length
+      const atRiskCount = transformedLearners.filter(l => l.status === 'At Risk').length
+      
+      setStats({
+        total: transformedLearners.length,
+        active: activeCount,
+        atRisk: atRiskCount,
+        certificates: 0 // TODO: Calculate from certificates - showing 0 instead of 385
+      })
+
+    } catch (error) {
+      console.error('Error fetching learners:', error)
+      // Show empty state instead of mock data
+      setLearners([])
+      setStats({
+        total: 0,
+        active: 0,
+        atRisk: 0,
+        certificates: 0
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Department segment data - show only if we have real department data
+  const segmentData = learners.length > 0 ? [
+    { name: 'Unassigned', value: learners.filter(l => l.department === 'Unassigned').length, color: '#90CAF9' },
+    // Add more departments as they get assigned
+  ].filter(s => s.value > 0) : []
+
+  const handleInvite = async (inviteData) => {
+    console.log('Invite data:', inviteData)
+    // TODO: Implement actual invite logic with database
+    // For now, just simulate success
+    return Promise.resolve()
+  }
+
+  const handleLearnerClick = (learner) => {
+    setSelectedLearner(learner)
+    setShowDetailsModal(true)
+  }
+
+  const handleAssignProgramme = async (assignmentData) => {
+    console.log('Assignment data:', assignmentData)
+    // TODO: Implement actual assignment logic with database
+    // For now, just simulate success
+    return Promise.resolve()
+  }
 
   return (
     <div className="dashboard-layout">
@@ -119,7 +139,10 @@ const Learners = () => {
               <select className="date-range-select">
                 <option>May 1 - May 31, 2026</option>
               </select>
-              <button className="btn btn-primary">
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowInviteModal(true)}
+              >
                 <Plus size={18} />
                 Invite Learners
               </button>
@@ -136,7 +159,7 @@ const Learners = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Total Learners</div>
-                <div className="stat-value">1,248</div>
+                <div className="stat-value">{loading ? '...' : stats.total.toLocaleString()}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>32% vs last month</span>
@@ -150,7 +173,7 @@ const Learners = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Active This Month</div>
-                <div className="stat-value">892</div>
+                <div className="stat-value">{loading ? '...' : stats.active.toLocaleString()}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>8% vs last month</span>
@@ -164,7 +187,7 @@ const Learners = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">At Risk</div>
-                <div className="stat-value">76</div>
+                <div className="stat-value">{loading ? '...' : stats.atRisk}</div>
                 <div className="stat-change negative">
                   <span>6% vs last month</span>
                 </div>
@@ -177,7 +200,7 @@ const Learners = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Certificates Earned</div>
-                <div className="stat-value">385</div>
+                <div className="stat-value">{loading ? '...' : stats.certificates.toLocaleString()}</div>
                 <div className="stat-change positive">
                   <TrendingUp size={14} />
                   <span>18% vs last month</span>
@@ -249,8 +272,25 @@ const Learners = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {learners.map((learner) => (
-                        <tr key={learner.id}>
+                      {loading ? (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                            Loading learners...
+                          </td>
+                        </tr>
+                      ) : learners.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                            No learners found
+                          </td>
+                        </tr>
+                      ) : (
+                        learners.map((learner) => (
+                          <tr 
+                            key={learner.id}
+                            onClick={() => handleLearnerClick(learner)}
+                            style={{ cursor: 'pointer' }}
+                          >
                           <td>
                             <div className="learner-info">
                               <img src={learner.avatar} alt={learner.name} className="learner-avatar" />
@@ -282,17 +322,20 @@ const Learners = () => {
                               {learner.status}
                             </span>
                           </td>
-                          <td>
+                          <td onClick={(e) => e.stopPropagation()}>
                             <button className="btn-icon">⋮</button>
                           </td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
                 
                 <div className="table-footer">
-                  <div className="table-info">Showing 1 to 8 of 1,248 learners</div>
+                  <div className="table-info">
+                    Showing 1 to {Math.min(learners.length, 8)} of {stats.total.toLocaleString()} learners
+                  </div>
                   <div className="pagination">
                     <select className="items-per-page">
                       <option>10</option>
@@ -319,6 +362,14 @@ const Learners = () => {
               <div className="card">
                 <h3 className="card-title">Learner Segments</h3>
                 <p className="card-subtitle">Department Breakdown</p>
+                {segmentData.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Department breakdown will appear here once learners are assigned to departments.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                 <div className="chart-container">
                   <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
@@ -336,7 +387,7 @@ const Learners = () => {
                         ))}
                       </Pie>
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-0.5em" fontSize="32" fontWeight="700" fill="#1a1a1a">1,248</tspan>
+                        <tspan x="50%" dy="-0.5em" fontSize="32" fontWeight="700" fill="#1a1a1a">{stats.total}</tspan>
                         <tspan x="50%" dy="1.5em" fontSize="14" fill="#666">Total</tspan>
                       </text>
                     </PieChart>
@@ -348,29 +399,43 @@ const Learners = () => {
                       <div className="segment-color" style={{background: segment.color}}></div>
                       <div className="segment-info">
                         <div className="segment-name">{segment.name}</div>
-                        <div className="segment-value">{segment.percentage} ({segment.value})</div>
+                        <div className="segment-value">{((segment.value / stats.total) * 100).toFixed(0)}% ({segment.value})</div>
                       </div>
                     </div>
                   ))}
                 </div>
+                  </>
+                )}
               </div>
 
               <div className="card">
                 <h3 className="card-title">Quick Actions</h3>
                 <div className="quick-actions">
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setShowInviteModal(true)}
+                  >
                     <Users size={20} />
                     <span>Invite Learners</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setShowBulkImportModal(true)}
+                  >
                     <Download size={20} />
                     <span>Bulk Import CSV</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setShowAssignModal(true)}
+                  >
                     <Users size={20} />
                     <span>Assign Programme</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => alert('Message Cohort functionality coming soon')}
+                  >
                     <Download size={20} />
                     <span>Message Cohort</span>
                   </button>
@@ -380,6 +445,42 @@ const Learners = () => {
           </div>
         </div>
       </div>
+
+      {/* Invite Learners Modal */}
+      <InviteLearnersModal 
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={() => {
+          setShowInviteModal(false)
+          fetchLearners()
+        }}
+      />
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal 
+        isOpen={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        onSuccess={() => {
+          setShowBulkImportModal(false)
+          fetchLearners()
+        }}
+      />
+
+      {/* Learner Details Modal */}
+      <LearnerDetailsModal 
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        learner={selectedLearner}
+      />
+
+      {/* Assign Programme Modal */}
+      <AssignProgrammeModal 
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        onAssign={handleAssignProgramme}
+        selectedLearners={[]}
+        institutionId={institutionId}
+      />
     </div>
   )
 }
