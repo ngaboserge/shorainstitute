@@ -12,6 +12,7 @@ import LearnerLogin from './pages/auth/LearnerLogin'
 import SeminarSignup from './pages/auth/SeminarSignup'
 import SeminarLogin from './pages/auth/SeminarLogin'
 import InstitutionalLogin from './pages/auth/InstitutionalLogin'
+import InstitutionalSignup from './pages/auth/InstitutionalSignup'
 import InstitutionalOverview from './pages/institutional/Overview'
 import InstitutionalLearners from './pages/institutional/Learners'
 import InstitutionalProgrammes from './pages/institutional/Programmes'
@@ -58,6 +59,7 @@ import LearningPaths from './pages/learner/LearningPaths'
 import OnboardingAssessment from './pages/public/OnboardingAssessment'
 import PaymentSuccess from './pages/public/PaymentSuccess'
 import SeminarRegistrationForm from './pages/public/SeminarRegistrationForm'
+import InvitationAccept from './pages/public/InvitationAccept'
 import './App.css'
 
 function App() {
@@ -77,6 +79,9 @@ function App() {
           {/* Seminar Registration Route */}
           <Route path="/seminar/:id/register" element={<SeminarRegistrationForm />} />
           
+          {/* Invitation Acceptance Route (Public) */}
+          <Route path="/invitation/accept" element={<InvitationAccept />} />
+          
           {/* Auth Routes */}
           <Route path="/auth/trainer/signup" element={<TrainerSignup />} />
           <Route path="/auth/trainer/login" element={<TrainerLogin />} />
@@ -88,6 +93,11 @@ function App() {
           <Route path="/auth/seminar/login" element={<SeminarLogin />} />
           
           <Route path="/auth/institutional/login" element={<InstitutionalLogin />} />
+          <Route path="/auth/institutional/signup" element={<InstitutionalSignup />} />
+          
+          {/* Catch-all for /auth/signup -> redirect to learner signup */}
+          <Route path="/auth/signup" element={<Navigate to="/auth/learner/signup" replace />} />
+          
         {/* Redirect public courses/seminars to learner portal */}
         <Route path="/courses" element={<Navigate to="/learner/courses" replace />} />
         <Route path="/seminars" element={<Navigate to="/learner/seminars" replace />} />

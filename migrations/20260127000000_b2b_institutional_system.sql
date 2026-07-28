@@ -12,6 +12,9 @@
 -- Add subscription management columns to existing institutions table
 ALTER TABLE institutions ADD COLUMN IF NOT EXISTS admin_user_id UUID REFERENCES auth.users(id);
 ALTER TABLE institutions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled'));
+ALTER TABLE institutions ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE institutions ADD COLUMN IF NOT EXISTS industry TEXT;
+ALTER TABLE institutions ADD COLUMN IF NOT EXISTS contact_phone TEXT;
 
 -- Add subscription columns
 ALTER TABLE institutions ADD COLUMN IF NOT EXISTS total_seats INTEGER DEFAULT 10;

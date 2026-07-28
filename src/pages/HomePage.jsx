@@ -240,9 +240,11 @@ const HomePage = () => {
             <Link to="/learner/browse" className="nav-icon-btn" title="Browse Courses">
               🔍
             </Link>
-            <Link to="/learner/dashboard" className="nav-btn-login">
+            {/* Login button */}
+            <Link to="/auth/learner/login" className="nav-btn-login">
               Log in
             </Link>
+            {/* Get Started button - goes to learner signup with role tabs */}
             <Link to="/auth/learner/signup" className="nav-btn-start">
               Get Started
             </Link>

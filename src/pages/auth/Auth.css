@@ -423,3 +423,80 @@
   padding: 10px 12px;
   white-space: nowrap;
 }
+
+
+/* Role Selection Cards (for unified signup) */
+.role-selection-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.role-card {
+  position: relative;
+  padding: 24px 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.role-card:hover {
+  border-color: #0B4F9F;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 79, 159, 0.1);
+}
+
+.role-card.active {
+  border-color: #0B4F9F;
+  background: #f0f7ff;
+  box-shadow: 0 4px 12px rgba(11, 79, 159, 0.2);
+}
+
+.role-card-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 50%;
+}
+
+.role-card.active .role-card-icon {
+  background: rgba(11, 79, 159, 0.1);
+}
+
+.role-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #1a1a1a;
+}
+
+.role-card p {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 16px 0;
+}
+
+.role-card-radio {
+  display: flex;
+  justify-content: center;
+}
+
+.role-card-radio input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .role-selection-cards {
+    grid-template-columns: 1fr;
+  }
+}

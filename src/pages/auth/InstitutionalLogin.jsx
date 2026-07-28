@@ -202,8 +202,8 @@ const InstitutionalLogin = () => {
             Institutional portal access is restricted to authorized administrators only.
           </p>
           <p className="switch-role">
-            Need institutional access?{' '}
-            <a href="mailto:support@shorainstitute.rw">Contact Support</a>
+            Don't have an institutional account?{' '}
+            <Link to="/auth/institutional/signup">Create one - Start Free Trial</Link>
           </p>
         </div>
       </div>
