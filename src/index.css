@@ -6,6 +6,7 @@
 
 html {
   font-size: 14px; /* Base font size for better scaling */
+  scroll-behavior: smooth; /* Smooth scrolling for anchor links */
 }
 
 body {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Calendar, Clock, Users, Video, Bell, CheckCircle, Award, ExternalLink } from 'lucide-react'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
 
@@ -9,14 +9,18 @@ import './Seminars.css'
 
 const Seminars = () => {
   const { user, profile } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('upcoming')
   const [seminars, setSeminars] = useState([])
   const [registrations, setRegistrations] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [selectedSeminar, setSelectedSeminar] = useState(null)
+  const [answers, setAnswers] = useState({})
 
   useEffect(() => {
+    loadSeminars()
     if (user) {
-      loadSeminars()
       loadRegistrations()
     }
   }, [user, activeTab])
@@ -31,7 +35,7 @@ const Seminars = () => {
         .order('date', { ascending: true })
 
       if (activeTab === 'upcoming') {
-        query.gte('date', today).in('status', ['upcoming', 'live'])
+        query.gte('date', today).in('status', ['published', 'upcoming', 'live'])
       } else {
         query.lt('date', today).eq('status', 'completed')
       }
@@ -70,6 +74,33 @@ const Seminars = () => {
   }
 
   const handleRegister = async (seminarId) => {
+    // Check if user is logged in
+    if (!user) {
+      // Redirect to seminar signup page
+      navigate('/auth/seminar/signup', {
+        state: {
+          returnTo: '/learner/seminars',
+          seminarId: seminarId
+        }
+      })
+      return
+    }
+
+    const seminar = seminars.find(s => s.id === seminarId)
+    
+    // Check if seminar has registration questions
+    if (seminar?.registration_questions && seminar.registration_questions.length > 0) {
+      setSelectedSeminar(seminar)
+      setAnswers({})
+      setShowRegisterModal(true)
+      return
+    }
+
+    // No questions, register directly
+    await completeRegistration(seminarId, {})
+  }
+
+  const completeRegistration = async (seminarId, registrationAnswers) => {
     try {
       // Check capacity
       const seminar = seminars.find(s => s.id === seminarId)
@@ -78,36 +109,73 @@ const Seminars = () => {
         return
       }
 
-      // Register
-      const { error: regError } = await supabase
+      // Check if user already has a registration (including cancelled ones)
+      const { data: existingRegs, error: checkError } = await supabase
         .from('seminar_registrations')
-        .insert({
-          seminar_id: seminarId,
-          user_id: user.id,
-          user_name: profile?.full_name || 'Learner',
-          user_email: user.email,
-          registration_status: 'registered'
-        })
+        .select('*')
+        .eq('seminar_id', seminarId)
+        .eq('user_id', user.id)
 
-      if (regError) throw regError
+      if (checkError) throw checkError
 
-      // Update seminar count
-      await supabase
-        .from('seminars')
-        .update({ 
-          current_registrations: (seminar.current_registrations || 0) + 1 
-        })
-        .eq('id', seminarId)
+      const existingReg = existingRegs && existingRegs.length > 0 ? existingRegs[0] : null
 
-      // Reload data
+      if (existingReg) {
+        // Update existing registration (re-register after cancellation)
+        const { error: updateError } = await supabase
+          .from('seminar_registrations')
+          .update({
+            registration_status: 'registered',
+            registration_answers: registrationAnswers,
+            user_name: profile?.full_name || 'Learner',
+            user_email: user.email
+          })
+          .eq('id', existingReg.id)
+
+        if (updateError) throw updateError
+      } else {
+        // Create new registration
+        const { error: insertError } = await supabase
+          .from('seminar_registrations')
+          .insert({
+            seminar_id: seminarId,
+            user_id: user.id,
+            user_name: profile?.full_name || 'Learner',
+            user_email: user.email,
+            registration_status: 'registered',
+            registration_answers: registrationAnswers
+          })
+
+        if (insertError) throw insertError
+      }
+
+      // Reload data (count is automatic from the relationship)
       await loadSeminars()
       await loadRegistrations()
       
+      setShowRegisterModal(false)
       alert('✅ Successfully registered for seminar!')
     } catch (error) {
       console.error('Error registering:', error)
       alert('Failed to register. Please try again.')
     }
+  }
+
+  const handleSubmitRegistration = (e) => {
+    e.preventDefault()
+    
+    // Validate required questions
+    const questions = selectedSeminar?.registration_questions || []
+    const requiredQuestions = questions.filter(q => q.required)
+    
+    for (const q of requiredQuestions) {
+      if (!answers[q.id] || answers[q.id].trim() === '') {
+        alert(`Please answer: ${q.question}`)
+        return
+      }
+    }
+
+    completeRegistration(selectedSeminar.id, answers)
   }
 
   const handleCancelRegistration = async (seminarId) => {
@@ -121,17 +189,6 @@ const Seminars = () => {
         .eq('user_id', user.id)
 
       if (error) throw error
-
-      // Update seminar count
-      const seminar = seminars.find(s => s.id === seminarId)
-      if (seminar) {
-        await supabase
-          .from('seminars')
-          .update({ 
-            current_registrations: Math.max(0, (seminar.current_registrations || 0) - 1)
-          })
-          .eq('id', seminarId)
-      }
 
       await loadSeminars()
       await loadRegistrations()
@@ -220,7 +277,7 @@ const Seminars = () => {
                         <Video size={48} color="white" />
                       </div>
                     )}
-                    {seminar.status === 'upcoming' && registered && (
+                    {(seminar.status === 'upcoming' || seminar.status === 'published') && registered && (
                       <div className="registered-badge">
                         <CheckCircle size={14} />
                         Registered
@@ -286,7 +343,7 @@ const Seminars = () => {
                         <Video size={16} />
                         <span>Live on {seminar.platform || 'Zoom'}</span>
                       </div>
-                      {seminar.status === 'upcoming' && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && (
                         <div className="detail-row">
                           <Users size={16} />
                           <span style={{ color: spotsLeft < 20 ? '#f59e0b' : '#666' }}>
@@ -297,7 +354,7 @@ const Seminars = () => {
                     </div>
 
                     <div className="seminar-actions">
-                      {seminar.status === 'upcoming' && !registered && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && !registered && (
                         <button 
                           className="btn btn-warning btn-full"
                           onClick={() => handleRegister(seminar.id)}
@@ -306,7 +363,7 @@ const Seminars = () => {
                           {spotsLeft > 0 ? 'Register Free' : 'Full'}
                         </button>
                       )}
-                      {seminar.status === 'upcoming' && registered && (
+                      {(seminar.status === 'upcoming' || seminar.status === 'published') && registered && (
                         <>
                           {seminar.meeting_link && (
                             <a 
@@ -362,6 +419,155 @@ const Seminars = () => {
               <Video size={48} color="#0B4F9F" />
               <h3>No seminars found</h3>
               <p>{activeTab === 'upcoming' ? 'Check back soon for new expert-led sessions.' : 'You haven\'t attended any seminars yet.'}</p>
+            </div>
+          )}
+
+          {/* Registration Modal */}
+          {showRegisterModal && selectedSeminar && (
+            <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
+              <div className="modal-content modal-fullpage" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2>Register for Seminar</h2>
+                  <button 
+                    className="modal-close"
+                    onClick={() => setShowRegisterModal(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="modal-body modal-body-fullpage">
+                  <div style={{ marginBottom: '24px', padding: '16px', background: '#f9fafb', borderRadius: '8px' }}>
+                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#0B4F9F', marginBottom: '8px' }}>
+                      {selectedSeminar.title}
+                    </h3>
+                    <p style={{ fontSize: '14px', color: '#666' }}>
+                      {formatDate(selectedSeminar.date)} • {formatTime(selectedSeminar.start_time, selectedSeminar.end_time)}
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleSubmitRegistration}>
+                    <p style={{ marginBottom: '20px', color: '#666' }}>
+                      Please answer the following questions to complete your registration:
+                    </p>
+
+                    {selectedSeminar.registration_questions?.map((q, index) => (
+                      <div key={q.id} className="form-group" style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                          {index + 1}. {q.question}
+                          {q.required && <span style={{ color: '#f44336' }}>*</span>}
+                        </label>
+
+                        {q.type === 'text' && (
+                          <input
+                            type="text"
+                            value={answers[q.id] || ''}
+                            onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                            required={q.required}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              fontSize: '14px'
+                            }}
+                          />
+                        )}
+
+                        {q.type === 'textarea' && (
+                          <textarea
+                            value={answers[q.id] || ''}
+                            onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                            required={q.required}
+                            rows={4}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              resize: 'vertical'
+                            }}
+                          />
+                        )}
+
+                        {q.type === 'select' && (
+                          <select
+                            value={answers[q.id] || ''}
+                            onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                            required={q.required}
+                            style={{
+                              width: '100%',
+                              padding: '12px',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              fontSize: '14px'
+                            }}
+                          >
+                            <option value="">Select an option...</option>
+                            {q.options?.map((opt, i) => (
+                              <option key={i} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {q.type === 'radio' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {q.options?.map((opt, i) => (
+                              <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name={q.id}
+                                  value={opt}
+                                  checked={answers[q.id] === opt}
+                                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                                  required={q.required}
+                                />
+                                {opt}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        {q.type === 'checkbox' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {q.options?.map((opt, i) => (
+                              <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  value={opt}
+                                  checked={(answers[q.id] || []).includes(opt)}
+                                  onChange={(e) => {
+                                    const current = answers[q.id] || []
+                                    const newValue = e.target.checked
+                                      ? [...current, opt]
+                                      : current.filter(v => v !== opt)
+                                    setAnswers({ ...answers, [q.id]: newValue })
+                                  }}
+                                />
+                                {opt}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div className="modal-actions" style={{ marginTop: '32px' }}>
+                      <button 
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowRegisterModal(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn btn-warning">
+                        Complete Registration
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
           )}
         </ResponsiveLayout>

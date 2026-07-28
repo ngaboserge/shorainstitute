@@ -1,11 +1,87 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Download, FileDown, Calendar } from 'lucide-react'
+import { Download, FileDown, Calendar, FileText } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import ReportBuilderModal from '../../components/modals/ReportBuilderModal'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Reports.css'
 
 const Reports = () => {
+  const { institutionId } = useShoraInstitute()
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    completionRate: 0,
+    liveAttendance: 0,
+    certificatesIssued: 0,
+    avgAssessmentScore: 0,
+    repeatAttendance: 0
+  })
+
+  useEffect(() => {
+    fetchReportsData()
+  }, [])
+
+  const fetchReportsData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch total learners
+      const { count: learnersCount, error: learnersError } = await supabase
+        .from('institution_learners')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (learnersError) throw learnersError
+
+      // Fetch certificates issued
+      const { count: certsCount, error: certsError } = await supabase
+        .from('certificates')
+        .select('*', { count: 'exact', head: true })
+
+      if (certsError) throw certsError
+
+      // Fetch active programmes
+      const { count: programmesCount, error: programmesError } = await supabase
+        .from('institutional_programmes')
+        .select('*', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (programmesError) throw programmesError
+
+      setStats({
+        totalLearners: learnersCount || 0,
+        completionRate: 0, // TODO: Calculate from course_progress
+        liveAttendance: 0, // TODO: Calculate from seminar_registrations
+        certificatesIssued: certsCount || 0,
+        avgAssessmentScore: 0, // TODO: Calculate from quiz_submissions
+        repeatAttendance: 0 // TODO: Calculate from seminar_registrations
+      })
+
+    } catch (error) {
+      console.error('Error fetching reports data:', error)
+      setStats({
+        totalLearners: 0,
+        completionRate: 0,
+        liveAttendance: 0,
+        certificatesIssued: 0,
+        avgAssessmentScore: 0,
+        repeatAttendance: 0
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGenerateReport = async (reportConfig) => {
+    console.log('Generating report with config:', reportConfig)
+    return Promise.resolve()
+  }
   const progressData = [
     { name: 'Finance & Risk', completed: 80, inProgress: 15, notStarted: 5 },
     { name: 'Operations', completed: 72, inProgress: 20, notStarted: 8 },
@@ -74,9 +150,12 @@ const Reports = () => {
                 <FileDown size={18} />
                 Export CSV
               </button>
-              <button className="btn btn-warning">
-                <Calendar size={18} />
-                Schedule Monthly Report
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowReportModal(true)}
+              >
+                <FileText size={18} />
+                Generate Custom Report
               </button>
             </>
           }
@@ -115,7 +194,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">1,248</div>
+                <div className="metric-value-reports">{loading ? '...' : stats.totalLearners.toLocaleString()}</div>
                 <div className="metric-label-reports">Total Learners</div>
                 <div className="metric-change-reports positive">↑ 12% vs Jan 30, 2026</div>
               </div>
@@ -129,7 +208,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">75%</div>
+                <div className="metric-value-reports">{loading ? '...' : `${stats.completionRate}%`}</div>
                 <div className="metric-label-reports">Completion Rate</div>
                 <div className="metric-change-reports positive">↑ 3% vs Jan 30, 2026</div>
               </div>
@@ -145,7 +224,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">68%</div>
+                <div className="metric-value-reports">{loading ? '...' : `${stats.liveAttendance}%`}</div>
                 <div className="metric-label-reports">Live Attendance</div>
                 <div className="metric-change-reports positive">↑ 5% vs Jan 30, 2026</div>
               </div>
@@ -161,7 +240,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">386</div>
+                <div className="metric-value-reports">{loading ? '...' : stats.certificatesIssued.toLocaleString()}</div>
                 <div className="metric-label-reports">Certificates Issued</div>
                 <div className="metric-change-reports positive">↑ 18% vs Jan 30, 2026</div>
               </div>
@@ -174,7 +253,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">82%</div>
+                <div className="metric-value-reports">{loading ? '...' : `${stats.avgAssessmentScore}%`}</div>
                 <div className="metric-label-reports">Average Assessment Score</div>
                 <div className="metric-change-reports positive">↑ 4% vs Jan 30, 2026</div>
               </div>
@@ -189,7 +268,7 @@ const Reports = () => {
                 </svg>
               </div>
               <div className="metric-content-reports">
-                <div className="metric-value-reports">41%</div>
+                <div className="metric-value-reports">{loading ? '...' : `${stats.repeatAttendance}%`}</div>
                 <div className="metric-label-reports">Repeat Attendance</div>
                 <div className="metric-change-reports negative">↓ 2% vs Jan 30, 2026</div>
               </div>
@@ -197,6 +276,19 @@ const Reports = () => {
           </div>
 
           {/* Charts Grid */}
+          {stats.totalLearners === 0 ? (
+            <div className="card" style={{ padding: '60px 20px', textAlign: 'center', marginTop: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📈</div>
+              <h3 style={{ marginBottom: '8px', color: '#1a1a1a' }}>No Analytics Data Available</h3>
+              <p style={{ color: '#666', marginBottom: '24px' }}>
+                Reports and analytics will appear here once you have learners enrolled and activity in your institution.
+              </p>
+              <button className="btn btn-primary" onClick={() => window.location.href = '/institutional/learners'}>
+                Get Started
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="reports-charts-grid">
             {/* Learner Progress by Department */}
             <div className="card reports-chart-card">
@@ -249,7 +341,7 @@ const Reports = () => {
                       ))}
                     </Pie>
                     <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                      <tspan x="50%" dy="-0.5em" fontSize="28" fontWeight="700" fill="#1a1a1a">1,248</tspan>
+                      <tspan x="50%" dy="-0.5em" fontSize="28" fontWeight="700" fill="#1a1a1a">{loading ? '...' : stats.totalLearners.toLocaleString()}</tspan>
                       <tspan x="50%" dy="1.5em" fontSize="13" fill="#666">Learners</tspan>
                     </text>
                   </PieChart>
@@ -427,8 +519,17 @@ const Reports = () => {
               </tbody>
             </table>
           </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Report Builder Modal */}
+      <ReportBuilderModal 
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        onGenerate={handleGenerateReport}
+      />
     </div>
   )
 }

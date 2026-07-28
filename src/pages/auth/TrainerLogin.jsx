@@ -101,10 +101,13 @@ const TrainerLogin = () => {
         {/* Role Switcher at Top */}
         <div className="role-switcher">
           <Link to="/auth/learner/login" className="role-btn">
-            Learner Login
+            Learner
           </Link>
           <Link to="/auth/trainer/login" className="role-btn active">
-            Trainer Login
+            Trainer
+          </Link>
+          <Link to="/auth/institutional/login" className="role-btn">
+            Institution
           </Link>
         </div>
 

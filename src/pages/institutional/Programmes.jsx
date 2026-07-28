@@ -1,101 +1,116 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { BookOpen, Users, TrendingUp, Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import CreateCohortModal from '../../components/modals/CreateCohortModal'
+import AssignProgrammeModal from '../../components/modals/AssignProgrammeModal'
+import ProgrammeDetailsModal from '../../components/modals/ProgrammeDetailsModal'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Programmes.css'
 
 const Programmes = () => {
+  const { institutionId } = useShoraInstitute()
   const [activeTab, setActiveTab] = useState('All Programmes')
+  const [showCreateCohortModal, setShowCreateCohortModal] = useState(false)
+  const [showAssignProgrammeModal, setShowAssignProgrammeModal] = useState(false)
+  const [showProgrammeDetailsModal, setShowProgrammeDetailsModal] = useState(false)
+  const [selectedProgramme, setSelectedProgramme] = useState(null)
+  const [programmes, setProgrammes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    total: 0,
+    totalEnrolled: 0,
+    activeCohorts: 0,
+    avgCompletion: 0
+  })
 
-  const programmes = [
-    { 
-      name: 'Financial Foundations', 
-      code: 'FF-2026-Q2', 
-      dept: 'Credit & Risk', 
-      enrolled: 299, 
-      progress: '73%',
-      progressValue: 73,
-      upcomingSession: 'May 08, 2026 9:00 AM (EAT)',
-      invitedSpeaker: 'Dr. Anan Hakizimana',
-      completionRate: '73%'
-    },
-    { 
-      name: 'Financial Planning Basics', 
-      code: 'FPB-2026-Q2', 
-      dept: 'Finance', 
-      enrolled: 242, 
-      progress: '68%',
-      progressValue: 68,
-      upcomingSession: 'May 15, 2026 2:00 PM (EAT)',
-      invitedSpeaker: 'Peace Uwase',
-      completionRate: '68%'
-    },
-    { 
-      name: 'Investment Foundations', 
-      code: 'INV-2026-Q2', 
-      dept: 'Investment', 
-      enrolled: 198, 
-      progress: '60%',
-      progressValue: 60,
-      upcomingSession: 'May 22, 2026 3:00 PM (EAT)',
-      invitedSpeaker: 'David Nkundanze',
-      completionRate: '63%'
-    },
-    { 
-      name: 'Risk Management Basics', 
-      code: 'RMB-2026-Q2', 
-      dept: 'Risk', 
-      enrolled: 210, 
-      progress: '61%',
-      progressValue: 61,
-      upcomingSession: 'May 29, 2026 2:00 PM (EAT)',
-      invitedSpeaker: 'Uwamahoro Aline',
-      completionRate: '63%'
-    },
-    { 
-      name: 'Capital Markets Essentials', 
-      code: 'CME-2026-Q2', 
-      dept: 'Markets', 
-      enrolled: 176, 
-      progress: '55%',
-      progressValue: 55,
-      upcomingSession: 'Jun 05, 2026 3:00 PM (EAT)',
-      invitedSpeaker: 'Jean Bosco Nkuranza',
-      completionRate: '52%'
-    },
-    { 
-      name: 'Treasury Management', 
-      code: 'TM-2026-Q2', 
-      dept: 'Treasury', 
-      enrolled: 142, 
-      progress: '50%',
-      progressValue: 50,
-      upcomingSession: 'Jun 12, 2026 2:00 PM (EAT)',
-      invitedSpeaker: 'Clare Mukamana',
-      completionRate: '48%'
-    },
-    { 
-      name: 'SME Finance Essentials', 
-      code: 'SME-2026-Q2', 
-      dept: 'Business Banking', 
-      enrolled: 131, 
-      progress: '41%',
-      progressValue: 41,
-      upcomingSession: 'Jun 19, 2026 3:00 PM (EAT)',
-      invitedSpeaker: 'Fernand Habimana',
-      completionRate: '40%'
-    },
-  ]
+  useEffect(() => {
+    fetchProgrammes()
+  }, [])
 
-  const cohortMilestones = [
-    { date: 'MAY\n08', day: 8, programme: 'FF-2026-Q2 Kickoff', subtitle: 'Financial Foundations', completionRate: '73%' },
-    { date: 'MAY\n15', day: 15, programme: 'FPB-2026-Q2 Kickoff', subtitle: 'Financial Planning Basics', completionRate: '68%' },
-    { date: 'MAY\n29', day: 29, programme: 'RMB-2026-Q2 Checkpoint 1', subtitle: 'Risk Management Basics', completionRate: '63%' },
-    { date: 'JUN\n12', day: 12, programme: 'TM-2026-Q2 Checkpoint 2', subtitle: 'Treasury Management', completionRate: '50%' },
-    { date: 'JUN\n19', day: 19, programme: 'SME-2026-Q2 Kickoff', subtitle: 'SME Finance Essentials', completionRate: '41%' },
-    { date: 'JUL\n08', day: 8, programme: 'CME-2026-Q2 Kickoff', subtitle: 'Capital Markets Essentials', completionRate: '52%' },
-  ]
+  const fetchProgrammes = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch programme assignments with learning path and cohort info
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('institution_programme_assignments')
+        .select(`
+          *,
+          learning_paths:programme_id (
+            title,
+            description
+          ),
+          institution_cohorts:cohort_id (
+            name,
+            code
+          )
+        `)
+        .eq('institution_id', institutionId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (assignmentsError) throw assignmentsError
+
+      // Transform data for display
+      const transformedProgrammes = assignmentsData.map(prog => ({
+        name: prog.learning_paths?.title || 'Unknown Programme',
+        code: prog.institution_cohorts?.code || 'N/A',
+        dept: 'Various', // TODO: Get department from learner data
+        enrolled: 0, // TODO: Count from cohort_members
+        progress: `0%`, // TODO: Calculate from course_progress
+        progressValue: 0,
+        upcomingSession: 'TBD',
+        invitedSpeaker: 'TBA',
+        completionRate: `0%` // TODO: Calculate from course_progress
+      }))
+
+      setProgrammes(transformedProgrammes)
+
+      // Calculate stats
+      const totalEnrolled = 0 // TODO: Sum actual enrollment
+      const avgCompletion = 0 // TODO: Calculate from real progress data
+
+      setStats({
+        total: transformedProgrammes.length,
+        totalEnrolled,
+        activeCohorts: transformedProgrammes.length,
+        avgCompletion
+      })
+
+    } catch (error) {
+      console.error('Error fetching programmes:', error)
+      // Show empty state instead of mock data
+      setProgrammes([])
+      setStats({
+        total: 0,
+        totalEnrolled: 0,
+        activeCohorts: 0,
+        avgCompletion: 0
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateCohort = async (cohortData) => {
+    console.log('Create cohort data:', cohortData)
+    // TODO: Implement actual cohort creation logic with database
+    return Promise.resolve()
+  }
+
+  const handleAssignProgramme = async (assignmentData) => {
+    console.log('Assignment data:', assignmentData)
+    // TODO: Implement actual assignment logic with database
+    return Promise.resolve()
+  }
+
+  const handleProgrammeClick = (prog) => {
+    setSelectedProgramme(prog)
+    setShowProgrammeDetailsModal(true)
+  }
 
   return (
     <div className="dashboard-layout">
@@ -105,7 +120,10 @@ const Programmes = () => {
           title="Programmes & Cohorts"
           subtitle="Manage enrolled programmes, cohorts, assignments, and learner progress across departments."
           actions={
-            <button className="btn btn-primary">
+            <button 
+              className="btn btn-primary"
+              onClick={() => setShowCreateCohortModal(true)}
+            >
               <Plus size={18} />
               Create Cohort
             </button>
@@ -121,7 +139,7 @@ const Programmes = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Active Programmes</div>
-                <div className="stat-value">18</div>
+                <div className="stat-value">{loading ? '...' : stats.total}</div>
                 <div className="stat-change positive">↑ 2 vs last month</div>
               </div>
             </div>
@@ -131,7 +149,7 @@ const Programmes = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Active Cohorts</div>
-                <div className="stat-value">48</div>
+                <div className="stat-value">{loading ? '...' : stats.activeCohorts}</div>
                 <div className="stat-change positive">↑ 6 vs last month</div>
               </div>
             </div>
@@ -141,7 +159,7 @@ const Programmes = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Learners Enrolled</div>
-                <div className="stat-value">1,248</div>
+                <div className="stat-value">{loading ? '...' : stats.totalEnrolled.toLocaleString()}</div>
                 <div className="stat-change positive">↑ 32% vs last month</div>
               </div>
             </div>
@@ -151,7 +169,7 @@ const Programmes = () => {
               </div>
               <div className="stat-content">
                 <div className="stat-label">Average Completion</div>
-                <div className="stat-value">68%</div>
+                <div className="stat-value">{loading ? '...' : `${stats.avgCompletion}%`}</div>
                 <div className="stat-change positive">↑ 4% vs last month</div>
               </div>
             </div>
@@ -211,8 +229,25 @@ const Programmes = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {programmes.map((prog, idx) => (
-                        <tr key={idx}>
+                      {loading ? (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                            Loading programmes...
+                          </td>
+                        </tr>
+                      ) : programmes.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                            No programmes found
+                          </td>
+                        </tr>
+                      ) : (
+                        programmes.map((prog, idx) => (
+                        <tr 
+                          key={idx}
+                          onClick={() => handleProgrammeClick(prog)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td>
                             <div className="programme-name-cell">
                               <BookOpen size={16} style={{color: '#0B4F9F'}} />
@@ -245,11 +280,12 @@ const Programmes = () => {
                               {prog.completionRate}
                             </div>
                           </td>
-                          <td>
+                          <td onClick={(e) => e.stopPropagation()}>
                             <button className="btn-icon">⋮</button>
                           </td>
                         </tr>
-                      ))}
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -259,24 +295,19 @@ const Programmes = () => {
               <div className="card">
                 <div className="card-header">
                   <h3 className="card-title">Cohort Calendar - Start Dates & Checkpoints</h3>
-                  <a href="#" className="link-text">View calendar →</a>
                 </div>
-                <div className="cohort-calendar">
-                  {cohortMilestones.map((milestone, idx) => (
-                    <div key={idx} className="cohort-milestone">
-                      <div className="milestone-date">
-                        {milestone.date.split('\n').map((line, i) => (
-                          <div key={i} className={i === 1 ? 'date-day' : 'date-month'}>{line}</div>
-                        ))}
-                        <div className="milestone-indicator">🎯</div>
-                      </div>
-                      <div className="milestone-info">
-                        <div className="milestone-programme">{milestone.programme}</div>
-                        <div className="milestone-subtitle">{milestone.subtitle}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {programmes.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Your cohort calendar will appear here once you create cohorts and set milestone dates.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666' }}>No milestones scheduled yet</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -284,60 +315,47 @@ const Programmes = () => {
             <div className="programmes-sidebar">
               <div className="card">
                 <h3 className="card-title">Upcoming Cohort Milestones</h3>
-                <a href="#" className="link-text-small">View all →</a>
-                <div className="milestones-list">
-                  <div className="milestone-item">
-                    <div className="milestone-date-badge">
-                      <div className="date-month">JUN</div>
-                      <div className="date-day-large">08</div>
-                    </div>
-                    <div className="milestone-details">
-                      <div className="milestone-title">FF-2026-Q2 Kickoff</div>
-                      <div className="milestone-desc">Financial Foundations</div>
-                      <div className="milestone-time">310 learners</div>
-                    </div>
+                {programmes.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Cohort milestones will appear here once you create cohorts and assign programmes.
+                    </p>
                   </div>
-                  <div className="milestone-item">
-                    <div className="milestone-date-badge">
-                      <div className="date-month">MAY</div>
-                      <div className="date-day-large">15</div>
-                    </div>
-                    <div className="milestone-details">
-                      <div className="milestone-title">FPB-2026-Q2 Kickoff</div>
-                      <div className="milestone-desc">Financial Planning Basics</div>
-                      <div className="milestone-time">210 learners</div>
-                    </div>
+                ) : (
+                  <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                    <p>No upcoming milestones</p>
                   </div>
-                  <div className="milestone-item">
-                    <div className="milestone-date-badge">
-                      <div className="date-month">JUN</div>
-                      <div className="date-day-large">29</div>
-                    </div>
-                    <div className="milestone-details">
-                      <div className="milestone-title">RMB-2026-Q2 Checkpoint 1</div>
-                      <div className="milestone-desc">Risk Management Basics</div>
-                      <div className="milestone-time">210 learners</div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="card">
                 <h3 className="card-title">Quick Actions</h3>
                 <div className="quick-actions">
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setShowCreateCohortModal(true)}
+                  >
                     <Users size={20} />
                     <span>Create Cohort</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => setShowAssignProgrammeModal(true)}
+                  >
                     <BookOpen size={20} />
                     <span>Assign Programme</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => alert('Request custom seminar functionality coming soon')}
+                  >
                     <Calendar size={20} />
                     <span>Request Custom Seminar</span>
                   </button>
-                  <button className="action-btn">
+                  <button 
+                    className="action-btn"
+                    onClick={() => alert('Duplicate cohort functionality coming soon')}
+                  >
                     <BookOpen size={20} />
                     <span>Duplicate Cohort</span>
                   </button>
@@ -347,6 +365,30 @@ const Programmes = () => {
           </div>
         </div>
       </div>
+
+      {/* Create Cohort Modal */}
+      <CreateCohortModal 
+        isOpen={showCreateCohortModal}
+        onClose={() => setShowCreateCohortModal(false)}
+        onCreate={handleCreateCohort}
+        institutionId={institutionId}
+      />
+
+      {/* Assign Programme Modal */}
+      <AssignProgrammeModal 
+        isOpen={showAssignProgrammeModal}
+        onClose={() => setShowAssignProgrammeModal(false)}
+        onAssign={handleAssignProgramme}
+        selectedLearners={[]}
+        institutionId={institutionId}
+      />
+
+      {/* Programme Details Modal */}
+      <ProgrammeDetailsModal 
+        isOpen={showProgrammeDetailsModal}
+        onClose={() => setShowProgrammeDetailsModal(false)}
+        programme={selectedProgramme}
+      />
     </div>
   )
 }

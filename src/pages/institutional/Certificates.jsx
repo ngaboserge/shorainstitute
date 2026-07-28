@@ -1,140 +1,128 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Download, Plus, Search } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import CertificatePreviewModal from '../../components/modals/CertificatePreviewModal'
+import { supabase } from '../../lib/supabase'
+import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Certificates.css'
 
 const Certificates = () => {
+  const { institutionId } = useShoraInstitute()
   const [selectedTab, setSelectedTab] = useState('All Programmes')
   const [selectedDept, setSelectedDept] = useState('All Departments')
   const [selectedStatus, setSelectedStatus] = useState('All Statuses')
+  const [showCertificateModal, setShowCertificateModal] = useState(false)
+  const [selectedCertificate, setSelectedCertificate] = useState(null)
+  const [certificates, setCertificates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalIssued: 0,
+    eligible: 0,
+    pending: 0,
+    cpdCredits: 0
+  })
 
-  const departmentData = [
-    { name: 'Finance & Risk', value: 348, color: '#0B4F9F' },
-    { name: 'Operations', value: 348, color: '#1976D2' },
-    { name: 'IT', value: 186, color: '#42A5F5' },
-    { name: 'HR & Admin', value: 124, color: '#64B5F6' },
-    { name: 'Others', value: 186, color: '#90CAF9' }
-  ]
+  useEffect(() => {
+    fetchCertificates()
+  }, [])
 
-  const milestones = [
-    {
-      month: 'FEB',
-      day: '05',
-      programme: 'Capital Markets Essentials',
-      department: 'Finance & Risk',
-      learners: '42 learners',
-      daysAway: '2 days'
-    },
-    {
-      month: 'FEB',
-      day: '12',
-      programme: 'Financial Planning Basics',
-      department: 'HR & Finance',
-      learners: '84 learners',
-      daysAway: '9 days'
-    },
-    {
-      month: 'FEB',
-      day: '19',
-      programme: 'Retirement Foundations',
-      department: 'Operations',
-      learners: '51 learners',
-      daysAway: '16 days'
+  const fetchCertificates = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch certificates with learner and programme info
+      const { data: certsData, error: certsError } = await supabase
+        .from('certificates')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email,
+            avatar_url
+          ),
+          learning_paths:path_id (
+            title
+          )
+        `)
+        .order('issued_at', { ascending: false })
+        .limit(50)
+
+      if (certsError) throw certsError
+
+      // Transform data for display
+      const transformedCerts = certsData.map(cert => ({
+        certificateId: cert.id,
+        learnerName: cert.profiles?.full_name || 'Unknown',
+        employeeId: cert.profiles?.email?.split('@')[0]?.toUpperCase() || 'N/A',
+        email: cert.profiles?.email || '',
+        avatar: cert.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${cert.user_id}`,
+        programme: cert.learning_paths?.title || 'Unknown Programme',
+        type: 'Certificate of Completion',
+        issueDate: new Date(cert.issued_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        completionDate: new Date(cert.issued_at).toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        verificationId: cert.verification_code || `SHORA-${cert.id.substring(0, 8).toUpperCase()}`,
+        cpdCredits: 12, // Mock for now
+        status: 'Issued',
+        finalScore: 85, // Mock for now
+        department: 'Finance', // Mock for now
+        coursesCompleted: 8,
+        totalCourses: 8,
+        assessmentsPassed: 8,
+        totalAssessments: 8,
+        sessionsAttended: 6,
+        totalSessions: 6,
+        institution: 'Shora Institute'
+      }))
+
+      setCertificates(transformedCerts)
+
+      // Calculate stats
+      setStats({
+        totalIssued: transformedCerts.length,
+        eligible: Math.floor(transformedCerts.length * 1.3), // Mock calculation
+        pending: Math.floor(transformedCerts.length * 0.08),
+        cpdCredits: transformedCerts.length * 12 // Assuming 12 per cert
+      })
+
+    } catch (error) {
+      console.error('Error fetching certificates:', error)
+      // Show empty state instead of mock data
+      setCertificates([])
+      setStats({
+        totalIssued: 0,
+        eligible: 0,
+        pending: 0,
+        cpdCredits: 0
+      })
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
-  const certificates = [
-    {
-      name: 'Jean Mukamana',
-      email: 'jean.mukamana@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=1',
-      programme: 'Financial Planning Basics',
-      type: 'Completion',
-      issueDate: 'May 29, 2026',
-      verificationId: 'SHORA-JK-00012348',
-      cpdCredits: 12,
-      status: 'Issued'
-    },
-    {
-      name: 'Aline Uwimana',
-      email: 'aline.uwimana@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=5',
-      programme: 'Investment Foundation',
-      type: 'Completion',
-      issueDate: 'May 28, 2026',
-      verificationId: 'SHORA-JK-00012347',
-      cpdCredits: 30,
-      status: 'Issued'
-    },
-    {
-      name: 'Patrick Munzindayo',
-      email: 'patrick.munz@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=12',
-      programme: 'Capital Markets Essentials',
-      type: 'Completion',
-      issueDate: 'May 27, 2026',
-      verificationId: 'SHORA-JK-00012346',
-      cpdCredits: 15,
-      status: 'Issued'
-    },
-    {
-      name: 'Isabella Kaviriri',
-      email: 'isabella.k@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=9',
-      programme: 'Financial Foundations',
-      type: 'Completion',
-      issueDate: 'May 26, 2026',
-      verificationId: 'SHORA-JK-00012345',
-      cpdCredits: 8,
-      status: 'Issued'
-    },
-    {
-      name: 'David Twagiramungu',
-      email: 'david.twag@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=13',
-      programme: 'Retirement Planning',
-      type: 'Certificate of Achievement',
-      issueDate: 'May 25, 2026',
-      verificationId: 'SHORA-JK-00012344',
-      cpdCredits: 20,
-      status: 'Issued'
-    },
-    {
-      name: 'Marcelle Ukundimana',
-      email: 'marcelle.u@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=10',
-      programme: 'Financial Statement Analysis',
-      type: 'Completion',
-      issueDate: 'May 24, 2026',
-      verificationId: 'SHORA-JK-00012343',
-      cpdCredits: 12,
-      status: 'Issued'
-    },
-    {
-      name: 'Blaise Karuranga',
-      email: 'blaise.karu@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=14',
-      programme: 'Risk Management Basics',
-      type: 'Certificate of Achievement',
-      issueDate: 'May 23, 2026',
-      verificationId: 'SHORA-JK-00012342',
-      cpdCredits: 50,
-      status: 'Requirements Pending'
-    },
-    {
-      name: 'Nerea Epose',
-      email: 'nerea.epose@rdb.rw',
-      avatar: 'https://i.pravatar.cc/150?img=8',
-      programme: 'Wealth Building Principles',
-      type: 'Completion',
-      issueDate: 'May 22, 2026',
-      verificationId: 'SHORA-JK-00012341',
-      cpdCredits: 10,
-      status: 'Issued'
-    }
-  ]
+  const handleCertificateClick = (cert) => {
+    setSelectedCertificate(cert)
+    setShowCertificateModal(true)
+  }
+
+  // Department data - placeholder for chart structure
+  // TODO: Calculate from actual certificate distribution by department
+  const departmentData = stats.totalIssued > 0 ? [
+    { name: 'Unassigned', value: stats.totalIssued, color: '#90CAF9' },
+  ] : []
+
+  // Milestones - show upcoming certificate eligibility dates
+  // TODO: Calculate from programme completion dates
+  const milestones = []
 
   return (
     <div className="dashboard-layout">
@@ -170,7 +158,7 @@ const Certificates = () => {
                 </svg>
               </div>
               <div className="cert-stat-content">
-                <div className="cert-stat-value">1,248</div>
+                <div className="cert-stat-value">{loading ? '...' : stats.totalIssued.toLocaleString()}</div>
                 <div className="cert-stat-label">Certificates Issued</div>
                 <div className="cert-stat-meta">↑ 126 vs last month</div>
               </div>
@@ -186,7 +174,7 @@ const Certificates = () => {
                 </svg>
               </div>
               <div className="cert-stat-content">
-                <div className="cert-stat-value">1,642</div>
+                <div className="cert-stat-value">{loading ? '...' : stats.eligible.toLocaleString()}</div>
                 <div className="cert-stat-label">Eligible Learners</div>
                 <div className="cert-stat-meta">↑ 9% vs last month</div>
               </div>
@@ -201,7 +189,7 @@ const Certificates = () => {
                 </svg>
               </div>
               <div className="cert-stat-content">
-                <div className="cert-stat-value">96</div>
+                <div className="cert-stat-value">{loading ? '...' : stats.pending}</div>
                 <div className="cert-stat-label">Pending Requirements</div>
                 <div className="cert-stat-meta">↓ 5% vs last month</div>
               </div>
@@ -216,7 +204,7 @@ const Certificates = () => {
                 </svg>
               </div>
               <div className="cert-stat-content">
-                <div className="cert-stat-value">3,258</div>
+                <div className="cert-stat-value">{loading ? '...' : stats.cpdCredits.toLocaleString()}</div>
                 <div className="cert-stat-label">CPD Credits Logged</div>
                 <div className="cert-stat-meta">↑ 130 vs last month</div>
               </div>
@@ -275,67 +263,91 @@ const Certificates = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {certificates.map((cert, index) => (
-                      <tr key={index}>
-                        <td>
-                          <div className="learner-cell">
-                            <img src={cert.avatar} alt={cert.name} className="learner-avatar-sm" />
-                            <div className="learner-info-cell">
-                              <div className="learner-name-cell">{cert.name}</div>
-                              <div className="learner-email-cell">{cert.email}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="programme-cell">{cert.programme}</td>
-                        <td>{cert.type}</td>
-                        <td>{cert.issueDate}</td>
-                        <td className="verification-id">{cert.verificationId}</td>
-                        <td className="cpd-credits">{cert.cpdCredits}</td>
-                        <td>
-                          <span className={`cert-status-badge ${cert.status === 'Issued' ? 'issued' : 'pending'}`}>
-                            {cert.status}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="cert-actions">
-                            <button className="cert-action-btn" title="Download">
-                              <Download size={16} />
-                            </button>
-                            <button className="cert-action-btn" title="View">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                            </button>
-                            <button className="cert-action-btn" title="Email">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                                <polyline points="22,6 12,13 2,6"/>
-                              </svg>
-                            </button>
-                            <button className="cert-action-btn" title="More">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="12" cy="12" r="1"/>
-                                <circle cx="12" cy="5" r="1"/>
-                                <circle cx="12" cy="19" r="1"/>
-                              </svg>
-                            </button>
-                          </div>
+                    {loading ? (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                          Loading certificates...
                         </td>
                       </tr>
-                    ))}
+                    ) : certificates.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>
+                          No certificates found
+                        </td>
+                      </tr>
+                    ) : (
+                      certificates.map((cert, index) => (
+                        <tr 
+                          key={index}
+                          onClick={() => handleCertificateClick(cert)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td>
+                            <div className="learner-cell">
+                              <img src={cert.avatar} alt={cert.learnerName} className="learner-avatar-sm" />
+                              <div className="learner-info-cell">
+                                <div className="learner-name-cell">{cert.learnerName}</div>
+                                <div className="learner-email-cell">{cert.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="programme-cell">{cert.programme}</td>
+                          <td>{cert.type}</td>
+                          <td>{cert.issueDate}</td>
+                          <td className="verification-id">{cert.verificationId}</td>
+                          <td className="cpd-credits">{cert.cpdCredits}</td>
+                          <td>
+                            <span className={`cert-status-badge ${cert.status === 'Issued' ? 'issued' : 'pending'}`}>
+                              {cert.status}
+                            </span>
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="cert-actions">
+                              <button className="cert-action-btn" title="Download">
+                                <Download size={16} />
+                              </button>
+                              <button 
+                                className="cert-action-btn" 
+                                title="View"
+                                onClick={() => handleCertificateClick(cert)}
+                              >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                              </button>
+                              <button className="cert-action-btn" title="Email">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                  <polyline points="22,6 12,13 2,6"/>
+                                </svg>
+                              </button>
+                              <button className="cert-action-btn" title="More">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="1"/>
+                                  <circle cx="12" cy="5" r="1"/>
+                                  <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
 
                 <div className="cert-table-footer">
-                  <div className="showing-text">Showing 1 to 8 of 1,248 certificates</div>
+                  <div className="showing-text">
+                    Showing 1 to {Math.min(certificates.length, 8)} of {stats.totalIssued} certificates
+                  </div>
                   <div className="cert-pagination">
                     <button className="page-btn">‹</button>
                     <button className="page-btn active">1</button>
                     <button className="page-btn">2</button>
                     <button className="page-btn">3</button>
                     <span className="page-dots">...</span>
-                    <button className="page-btn">156</button>
+                    <button className="page-btn">{Math.ceil(stats.totalIssued / 8)}</button>
                     <button className="page-btn">›</button>
                   </div>
                 </div>
@@ -378,6 +390,14 @@ const Certificates = () => {
               {/* Department Distribution */}
               <div className="card cert-sidebar-card">
                 <h3 className="cert-sidebar-title">Certificate Distribution by Department</h3>
+                {departmentData.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Department distribution will appear here once certificates are issued.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                 <div className="cert-chart-wrapper">
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
@@ -395,7 +415,9 @@ const Certificates = () => {
                         ))}
                       </Pie>
                       <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                        <tspan x="50%" dy="-0.5em" fontSize="28" fontWeight="700" fill="#1a1a1a">1,248</tspan>
+                        <tspan x="50%" dy="-0.5em" fontSize="28" fontWeight="700" fill="#1a1a1a">
+                          {loading ? '...' : stats.totalIssued.toLocaleString()}
+                        </tspan>
                         <tspan x="50%" dy="1.5em" fontSize="13" fill="#666">Total Issued</tspan>
                       </text>
                     </PieChart>
@@ -407,37 +429,46 @@ const Certificates = () => {
                       <div className="legend-color" style={{backgroundColor: dept.color}}></div>
                       <div className="legend-info-cert">
                         <span className="legend-name-cert">{dept.name}</span>
-                        <span className="legend-value-cert">{dept.value} (29%)</span>
+                        <span className="legend-value-cert">{dept.value} ({((dept.value / stats.totalIssued) * 100).toFixed(0)}%)</span>
                       </div>
                     </div>
                   ))}
                 </div>
+                  </>
+                )}
               </div>
 
               {/* Upcoming Milestones */}
               <div className="card cert-sidebar-card">
                 <div className="cert-sidebar-header">
                   <h3 className="cert-sidebar-title">Upcoming Eligibility Milestones</h3>
-                  <a href="#" className="view-all-link">View all</a>
                 </div>
                 
-                <div className="milestones-list">
-                  {milestones.map((milestone, index) => (
-                    <div key={index} className="milestone-item">
-                      <div className="milestone-date">
-                        <div className="milestone-month">{milestone.month}</div>
-                        <div className="milestone-day">{milestone.day}</div>
-                      </div>
-                      <div className="milestone-details">
-                        <div className="milestone-programme">{milestone.programme}</div>
-                        <div className="milestone-meta">
-                          {milestone.department} • {milestone.learners}
+                {milestones.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Certificate eligibility milestones will appear here based on programme completion dates.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="milestones-list">
+                    {milestones.map((milestone, index) => (
+                      <div key={index} className="milestone-item">
+                        <div className="milestone-date">
+                          <div className="milestone-month">{milestone.month}</div>
+                          <div className="milestone-day">{milestone.day}</div>
                         </div>
-                        <div className="milestone-time">{milestone.daysAway}</div>
+                        <div className="milestone-details">
+                          <div className="milestone-programme">{milestone.programme}</div>
+                          <div className="milestone-meta">
+                            {milestone.department} • {milestone.learners}
+                          </div>
+                          <div className="milestone-time">{milestone.daysAway}</div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Certificate Preview */}
@@ -469,6 +500,13 @@ const Certificates = () => {
           </div>
         </div>
       </div>
+
+      {/* Certificate Preview Modal */}
+      <CertificatePreviewModal 
+        isOpen={showCertificateModal}
+        onClose={() => setShowCertificateModal(false)}
+        certificate={selectedCertificate}
+      />
     </div>
   )
 }

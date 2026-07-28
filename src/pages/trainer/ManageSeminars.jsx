@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye } from 'lucide-react'
+import { Calendar, Clock, Users, Video, Plus, Edit, Trash2, Eye, HelpCircle, List, Upload, QrCode } from 'lucide-react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
+import QRCodeModal from '../../components/QRCodeModal'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import './ManageSeminars.css'
@@ -15,6 +16,13 @@ const ManageSeminars = () => {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingSeminar, setEditingSeminar] = useState(null)
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false)
+  const [showQRModal, setShowQRModal] = useState(false)
+  const [selectedSeminar, setSelectedSeminar] = useState(null)
+  const [questions, setQuestions] = useState([])
+  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState(null)
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -29,7 +37,7 @@ const ManageSeminars = () => {
     capacity: 100,
     category: 'Finance & Investment',
     level: 'all',
-    status: 'upcoming'
+    status: 'draft'
   })
 
   useEffect(() => {
@@ -42,25 +50,42 @@ const ManageSeminars = () => {
     try {
       const today = new Date().toISOString().split('T')[0]
       
-      const query = supabase
+      // First get seminars
+      let query = supabase
         .from('seminars')
-        .select(`
-          *,
-          seminar_registrations (count)
-        `)
+        .select('*')
         .eq('instructor_id', user.id)
         .order('date', { ascending: true })
 
       if (activeTab === 'upcoming') {
-        query.gte('date', today).in('status', ['upcoming', 'draft'])
+        query.gte('date', today).in('status', ['published', 'draft'])
       } else if (activeTab === 'completed') {
         query.eq('status', 'completed')
       }
 
-      const { data, error } = await query
+      const { data: seminarsData, error: seminarsError } = await query
 
-      if (error) throw error
-      setSeminars(data || [])
+      if (seminarsError) throw seminarsError
+
+      // Get registration counts for each seminar
+      const seminarsWithCounts = await Promise.all(
+        (seminarsData || []).map(async (seminar) => {
+          const { count, error: countError } = await supabase
+            .from('seminar_registrations')
+            .select('*', { count: 'exact', head: true })
+            .eq('seminar_id', seminar.id)
+            .eq('registration_status', 'registered')
+
+          if (countError) {
+            console.error('Error counting registrations for seminar', seminar.id, ':', countError)
+            return { ...seminar, current_registrations: 0 }
+          }
+
+          return { ...seminar, current_registrations: count || 0 }
+        })
+      )
+
+      setSeminars(seminarsWithCounts)
     } catch (error) {
       console.error('Error loading seminars:', error)
     } finally {
@@ -76,12 +101,81 @@ const ManageSeminars = () => {
     }))
   }
 
+  const handleThumbnailChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB')
+        return
+      }
+
+      setThumbnailFile(file)
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadThumbnail = async () => {
+    if (!thumbnailFile) return null
+
+    try {
+      setUploadingThumbnail(true)
+
+      // Generate unique filename
+      const fileExt = thumbnailFile.name.split('.').pop()
+      const fileName = `seminar-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `seminars/${fileName}`
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('course-thumbnails')
+        .upload(filePath, thumbnailFile)
+
+      if (error) throw error
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('course-thumbnails')
+        .getPublicUrl(filePath)
+
+      return urlData.publicUrl
+    } catch (error) {
+      console.error('Error uploading thumbnail:', error)
+      alert('Failed to upload thumbnail')
+      return null
+    } finally {
+      setUploadingThumbnail(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
     try {
+      // Upload thumbnail if new one selected
+      let thumbnailUrl = formData.thumbnail_url || editingSeminar?.thumbnail_url || null
+      if (thumbnailFile) {
+        const uploadedUrl = await uploadThumbnail()
+        if (uploadedUrl) {
+          thumbnailUrl = uploadedUrl
+        }
+      }
+
       const seminarData = {
         ...formData,
+        thumbnail_url: thumbnailUrl,
         instructor_id: user.id,
         instructor_name: profile?.full_name || 'Trainer',
         duration_minutes: calculateDuration(formData.start_time, formData.end_time)
@@ -130,8 +224,11 @@ const ManageSeminars = () => {
       capacity: seminar.capacity || 100,
       category: seminar.category || 'Finance & Investment',
       level: seminar.level || 'all',
-      status: seminar.status
+      status: seminar.status,
+      thumbnail_url: seminar.thumbnail_url || null
     })
+    setThumbnailFile(null)
+    setThumbnailPreview(seminar.thumbnail_url || null)
     setShowCreateModal(true)
   }
 
@@ -154,6 +251,28 @@ const ManageSeminars = () => {
     }
   }
 
+  const handleTogglePublish = async (seminar) => {
+    const newStatus = seminar.status === 'published' ? 'draft' : 'published'
+    const action = newStatus === 'published' ? 'publish' : 'unpublish'
+    
+    if (!confirm(`Are you sure you want to ${action} this seminar?`)) return
+
+    try {
+      const { error } = await supabase
+        .from('seminars')
+        .update({ status: newStatus })
+        .eq('id', seminar.id)
+
+      if (error) throw error
+      
+      alert(`✅ Seminar ${action}ed successfully! ${newStatus === 'published' ? 'It is now visible to learners.' : 'It is now hidden from learners.'}`)
+      loadSeminars()
+    } catch (error) {
+      console.error(`Error ${action}ing seminar:`, error)
+      alert(`Failed to ${action} seminar`)
+    }
+  }
+
   const calculateDuration = (start, end) => {
     const [startHour, startMin] = start.split(':').map(Number)
     const [endHour, endMin] = end.split(':').map(Number)
@@ -173,8 +292,11 @@ const ManageSeminars = () => {
       capacity: 100,
       category: 'Finance & Investment',
       level: 'all',
-      status: 'upcoming'
+      status: 'draft',
+      thumbnail_url: null
     })
+    setThumbnailFile(null)
+    setThumbnailPreview(null)
   }
 
   const formatDate = (dateStr) => {
@@ -183,6 +305,51 @@ const ManageSeminars = () => {
       day: 'numeric', 
       year: 'numeric' 
     })
+  }
+
+  const handleManageQuestions = (seminar) => {
+    setSelectedSeminar(seminar)
+    setQuestions(seminar.registration_questions || [])
+    setShowQuestionsModal(true)
+  }
+
+  const addQuestion = () => {
+    const newQuestion = {
+      id: `q${Date.now()}`,
+      question: '',
+      type: 'text',
+      required: false,
+      options: []
+    }
+    setQuestions([...questions, newQuestion])
+  }
+
+  const updateQuestion = (id, field, value) => {
+    setQuestions(questions.map(q => 
+      q.id === id ? { ...q, [field]: value } : q
+    ))
+  }
+
+  const deleteQuestion = (id) => {
+    setQuestions(questions.filter(q => q.id !== id))
+  }
+
+  const saveQuestions = async () => {
+    try {
+      const { error } = await supabase
+        .from('seminars')
+        .update({ registration_questions: questions })
+        .eq('id', selectedSeminar.id)
+
+      if (error) throw error
+
+      alert('✅ Registration questions saved successfully!')
+      setShowQuestionsModal(false)
+      loadSeminars()
+    } catch (error) {
+      console.error('Error saving questions:', error)
+      alert('Failed to save questions')
+    }
   }
 
   if (loading) {
@@ -260,65 +427,135 @@ const ManageSeminars = () => {
               </div>
             ) : (
               seminars.map((seminar) => (
-                <div key={seminar.id} className="seminar-item">
-                  <div className="seminar-item-header">
-                    <div>
-                      <span className="seminar-type-badge">
+                <div key={seminar.id} className="seminar-card-compact">
+                  {/* Thumbnail */}
+                  <div className="seminar-thumbnail-compact">
+                    {seminar.thumbnail_url ? (
+                      <img src={seminar.thumbnail_url} alt={seminar.title} />
+                    ) : (
+                      <div className="thumbnail-placeholder-compact">
+                        <Video size={32} color="#999" />
+                      </div>
+                    )}
+                    <div className="seminar-badges-overlay">
+                      <span className={`type-badge ${seminar.seminar_type || 'webinar'}`}>
                         {seminar.seminar_type || 'webinar'}
                       </span>
                       {seminar.status === 'draft' && (
-                        <span className="draft-badge">Draft</span>
+                        <span className="type-badge draft">Draft</span>
                       )}
-                      <h3>{seminar.title}</h3>
-                      <p className="seminar-description">{seminar.description}</p>
-                    </div>
-                    <div className="seminar-actions">
-                      <button 
-                        className="btn btn-icon"
-                        onClick={() => handleEdit(seminar)}
-                        title="Edit"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button 
-                        className="btn btn-icon"
-                        onClick={() => handleDelete(seminar.id)}
-                        title="Delete"
-                      >
-                        <Trash2 size={18} />
-                      </button>
                     </div>
                   </div>
 
-                  <div className="seminar-item-details">
-                    <div className="detail-item">
-                      <Calendar size={16} />
-                      <span>{formatDate(seminar.date)}</span>
+                  {/* Content */}
+                  <div className="seminar-content-compact">
+                    <h3 className="seminar-title-compact">{seminar.title}</h3>
+                    <p className="seminar-desc-compact">
+                      {seminar.description?.substring(0, 120) || 'No description'}
+                      {seminar.description?.length > 120 ? '...' : ''}
+                    </p>
+
+                    <div className="seminar-meta-compact">
+                      <div className="meta-item-compact">
+                        <Calendar size={14} />
+                        <span>{formatDate(seminar.date)}</span>
+                      </div>
+                      <div className="meta-item-compact">
+                        <Clock size={14} />
+                        <span>{seminar.start_time.slice(0, 5)}</span>
+                      </div>
+                      <div className="meta-item-compact">
+                        <Users size={14} />
+                        <span>{seminar.current_registrations || 0}/{seminar.capacity}</span>
+                      </div>
+                      <div className="meta-item-compact">
+                        <Video size={14} />
+                        <span>{seminar.platform || 'Zoom'}</span>
+                      </div>
                     </div>
-                    <div className="detail-item">
-                      <Clock size={16} />
-                      <span>{seminar.start_time.slice(0, 5)} - {seminar.end_time.slice(0, 5)}</span>
-                    </div>
-                    <div className="detail-item">
+
+                    {/* Progress */}
+                    {(seminar.current_registrations || 0) > 0 && (
+                      <div className="seminar-progress-compact">
+                        <div className="progress-bg-compact">
+                          <div 
+                            className="progress-fill-compact"
+                            style={{ 
+                              width: `${Math.min((seminar.current_registrations / seminar.capacity) * 100, 100)}%` 
+                            }}
+                          />
+                        </div>
+                        <span className="progress-label-compact">
+                          {Math.round((seminar.current_registrations / seminar.capacity) * 100)}% full
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="seminar-actions-compact">
+                    {seminar.status === 'draft' ? (
+                      <button 
+                        className="action-btn-compact publish"
+                        onClick={() => handleTogglePublish(seminar)}
+                        title="Publish Seminar"
+                      >
+                        <Eye size={16} />
+                        <span>Publish</span>
+                      </button>
+                    ) : (
+                      <button 
+                        className="action-btn-compact unpublish"
+                        onClick={() => handleTogglePublish(seminar)}
+                        title="Unpublish Seminar"
+                      >
+                        <Eye size={16} />
+                        <span>Unpublish</span>
+                      </button>
+                    )}
+                    <button 
+                      className="action-btn-compact primary"
+                      onClick={() => {
+                        setSelectedSeminar(seminar)
+                        setShowQRModal(true)
+                      }}
+                      title="Generate QR Code"
+                    >
+                      <QrCode size={16} />
+                      <span>QR Code</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact primary"
+                      onClick={() => navigate(`/trainer/seminars/${seminar.id}/registrations`)}
+                      title="View Registrations"
+                    >
                       <Users size={16} />
-                      <span>{seminar.current_registrations || 0} / {seminar.capacity} registered</span>
-                    </div>
-                    <div className="detail-item">
-                      <Video size={16} />
-                      <span>{seminar.platform || 'Zoom'}</span>
-                    </div>
+                      <span>Registrations</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact secondary"
+                      onClick={() => handleManageQuestions(seminar)}
+                      title="Manage Questions"
+                    >
+                      <HelpCircle size={16} />
+                      <span>Questions</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact secondary"
+                      onClick={() => handleEdit(seminar)}
+                      title="Edit"
+                    >
+                      <Edit size={16} />
+                      <span>Edit</span>
+                    </button>
+                    <button 
+                      className="action-btn-compact danger"
+                      onClick={() => handleDelete(seminar.id)}
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-
-                  {seminar.current_registrations > 0 && (
-                    <div className="seminar-progress-bar">
-                      <div 
-                        className="progress-fill"
-                        style={{ 
-                          width: `${(seminar.current_registrations / seminar.capacity) * 100}%` 
-                        }}
-                      />
-                    </div>
-                  )}
                 </div>
               ))
             )}
@@ -341,6 +578,51 @@ const ManageSeminars = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="seminar-form">
+              {/* Thumbnail Upload */}
+              <div className="form-group">
+                <label>Seminar Thumbnail</label>
+                <div className="thumbnail-upload-container">
+                  {thumbnailPreview ? (
+                    <div className="thumbnail-preview">
+                      <img src={thumbnailPreview} alt="Thumbnail preview" />
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setThumbnailFile(null)
+                          setThumbnailPreview(null)
+                          setFormData(prev => ({ ...prev, thumbnail_url: null }))
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="thumbnail-upload-placeholder">
+                      <Upload size={32} color="#999" />
+                      <p>Click to upload thumbnail</p>
+                      <p style={{ fontSize: '12px', color: '#999' }}>
+                        Recommended: 800x600px, Max 5MB
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailChange}
+                    style={{ display: 'none' }}
+                    id="thumbnail-upload"
+                  />
+                  <label 
+                    htmlFor="thumbnail-upload" 
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '12px', cursor: 'pointer' }}
+                  >
+                    {thumbnailPreview ? 'Change Image' : 'Choose Image'}
+                  </label>
+                </div>
+              </div>
+
               <div className="form-group">
                 <label>Title *</label>
                 <input
@@ -491,11 +773,17 @@ const ManageSeminars = () => {
                     value={formData.status}
                     onChange={handleInputChange}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="upcoming">Publish (Upcoming)</option>
+                    <option value="draft">Draft (Not visible to learners)</option>
+                    <option value="published">Published (Visible on homepage)</option>
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
+                  <small style={{ display: 'block', marginTop: '6px', color: '#666', fontSize: '12px' }}>
+                    {formData.status === 'draft' && '📝 Only you can see this seminar'}
+                    {formData.status === 'published' && '✅ Learners can discover and register for this seminar'}
+                    {formData.status === 'completed' && '✔️ Seminar has ended'}
+                    {formData.status === 'cancelled' && '❌ Seminar was cancelled'}
+                  </small>
                 </div>
               </div>
 
@@ -504,16 +792,329 @@ const ManageSeminars = () => {
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setShowCreateModal(false)}
+                  disabled={uploadingThumbnail}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingSeminar ? 'Update Seminar' : 'Create Seminar'}
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={uploadingThumbnail}
+                >
+                  {uploadingThumbnail ? 'Uploading...' : editingSeminar ? 'Update Seminar' : 'Create Seminar'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Registration Questions Modal */}
+      {showQuestionsModal && (
+        <div className="modal-overlay" onClick={() => setShowQuestionsModal(false)}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>Registration Questions</h2>
+                <p style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+                  {selectedSeminar?.title}
+                </p>
+              </div>
+              <button 
+                className="modal-close"
+                onClick={() => setShowQuestionsModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body modal-body-large">
+              <p style={{ marginBottom: '20px', color: '#666', fontSize: '14px' }}>
+                Add custom questions for learners to answer when registering for this seminar.
+              </p>
+
+              {questions.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', background: '#f9fafb', borderRadius: '12px' }}>
+                  <HelpCircle size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                  <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>No registration questions yet</p>
+                  <button 
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={addQuestion}
+                  >
+                    <Plus size={18} />
+                    Add First Question
+                  </button>
+                </div>
+              ) : (
+                <div className="questions-list">
+                  {questions.map((q, index) => (
+                    <div key={q.id} className="question-item">
+                      <div className="question-header">
+                        <h4>Question {index + 1}</h4>
+                        <button 
+                          type="button"
+                          className="btn btn-icon btn-sm"
+                          onClick={() => deleteQuestion(q.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Question Text *</label>
+                        <input
+                          type="text"
+                          value={q.question}
+                          onChange={(e) => updateQuestion(q.id, 'question', e.target.value)}
+                          placeholder="e.g., What topics are you most interested in?"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group" style={{ flex: 1 }}>
+                          <label>Answer Type *</label>
+                          <select
+                            value={q.type}
+                            onChange={(e) => updateQuestion(q.id, 'type', e.target.value)}
+                            style={{ width: '100%' }}
+                          >
+                            <option value="text">Text (Short Answer)</option>
+                            <option value="textarea">Text Area (Long Answer)</option>
+                            <option value="select">Dropdown</option>
+                            <option value="radio">Multiple Choice</option>
+                            <option value="checkbox">Checkboxes</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group" style={{ flex: 0, minWidth: '200px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px' }}>Options</label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={q.required}
+                              onChange={(e) => updateQuestion(q.id, 'required', e.target.checked)}
+                            />
+                            <span>Required Question</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Dropdown UI */}
+                      {q.type === 'select' && (
+                        <div className="answer-type-ui dropdown-ui">
+                          <label className="ui-label">
+                            <List size={16} />
+                            Dropdown Options
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <span className="option-number">{i + 1}</span>
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Option ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Dropdown Option
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Multiple Choice (Radio) UI */}
+                      {q.type === 'radio' && (
+                        <div className="answer-type-ui radio-ui">
+                          <label className="ui-label">
+                            <HelpCircle size={16} />
+                            Multiple Choice Options (select one)
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <input type="radio" disabled className="option-preview-icon" />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Choice ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Choice
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Checkboxes UI */}
+                      {q.type === 'checkbox' && (
+                        <div className="answer-type-ui checkbox-ui">
+                          <label className="ui-label">
+                            <List size={16} />
+                            Checkbox Options (select multiple)
+                          </label>
+                          <div className="options-list">
+                            {q.options?.map((opt, i) => (
+                              <div key={i} className="option-item">
+                                <input type="checkbox" disabled className="option-preview-icon" />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOptions = [...(q.options || [])]
+                                    newOptions[i] = e.target.value
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  placeholder={`Option ${i + 1}`}
+                                  className="option-input"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newOptions = q.options.filter((_, idx) => idx !== i)
+                                    updateQuestion(q.id, 'options', newOptions)
+                                  }}
+                                  className="remove-option-btn"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => updateQuestion(q.id, 'options', [...(q.options || []), ''])}
+                              className="add-option-btn"
+                            >
+                              <Plus size={14} />
+                              Add Checkbox Option
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Text/Textarea - No additional UI needed */}
+                      {(q.type === 'text' || q.type === 'textarea') && (
+                        <div className="answer-type-ui text-ui">
+                          <div className="text-preview">
+                            {q.type === 'text' ? (
+                              <>
+                                <input type="text" placeholder="Learner will type answer here..." disabled className="preview-field" />
+                                <small>Short text answer</small>
+                              </>
+                            ) : (
+                              <>
+                                <textarea rows={3} placeholder="Learner will type answer here..." disabled className="preview-field" />
+                                <small>Long text answer</small>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <button 
+                    type="button"
+                    className="btn btn-secondary btn-full"
+                    onClick={addQuestion}
+                    style={{ marginTop: '16px' }}
+                  >
+                    <Plus size={18} />
+                    Add Another Question
+                  </button>
+
+                  {/* Preview Box - Bottom Horizontal */}
+                  {questions.length > 0 && (
+                    <div className="bottom-preview-box">
+                      {questions.map((q, index) => (
+                        <span key={q.id} className="preview-question-text">
+                          <strong>Q{index + 1}:</strong> {q.question || '(empty)'}
+                          {q.required && <span className="required-star">*</span>}
+                          {index < questions.length - 1 && ' | '}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowQuestionsModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                className="btn btn-primary"
+                onClick={saveQuestions}
+              >
+                Save Questions
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && selectedSeminar && (
+        <QRCodeModal 
+          seminar={selectedSeminar}
+          onClose={() => {
+            setShowQRModal(false)
+            setSelectedSeminar(null)
+          }}
+        />
       )}
     </div>
   )

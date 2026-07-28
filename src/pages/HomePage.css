@@ -115,6 +115,17 @@
   animation: dropdownFadeIn 0.2s ease;
 }
 
+@keyframes highlight-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 24px rgba(11, 79, 159, 0.3);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 12px 32px rgba(11, 79, 159, 0.5);
+  }
+}
+
 @keyframes dropdownFadeIn {
   from {
     opacity: 0;
@@ -472,21 +483,37 @@
   opacity: 0.7;
 }
 
+/* Grid layout for multiple seminars */
+.seminars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Compact seminar card */
 .seminar-box {
   background: white;
   border-radius: 12px;
-  padding: 28px;
+  overflow: hidden;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   position: relative;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+
+.seminar-box:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 
 .tag-free {
   position: absolute;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
   background: #4CAF50;
   color: white;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
@@ -494,6 +521,186 @@
   z-index: 10;
 }
 
+/* Thumbnail section */
+.seminar-thumbnail {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+}
+
+.seminar-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.seminar-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Date badge */
+.date-card-compact {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(11, 79, 159, 0.95);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: center;
+  min-width: 70px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.date-compact-month {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+.date-compact-day {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 2px 0;
+}
+
+.date-compact-time {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* Content section */
+.seminar-content-compact {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.seminar-h-compact {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0B4F9F;
+  line-height: 1.3;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.seminar-p-compact {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555555;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Instructor info */
+.seminar-instructor-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.instructor-avatar-compact {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.instructor-info-compact {
+  flex: 1;
+  min-width: 0;
+}
+
+.instructor-name-compact {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0B4F9F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.instructor-role-compact {
+  font-size: 12px;
+  color: #666666;
+}
+
+/* Details row */
+.seminar-details-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+.detail-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.detail-item-compact svg {
+  color: #0B4F9F;
+  flex-shrink: 0;
+}
+
+/* Register button */
+.btn-register-compact {
+  background: #FDB714;
+  color: #0B4F9F;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  width: 100%;
+  text-decoration: none;
+  display: block;
+}
+
+.btn-register-compact:hover {
+  background: #ffa000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(253, 183, 20, 0.35);
+}
+
+/* OLD STYLES (keep for backwards compatibility if needed elsewhere) */
 .seminar-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -628,6 +835,8 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .btn-register:hover {

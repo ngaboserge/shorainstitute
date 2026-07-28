@@ -1,0 +1,145 @@
+.qr-modal {
+  max-width: 600px;
+  width: 90%;
+}
+
+.qr-modal-body {
+  padding: 0;
+}
+
+.modal-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-top: 4px;
+  font-weight: 400;
+}
+
+/* QR Code Container */
+.qr-code-container {
+  padding: 40px;
+  text-align: center;
+  background: #f9fafb;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.qr-code-container canvas {
+  border: 8px solid white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.qr-code-help {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* URL Section */
+.url-section {
+  padding: 24px 32px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.url-section label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.url-display {
+  display: flex;
+  gap: 8px;
+}
+
+.url-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  background: #f9fafb;
+  color: #333;
+}
+
+.btn-icon {
+  padding: 10px 14px;
+  min-width: auto;
+}
+
+.success-message {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #4caf50;
+  font-weight: 500;
+}
+
+/* Instructions Section */
+.instructions-section {
+  padding: 24px 32px;
+  background: #f9fafb;
+}
+
+.instructions-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.instructions-section ol {
+  margin: 0;
+  padding-left: 20px;
+  color: #666;
+}
+
+.instructions-section li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.instructions-section li:last-child {
+  margin-bottom: 0;
+}
+
+/* Actions */
+.modal-actions {
+  padding: 24px 32px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .qr-modal {
+    max-width: 95%;
+  }
+  
+  .qr-code-container {
+    padding: 24px;
+  }
+  
+  .qr-code-container canvas {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .url-section,
+  .instructions-section,
+  .modal-actions {
+    padding: 20px;
+  }
+  
+  .url-display {
+    flex-direction: column;
+  }
+  
+  .btn-icon {
+    width: 100%;
+  }
+}

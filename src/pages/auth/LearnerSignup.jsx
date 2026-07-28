@@ -116,6 +116,19 @@ const LearnerSignup = () => {
   return (
     <div className="auth-page">
       <div className="auth-container">
+        {/* Role Switcher at Top */}
+        <div className="role-switcher">
+          <Link to="/auth/learner/signup" className="role-btn active">
+            Learner
+          </Link>
+          <Link to="/auth/trainer/signup" className="role-btn">
+            Trainer
+          </Link>
+          <Link to="/auth/institutional/signup" className="role-btn">
+            Institution
+          </Link>
+        </div>
+
         <div className="auth-header">
           <h1>Create Learner Account</h1>
           <p>Start your learning journey today</p>

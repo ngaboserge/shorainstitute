@@ -1,149 +1,112 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Video, Users, TrendingUp, Award, Calendar, Plus, Download } from 'lucide-react'
+import SeminarDetailsModal from '../../components/modals/SeminarDetailsModal'
+import { supabase } from '../../lib/supabase'
 import './LiveSeminars.css'
 
 const LiveSeminars = () => {
   const [selectedMonth, setSelectedMonth] = useState('May 2026')
-  
-  const featuredSessions = [
-    {
-      month: 'MAY',
-      day: '07',
-      title: 'Financial Statement Analysis for Decision Makers',
-      type: 'EXPERT SESSION',
-      speakers: ['Dr. James K. Mutungi'],
-      platform: 'Zoom',
-      time: '10:00 AM - 12:00 PM (EAT)',
-      registered: 186,
-      status: 'Registered'
-    },
-    {
-      month: 'MAY',
-      day: '15',
-      title: 'ESG Reporting: Trends, Standards & Impact',
-      type: 'EXPERT SESSION',
-      speakers: ['Dr. James K. Mutungi'],
-      platform: 'Zoom',
-      time: '2:00 PM - 4:00 PM (EAT)',
-      registered: 214,
-      status: 'Registered'
-    },
-    {
-      month: 'MAY',
-      day: '21',
-      title: 'Investment Risk Assessment Essentials',
-      type: 'WEBINAR',
-      speakers: ['Alice Uwase'],
-      platform: 'Hybrid',
-      time: '9:00 AM - 11:00 AM (EAT)',
-      registered: 147,
-      status: 'In Discussion'
-    },
-    {
-      month: 'MAY',
-      day: '27',
-      title: 'Treasury Operations & Cash Flow Optimization',
-      type: 'SEMINAR',
-      speakers: ['Invited Expert'],
-      platform: 'Zoom',
-      time: '3:00 PM - 5:00 PM (EAT)',
-      registered: 192,
-      status: 'Registered'
-    }
-  ]
+  const [showSeminarModal, setShowSeminarModal] = useState(false)
+  const [selectedSeminar, setSelectedSeminar] = useState(null)
+  const [seminars, setSeminars] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalSeminars: 0,
+    totalRegistered: 0,
+    avgAttendance: 0,
+    upcomingCount: 0
+  })
 
-  const registeredSessions = [
-    {
-      title: 'Financial Statement Analysis for Decision Makers',
-      type: 'Expert Session',
-      date: 'May 10, 2026 • 9:00 PM-12:00 PM',
-      registered: 186,
-      status: 'Registered'
-    },
-    {
-      title: 'ESG Reporting: Trends, Standards & Impact',
-      type: 'Expert Session',
-      date: 'May 15, 2026 • 2:00 PM-4:00 PM',
-      registered: 214,
-      status: 'Registered'
-    },
-    {
-      title: 'Investment Risk Assessment Essentials',
-      type: 'Webinar',
-      date: 'May 21, 2026 • 9:00 AM-11:00 AM',
-      registered: 147,
-      status: 'In Discussion'
-    }
-  ]
+  useEffect(() => {
+    fetchSeminars()
+  }, [])
 
-  const customSessions = [
-    {
-      title: 'Custom: Internal Audit Best Practices',
-      requestor: 'Finance Team',
-      date: 'Recorded on: Apr 26, 2026',
-      status: 'Recorded'
-    },
-    {
-      title: 'Custom: Credit Risk Assessment',
-      requestor: 'Credit & Risk Team',
-      date: 'Requested on: Apr 26, 2026',
-      status: 'In Discussion'
-    },
-    {
-      title: 'Custom: Fraud Prevention Workshop',
-      requestor: 'Compliance Team',
-      date: 'Requested on: May 1, 2026',
-      status: 'Pending'
-    },
-    {
-      title: 'Custom: Treasury Operations Optimization',
-      requestor: 'Treasury Team',
-      date: 'Requested on: May 2, 2026',
-      status: 'Pending'
-    }
-  ]
+  const fetchSeminars = async () => {
+    try {
+      setLoading(true)
 
-  const attendanceHistory = [
-    {
-      title: 'Legal Structures for Startups and SMEs',
-      date: 'Apr 20, 2026',
-      attendees: 'Corporate Governance Essentials',
-      completion: 85
-    },
-    {
-      title: 'Introduction to Capital Markets and Securities',
-      date: 'Apr 16, 2026',
-      attendees: 'Financial Modeling Fundamentals',
-      completion: 78
-    },
-    {
-      title: 'Financial Statements Analysis',
-      date: 'Apr 2, 2026',
-      attendees: 'AML-KYC Compliance Update',
-      completion: 77
-    }
-  ]
+      // Fetch published seminars
+      const { data: seminarsData, error: seminarsError } = await supabase
+        .from('seminars')
+        .select('*')
+        .eq('status', 'published')
+        .order('date', { ascending: true })
+        .limit(20)
 
-  const recommendedExperts = [
-    {
-      name: 'Advanced Risk Analytics with AI',
-      tag: 'INVITED EXPERT',
-      expert: 'Expert: Prof. David Kirundo',
-      date: 'Jun 3, 2026 • 10:00 AM (EAT)',
-      platform: 'Zoom',
-      attendees: 'Live Webinar'
-    },
-    {
-      name: 'Sustainable Finance & Green Bonds',
-      tag: 'INVITED EXPERT',
-      expert: 'Expert: Dr. Foluke Olajede',
-      date: 'Jun 12, 2026 • 2:00 PM (EAT)',
-      platform: 'Hybrid',
-      attendees: 'Live Webinar'
+      if (seminarsError) throw seminarsError
+
+      // Transform data for display
+      const transformedSeminars = seminarsData.map(seminar => ({
+        id: seminar.id,
+        month: new Date(seminar.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        day: new Date(seminar.date).getDate().toString().padStart(2, '0'),
+        title: seminar.title,
+        type: 'LIVE SEMINAR',
+        speakers: [seminar.speaker || 'TBA'],
+        platform: 'Zoom',
+        time: `${new Date(seminar.date).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })} (EAT)`,
+        registered: 0, // TODO: Count from seminar_registrations
+        status: 'Available'
+      }))
+
+      setSeminars(transformedSeminars)
+
+      // Calculate stats
+      setStats({
+        totalSeminars: transformedSeminars.length,
+        totalRegistered: 0, // TODO: Count total registrations
+        avgAttendance: 0,
+        upcomingCount: transformedSeminars.filter(s => new Date(s.date) > new Date()).length
+      })
+
+    } catch (error) {
+      console.error('Error fetching seminars:', error)
+      // Show empty state instead of mock data
+      setSeminars([])
+      setStats({
+        totalSeminars: 0,
+        totalRegistered: 0,
+        avgAttendance: 0,
+        upcomingCount: 0
+      })
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
+
+  const featuredSessions = seminars.slice(0, 3) // Show first 3 seminars
+
+  // Sidebar sections - show empty states when no data
+  const registeredSessions = []
+  const customSessions = []
+  const attendanceHistory = []
+  const recommendedExperts = []
+
+  const handleSeminarClick = (session) => {
+    // Convert session data to modal format
+    const seminarData = {
+      id: session.title.replace(/\s+/g, '-').toLowerCase(),
+      title: session.title,
+      date: `${session.month} ${session.day}, 2026`,
+      time: session.time,
+      speaker: session.speakers ? session.speakers[0] : 'TBA',
+      registered: session.registered,
+      description: `This ${session.type.toLowerCase()} will provide valuable insights into ${session.title.toLowerCase()}.`
+    }
+    setSelectedSeminar(seminarData)
+    setShowSeminarModal(true)
+  }
+
+  const handleBulkRegister = async (registrationData) => {
+    console.log('Bulk registration data:', registrationData)
+    // TODO: Implement actual registration logic with database
+    return Promise.resolve()
+  }
 
   return (
     <div className="dashboard-layout">
@@ -178,7 +141,7 @@ const LiveSeminars = () => {
                 <Calendar size={24} />
               </div>
               <div className="seminars-stat-content">
-                <div className="seminars-stat-value">22</div>
+                <div className="seminars-stat-value">{loading ? '...' : stats.upcomingCount}</div>
                 <div className="seminars-stat-label">Upcoming Sessions</div>
                 <div className="seminars-stat-meta">↑ 13% vs last month</div>
               </div>
@@ -189,7 +152,7 @@ const LiveSeminars = () => {
                 <Users size={24} />
               </div>
               <div className="seminars-stat-content">
-                <div className="seminars-stat-value">1,482</div>
+                <div className="seminars-stat-value">{loading ? '...' : stats.totalRegistered.toLocaleString()}</div>
                 <div className="seminars-stat-label">Registered Learners</div>
                 <div className="seminars-stat-meta">↑ 18% vs last month</div>
               </div>
@@ -200,7 +163,7 @@ const LiveSeminars = () => {
                 <TrendingUp size={24} />
               </div>
               <div className="seminars-stat-content">
-                <div className="seminars-stat-value">76%</div>
+                <div className="seminars-stat-value">{loading ? '...' : `${stats.avgAttendance}%`}</div>
                 <div className="seminars-stat-label">Average Attendance</div>
                 <div className="seminars-stat-meta">↑ 4% vs last month</div>
               </div>
@@ -211,7 +174,7 @@ const LiveSeminars = () => {
                 <Award size={24} />
               </div>
               <div className="seminars-stat-content">
-                <div className="seminars-stat-value">148</div>
+                <div className="seminars-stat-value">{loading ? '...' : stats.totalSeminars * 12}</div>
                 <div className="seminars-stat-label">CPD Credits Earned</div>
                 <div className="seminars-stat-meta">↑ 25% vs last month</div>
               </div>
@@ -271,7 +234,12 @@ const LiveSeminars = () => {
                 </div>
 
                 <div className="featured-sessions-list">
-                  {featuredSessions.map((session, index) => (
+                  {loading ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}>Loading sessions...</div>
+                  ) : featuredSessions.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px' }}>No upcoming sessions</div>
+                  ) : (
+                    featuredSessions.map((session, index) => (
                     <div key={index} className="featured-session-item">
                       <div className="session-date-badge">
                         <div className="session-month">{session.month}</div>
@@ -287,11 +255,16 @@ const LiveSeminars = () => {
                         </div>
                       </div>
                       <div className="session-actions">
-                        <button className="btn-session-primary">View Details</button>
+                        <button 
+                          className="btn-session-primary"
+                          onClick={() => handleSeminarClick(session)}
+                        >
+                          View Details
+                        </button>
                         <button className="btn-session-secondary">Send Reminder</button>
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               </div>
             </div>
@@ -325,49 +298,63 @@ const LiveSeminars = () => {
               <div className="card">
                 <div className="section-header-seminars">
                   <h3 className="sidebar-title-seminars">Registered Sessions</h3>
-                  <a href="#" className="view-all-link-seminars">View all</a>
                 </div>
-                <div className="registered-sessions-list">
-                  {registeredSessions.map((session, index) => (
-                    <div key={index} className="registered-session-item">
-                      <div className="registered-session-icon">📅</div>
-                      <div className="registered-session-info">
-                        <div className="registered-session-title">{session.title}</div>
-                        <div className="registered-session-date">{session.date}</div>
-                        <span className={`session-status-badge ${session.status === 'Registered' ? 'registered' : 'discussion'}`}>
-                          {session.status}
-                        </span>
+                {registeredSessions.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Your registered sessions will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="registered-sessions-list">
+                    {registeredSessions.map((session, index) => (
+                      <div key={index} className="registered-session-item">
+                        <div className="registered-session-icon">📅</div>
+                        <div className="registered-session-info">
+                          <div className="registered-session-title">{session.title}</div>
+                          <div className="registered-session-date">{session.date}</div>
+                          <span className={`session-status-badge ${session.status === 'Registered' ? 'registered' : 'discussion'}`}>
+                            {session.status}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Custom Requested Sessions */}
               <div className="card">
                 <div className="section-header-seminars">
                   <h3 className="sidebar-title-seminars">Requested Custom Sessions</h3>
-                  <a href="#" className="view-all-link-seminars">View all</a>
                 </div>
-                <div className="custom-sessions-list">
-                  {customSessions.map((session, index) => (
-                    <div key={index} className="custom-session-item">
-                      <div className="custom-session-icon">🎯</div>
-                      <div className="custom-session-info">
-                        <div className="custom-session-title">{session.title}</div>
-                        <div className="custom-session-requestor">{session.requestor}</div>
-                        <div className="custom-session-date">{session.date}</div>
-                        <span className={`session-status-badge ${
-                          session.status === 'Recorded' ? 'recorded' : 
-                          session.status === 'In Discussion' ? 'discussion' : 
-                          'pending'
-                        }`}>
-                          {session.status}
-                        </span>
+                {customSessions.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <p style={{ color: '#666', fontSize: '14px' }}>
+                      Your custom session requests will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="custom-sessions-list">
+                    {customSessions.map((session, index) => (
+                      <div key={index} className="custom-session-item">
+                        <div className="custom-session-icon">🎯</div>
+                        <div className="custom-session-info">
+                          <div className="custom-session-title">{session.title}</div>
+                          <div className="custom-session-requestor">{session.requestor}</div>
+                          <div className="custom-session-date">{session.date}</div>
+                          <span className={`session-status-badge ${
+                            session.status === 'Recorded' ? 'recorded' : 
+                            session.status === 'In Discussion' ? 'discussion' : 
+                            'pending'
+                          }`}>
+                            {session.status}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -376,41 +363,61 @@ const LiveSeminars = () => {
           <div className="seminars-bottom-grid">
             <div className="card">
               <h3 className="section-title-seminars">Attendance History</h3>
-              <div className="attendance-list">
-                {attendanceHistory.map((item, index) => (
-                  <div key={index} className="attendance-item">
-                    <div className="attendance-icon">✓</div>
-                    <div className="attendance-info">
-                      <div className="attendance-title">{item.title}</div>
-                      <div className="attendance-date">{item.date} • {item.attendees}</div>
+              {attendanceHistory.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                  <p style={{ color: '#666' }}>Your attendance history will appear here.</p>
+                </div>
+              ) : (
+                <div className="attendance-list">
+                  {attendanceHistory.map((item, index) => (
+                    <div key={index} className="attendance-item">
+                      <div className="attendance-icon">✓</div>
+                      <div className="attendance-info">
+                        <div className="attendance-title">{item.title}</div>
+                        <div className="attendance-date">{item.date} • {item.attendees}</div>
+                      </div>
+                      <div className="attendance-completion">{item.completion}%</div>
+                      <button className="btn-view-certificate">View Certificate</button>
                     </div>
-                    <div className="attendance-completion">{item.completion}%</div>
-                    <button className="btn-view-certificate">View Certificate</button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="card">
               <h3 className="section-title-seminars">Recommended Expert Sessions</h3>
-              <div className="recommended-experts-list">
-                {recommendedExperts.map((expert, index) => (
-                  <div key={index} className="expert-session-item">
-                    <div className="expert-badge">{expert.tag}</div>
-                    <div className="expert-session-title">{expert.name}</div>
-                    <div className="expert-session-expert">{expert.expert}</div>
-                    <div className="expert-session-meta">
-                      <span>📅 {expert.date}</span>
-                      <span>🎥 {expert.platform}</span>
-                      <span>👥 {expert.attendees}</span>
+              {recommendedExperts.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                  <p style={{ color: '#666' }}>Recommended sessions will appear here.</p>
+                </div>
+              ) : (
+                <div className="recommended-experts-list">
+                  {recommendedExperts.map((expert, index) => (
+                    <div key={index} className="expert-session-item">
+                      <div className="expert-badge">{expert.tag}</div>
+                      <div className="expert-session-title">{expert.name}</div>
+                      <div className="expert-session-expert">{expert.expert}</div>
+                      <div className="expert-session-meta">
+                        <span>📅 {expert.date}</span>
+                        <span>🎥 {expert.platform}</span>
+                        <span>👥 {expert.attendees}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Seminar Details Modal */}
+      <SeminarDetailsModal 
+        isOpen={showSeminarModal}
+        onClose={() => setShowSeminarModal(false)}
+        seminar={selectedSeminar}
+        onBulkRegister={handleBulkRegister}
+      />
     </div>
   )
 }
