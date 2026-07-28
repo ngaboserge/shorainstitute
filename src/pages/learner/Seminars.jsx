@@ -512,9 +512,24 @@ const Seminars = () => {
                         )}
 
                         {q.type === 'radio' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {q.options?.map((opt, i) => (
-                              <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                              <label 
+                                key={i} 
+                                style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '12px', 
+                                  cursor: 'pointer',
+                                  padding: '12px 16px',
+                                  border: '1px solid #e0e0e0',
+                                  borderRadius: '8px',
+                                  background: 'white',
+                                  margin: '0',
+                                  width: '100%',
+                                  boxSizing: 'border-box'
+                                }}
+                              >
                                 <input
                                   type="radio"
                                   name={q.id}
@@ -522,8 +537,24 @@ const Seminars = () => {
                                   checked={answers[q.id] === opt}
                                   onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
                                   required={q.required}
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    cursor: 'pointer',
+                                    flexShrink: '0',
+                                    margin: '0',
+                                    accentColor: '#0B4F9F'
+                                  }}
                                 />
-                                {opt}
+                                <span style={{ 
+                                  color: '#333',
+                                  fontSize: '15px',
+                                  margin: '0',
+                                  padding: '0',
+                                  flex: '0 1 auto'
+                                }}>
+                                  {opt}
+                                </span>
                               </label>
                             ))}
                           </div>

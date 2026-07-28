@@ -161,16 +161,33 @@
 }
 
 .form-group {
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.form-group:last-of-type {
+  border-bottom: none;
 }
 
 .form-group label {
   display: block;
   font-weight: 600;
   color: #333;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+.question-number {
+  font-weight: 700;
+  color: #0B4F9F;
+  margin-right: 4px;
+}
+
+.question-text {
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .required {
@@ -208,44 +225,58 @@
 }
 
 /* Radio and Checkbox Groups */
-.radio-group,
-.checkbox-group {
+.registration-form .radio-group,
+.registration-form .checkbox-group {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 12px;
+  width: 100%;
 }
 
-.radio-label,
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.registration-form .radio-label,
+.registration-form .checkbox-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
   cursor: pointer;
-  padding: 10px;
-  border: 1px solid #e0e0e0;
+  padding: 12px 16px !important;
+  border: 1px solid #e0e0e0 !important;
   border-radius: 8px;
   transition: all 0.2s;
   font-weight: 400;
+  background: white !important;
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: flex-start !important;
 }
 
-.radio-label:hover,
-.checkbox-label:hover {
-  background: #f9fafb;
-  border-color: #0B4F9F;
+.registration-form .radio-label:hover,
+.registration-form .checkbox-label:hover {
+  background: #f9fafb !important;
+  border-color: #0B4F9F !important;
 }
 
-.radio-label input[type="radio"],
-.checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+.registration-form .radio-label input[type="radio"],
+.registration-form .checkbox-label input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
   cursor: pointer;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  accent-color: #0B4F9F;
+  position: relative;
 }
 
-.radio-label span,
-.checkbox-label span {
-  flex: 1;
-  color: #333;
+.registration-form .radio-label span,
+.registration-form .checkbox-label span {
+  color: #333 !important;
+  font-size: 15px !important;
+  line-height: 1.5;
+  flex: 0 1 auto !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Buttons */

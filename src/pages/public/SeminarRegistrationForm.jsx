@@ -267,88 +267,127 @@ const SeminarRegistrationForm = () => {
                 Please answer the following questions to help us better serve you:
               </p>
 
-              {questions.map((q, index) => (
-                <div key={q.id} className="form-group">
-                  <label>
-                    {index + 1}. {q.question}
-                    {q.required && <span className="required">*</span>}
-                  </label>
+              {questions.map((q, index) => {
+                // Ensure q.id exists, fallback to index if not
+                const questionId = q.id || `question_${index}`
+                
+                return (
+                  <div key={questionId} className="form-group">
+                    <label>
+                      <span className="question-number">{index + 1}.</span>{' '}
+                      <span className="question-text">{q.question}</span>
+                      {q.required && <span className="required"> *</span>}
+                    </label>
 
-                  {q.type === 'text' && (
-                    <input
-                      type="text"
-                      value={answers[q.id] || ''}
-                      onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                      required={q.required}
-                      className="form-input"
-                    />
-                  )}
+                    {q.type === 'text' && (
+                      <input
+                        type="text"
+                        value={answers[questionId] || ''}
+                        onChange={(e) => setAnswers({ ...answers, [questionId]: e.target.value })}
+                        required={q.required}
+                        className="form-input"
+                        placeholder="Enter your answer..."
+                      />
+                    )}
 
-                  {q.type === 'textarea' && (
-                    <textarea
-                      value={answers[q.id] || ''}
-                      onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                      required={q.required}
-                      rows={4}
-                      className="form-textarea"
-                    />
-                  )}
+                    {q.type === 'textarea' && (
+                      <textarea
+                        value={answers[questionId] || ''}
+                        onChange={(e) => setAnswers({ ...answers, [questionId]: e.target.value })}
+                        required={q.required}
+                        rows={4}
+                        className="form-textarea"
+                        placeholder="Enter your answer..."
+                      />
+                    )}
 
-                  {q.type === 'select' && (
-                    <select
-                      value={answers[q.id] || ''}
-                      onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                      required={q.required}
-                      className="form-select"
-                    >
-                      <option value="">Select an option...</option>
-                      {q.options?.map((opt, i) => (
-                        <option key={i} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  )}
+                    {q.type === 'select' && (
+                      <select
+                        value={answers[questionId] || ''}
+                        onChange={(e) => setAnswers({ ...answers, [questionId]: e.target.value })}
+                        required={q.required}
+                        className="form-select"
+                      >
+                        <option value="">Select an option...</option>
+                        {q.options?.map((opt, i) => (
+                          <option key={i} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    )}
 
-                  {q.type === 'radio' && (
-                    <div className="radio-group">
-                      {q.options?.map((opt, i) => (
-                        <label key={i} className="radio-label">
-                          <input
-                            type="radio"
-                            name={q.id}
-                            value={opt}
-                            checked={answers[q.id] === opt}
-                            onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                            required={q.required}
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-
-                  {q.type === 'checkbox' && (
-                    <div className="checkbox-group">
-                      {q.options?.map((opt, i) => (
-                        <label key={i} className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            value={opt}
-                            checked={(answers[q.id] || []).includes(opt)}
-                            onChange={(e) => {
-                              const current = answers[q.id] || []
-                              const newValue = e.target.checked
-                                ? [...current, opt]
-                                : current.filter(v => v !== opt)
-                              setAnswers({ ...answers, [q.id]: newValue })
+                    {q.type === 'radio' && (
+                      <div className="radio-group">
+                        {q.options?.map((opt, i) => (
+                          <label 
+                            key={i} 
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '12px',
+                              padding: '12px 16px',
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                              background: 'white',
+                              margin: '0 0 8px 0',
+                              width: '100%',
+                              boxSizing: 'border-box'
                             }}
-                          />
-                          <span>{opt}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                          >
+                            <input
+                              type="radio"
+                              name={questionId}
+                              value={opt}
+                              checked={answers[questionId] === opt}
+                              onChange={(e) => setAnswers({ ...answers, [questionId]: e.target.value })}
+                              required={q.required}
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                flexShrink: '0',
+                                margin: '0',
+                                accentColor: '#0B4F9F'
+                              }}
+                            />
+                            <span style={{ 
+                              color: '#333', 
+                              fontSize: '15px',
+                              margin: '0',
+                              padding: '0',
+                              flex: '0 1 auto'
+                            }}>
+                              {opt}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {q.type === 'checkbox' && (
+                      <div className="checkbox-group">
+                        {q.options?.map((opt, i) => (
+                          <label key={i} className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              value={opt}
+                              checked={(answers[questionId] || []).includes(opt)}
+                              onChange={(e) => {
+                                const current = answers[questionId] || []
+                                const newValue = e.target.checked
+                                  ? [...current, opt]
+                                  : current.filter(v => v !== opt)
+                                setAnswers({ ...answers, [questionId]: newValue })
+                              }}
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
 
               <button
                 type="submit"
