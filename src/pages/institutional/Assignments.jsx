@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Mail, CheckCircle, Clock, XCircle, Users, BookOpen, Loader, Plus, Copy, ExternalLink, Check } from 'lucide-react'
+import { Mail, CheckCircle, Clock, XCircle, Users, BookOpen, Loader, Plus, Copy, ExternalLink, Check, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Programmes.css'
@@ -15,6 +15,7 @@ const Assignments = () => {
   const [activeTab, setActiveTab] = useState('all') // 'all', 'pending', 'active'
   const [assignments, setAssignments] = useState([])
   const [copiedId, setCopiedId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -308,6 +309,8 @@ const Assignments = () => {
   const getInvitationLink = (invitationId) => {
     if (!invitationId) return null
     const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin
+    console.log('🔍 Debug Assignments - VITE_SITE_URL:', import.meta.env.VITE_SITE_URL)
+    console.log('🔍 Debug Assignments - baseUrl used:', baseUrl)
     return `${baseUrl}/invitation/accept?token=${invitationId}`
   }
 
@@ -319,6 +322,34 @@ const Assignments = () => {
     } catch (err) {
       console.error('Failed to copy:', err)
       alert('Failed to copy to clipboard')
+    }
+  }
+
+  const deleteInvitation = async (assignmentId, assignmentEmail) => {
+    if (!confirm(`Are you sure you want to delete the invitation for ${assignmentEmail}? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      setDeletingId(assignmentId)
+
+      // Delete the pending course assignment
+      const { error } = await supabase
+        .from('pending_course_assignments')
+        .delete()
+        .eq('id', assignmentId)
+
+      if (error) throw error
+
+      // Refresh the assignments list
+      await fetchAssignments()
+      
+      alert('Invitation deleted successfully')
+    } catch (err) {
+      console.error('Error deleting invitation:', err)
+      alert(`Failed to delete invitation: ${err.message}`)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -444,6 +475,7 @@ const Assignments = () => {
                       <th>Progress</th>
                       <th>Invitation Link</th>
                       <th>Assigned Date</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -531,6 +563,33 @@ const Assignments = () => {
                         </td>
                         <td>
                           {new Date(assignment.assignedAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          {assignment.type === 'pending' ? (
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => deleteInvitation(assignment.id, assignment.employeeEmail)}
+                              disabled={deletingId === assignment.id}
+                              style={{ padding: '6px 12px', fontSize: '12px' }}
+                              title="Delete this pending invitation"
+                            >
+                              {deletingId === assignment.id ? (
+                                <>
+                                  <Loader size={14} className="spinner" />
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 size={14} />
+                                  Delete
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <span style={{ color: '#999', fontSize: '12px', fontStyle: 'italic' }}>
+                              —
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -148,6 +148,9 @@ const InviteLearnersModal = ({ isOpen, onClose, onSuccess }) => {
       // TODO: Send invitation email via email service
       // For now, just log the invitation link
       const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin
+      console.log('🔍 Debug - VITE_SITE_URL:', import.meta.env.VITE_SITE_URL)
+      console.log('🔍 Debug - window.location.origin:', window.location.origin)
+      console.log('🔍 Debug - baseUrl used:', baseUrl)
       const invitationLink = `${baseUrl}/invitation/accept?token=${invitation.invitation_token}`
       console.log('Invitation link:', invitationLink)
 
