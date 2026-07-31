@@ -307,7 +307,7 @@ const Assignments = () => {
 
   const getInvitationLink = (invitationId) => {
     if (!invitationId) return null
-    const baseUrl = window.location.origin
+    const baseUrl = import.meta.env.VITE_SITE_URL || window.location.origin
     return `${baseUrl}/invitation/accept?token=${invitationId}`
   }
 
