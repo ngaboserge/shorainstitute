@@ -37,31 +37,66 @@ const LiveSeminars = () => {
 
       if (seminarsError) throw seminarsError
 
+      // Fetch registration counts for all seminars
+      const { data: registrationsData, error: regError } = await supabase
+        .from('seminar_registrations')
+        .select('seminar_id, status')
+      
+      if (regError) {
+        console.log('No registrations data:', regError)
+      }
+
+      // Count registrations by seminar
+      const registrationCounts = {}
+      let totalRegistered = 0
+      let totalAttended = 0
+      let totalCompleted = 0
+
+      registrationsData?.forEach(reg => {
+        registrationCounts[reg.seminar_id] = (registrationCounts[reg.seminar_id] || 0) + 1
+        totalRegistered++
+        if (reg.status === 'attended') totalAttended++
+        if (reg.status === 'completed') totalCompleted++
+      })
+
       // Transform data for display
-      const transformedSeminars = seminarsData.map(seminar => ({
-        id: seminar.id,
-        month: new Date(seminar.date).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        day: new Date(seminar.date).getDate().toString().padStart(2, '0'),
-        title: seminar.title,
-        type: 'LIVE SEMINAR',
-        speakers: [seminar.speaker || 'TBA'],
-        platform: 'Zoom',
-        time: `${new Date(seminar.date).toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        })} (EAT)`,
-        registered: 0, // TODO: Count from seminar_registrations
-        status: 'Available'
-      }))
+      const transformedSeminars = seminarsData.map(seminar => {
+        const registeredCount = registrationCounts[seminar.id] || 0
+        const seminarDate = new Date(seminar.date)
+        const isPast = seminarDate < new Date()
+        
+        return {
+          id: seminar.id,
+          month: seminarDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+          day: seminarDate.getDate().toString().padStart(2, '0'),
+          date: seminar.date,
+          title: seminar.title,
+          type: 'LIVE SEMINAR',
+          speakers: [seminar.speaker || 'TBA'],
+          platform: 'Zoom',
+          time: `${seminarDate.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })} (EAT)`,
+          registered: registeredCount,
+          status: isPast ? 'Completed' : 'Available',
+          isPast
+        }
+      })
 
       setSeminars(transformedSeminars)
 
       // Calculate stats
+      const upcomingSeminars = transformedSeminars.filter(s => !s.isPast)
+      const avgAttendance = totalRegistered > 0 
+        ? Math.round(((totalAttended + totalCompleted) / totalRegistered) * 100)
+        : 0
+
       setStats({
         totalSeminars: transformedSeminars.length,
-        totalRegistered: 0, // TODO: Count total registrations
-        avgAttendance: 0,
-        upcomingCount: transformedSeminars.filter(s => new Date(s.date) > new Date()).length
+        totalRegistered,
+        avgAttendance,
+        upcomingCount: upcomingSeminars.length
       })
 
     } catch (error) {
@@ -143,7 +178,6 @@ const LiveSeminars = () => {
               <div className="seminars-stat-content">
                 <div className="seminars-stat-value">{loading ? '...' : stats.upcomingCount}</div>
                 <div className="seminars-stat-label">Upcoming Sessions</div>
-                <div className="seminars-stat-meta">↑ 13% vs last month</div>
               </div>
             </div>
 
@@ -154,7 +188,6 @@ const LiveSeminars = () => {
               <div className="seminars-stat-content">
                 <div className="seminars-stat-value">{loading ? '...' : stats.totalRegistered.toLocaleString()}</div>
                 <div className="seminars-stat-label">Registered Learners</div>
-                <div className="seminars-stat-meta">↑ 18% vs last month</div>
               </div>
             </div>
 
@@ -165,7 +198,6 @@ const LiveSeminars = () => {
               <div className="seminars-stat-content">
                 <div className="seminars-stat-value">{loading ? '...' : `${stats.avgAttendance}%`}</div>
                 <div className="seminars-stat-label">Average Attendance</div>
-                <div className="seminars-stat-meta">↑ 4% vs last month</div>
               </div>
             </div>
 
@@ -174,9 +206,8 @@ const LiveSeminars = () => {
                 <Award size={24} />
               </div>
               <div className="seminars-stat-content">
-                <div className="seminars-stat-value">{loading ? '...' : stats.totalSeminars * 12}</div>
-                <div className="seminars-stat-label">CPD Credits Earned</div>
-                <div className="seminars-stat-meta">↑ 25% vs last month</div>
+                <div className="seminars-stat-value">{loading ? '...' : stats.totalRegistered}</div>
+                <div className="seminars-stat-label">Total Registrations</div>
               </div>
             </div>
           </div>
@@ -206,10 +237,8 @@ const LiveSeminars = () => {
 
                 <div className="calendar-grid">
                   {[...Array(31)].map((_, i) => (
-                    <div key={i} className={`calendar-day ${i === 6 ? 'has-event' : ''} ${i === 14 ? 'has-event' : ''} ${i === 20 ? 'today' : ''}`}>
+                    <div key={i} className={`calendar-day ${i === 20 ? 'today' : ''}`}>
                       <span className="day-number">{i + 1}</span>
-                      {i === 6 && <div className="event-dot"></div>}
-                      {i === 14 && <div className="event-dot"></div>}
                     </div>
                   ))}
                 </div>

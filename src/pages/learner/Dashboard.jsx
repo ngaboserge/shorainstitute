@@ -242,9 +242,20 @@ const Dashboard = () => {
                         <div className="next-lesson-label" style={{color: '#0B4F9F', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px'}}>NEXT LESSON</div>
                         <div className="next-lesson-title" style={{color: '#1a1a1a', fontSize: '15px', fontWeight: '600'}}>{currentCourse.nextLesson?.title || 'Start first lesson'}</div>
                       </div>
-                      <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson?.id}`} className="btn btn-primary btn-full">
-                        Continue Learning →
-                      </Link>
+                      {currentCourse.nextLesson?.id ? (
+                        <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson.id}`} className="btn btn-primary btn-full">
+                          Continue Learning →
+                        </Link>
+                      ) : (
+                        <button 
+                          className="btn btn-secondary btn-full" 
+                          disabled
+                          style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                          title="No lessons available yet"
+                        >
+                          No Lessons Available
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

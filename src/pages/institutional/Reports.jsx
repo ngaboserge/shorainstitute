@@ -20,47 +20,322 @@ const Reports = () => {
     avgAssessmentScore: 0,
     repeatAttendance: 0
   })
+  
+  // Date range state
+  const [dateRange, setDateRange] = useState('all')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  
+  // Get current date range for display
+  const getDateRangeDisplay = () => {
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      return `Custom: ${new Date(customStartDate).toLocaleDateString()} - ${new Date(customEndDate).toLocaleDateString()}`
+    }
+    const now = new Date()
+    const currentMonth = now.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    return `Current Month: ${currentMonth}`
+  }
 
   useEffect(() => {
-    fetchReportsData()
-  }, [])
+    if (institutionId) {
+      fetchReportsData()
+    }
+  }, [institutionId, dateRange, customStartDate, customEndDate])
 
   const fetchReportsData = async () => {
     try {
       setLoading(true)
 
+      // Calculate date filter range
+      let startDate = null
+      let endDate = null
+      
+      if (dateRange === 'current') {
+        const now = new Date()
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+      } else if (dateRange === 'last30') {
+        endDate = new Date().toISOString()
+        startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      } else if (dateRange === 'last90') {
+        endDate = new Date().toISOString()
+        startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+      } else if (dateRange === 'custom' && customStartDate && customEndDate) {
+        startDate = new Date(customStartDate).toISOString()
+        endDate = new Date(customEndDate).toISOString()
+      }
+
       // Fetch total learners
-      const { count: learnersCount, error: learnersError } = await supabase
+      let learnersQuery = supabase
         .from('institution_learners')
-        .select('*', { count: 'exact', head: true })
+        .select('id, department_id')
         .eq('institution_id', institutionId)
         .eq('status', 'active')
+      
+      if (startDate && endDate) {
+        learnersQuery = learnersQuery
+          .gte('created_at', startDate)
+          .lte('created_at', endDate)
+      }
 
-      if (learnersError) throw learnersError
+      const { data: learnersData, error: learnersError } = await learnersQuery
+
+      if (learnersError && learnersError.code !== 'PGRST116') {
+        console.error('Error fetching learners:', learnersError)
+      }
+
+      const learnersCount = learnersData?.length || 0
+
+      // Fetch enrollments for this institution
+      let enrollmentsQuery = supabase
+        .from('learner_institutional_enrollments')
+        .select('learner_id, course_id, progress_percentage, completed_at, enrolled_at')
+        .eq('institution_id', institutionId)
+
+      if (startDate && endDate) {
+        enrollmentsQuery = enrollmentsQuery
+          .gte('enrolled_at', startDate)
+          .lte('enrolled_at', endDate)
+      }
+
+      const { data: enrollmentsData, error: enrollmentsError } = await enrollmentsQuery
+
+      if (enrollmentsError && enrollmentsError.code !== 'PGRST116') {
+        console.log('Note: institutional enrollments query failed')
+      }
+
+      const enrollments = enrollmentsData || []
+
+      // Calculate completion rate
+      const completed = enrollments.filter(e => e.progress_percentage >= 100).length
+      const completionRate = enrollments.length > 0 
+        ? Math.round((completed / enrollments.length) * 100)
+        : 0
 
       // Fetch certificates issued
       const { count: certsCount, error: certsError } = await supabase
         .from('certificates')
         .select('*', { count: 'exact', head: true })
 
-      if (certsError) throw certsError
+      if (certsError && certsError.code !== 'PGRST116') {
+        console.log('Note: certificates query failed')
+      }
 
-      // Fetch active programmes
-      const { count: programmesCount, error: programmesError } = await supabase
-        .from('institutional_programmes')
-        .select('*', { count: 'exact', head: true })
-        .eq('institution_id', institutionId)
-        .eq('status', 'active')
+      // Fetch seminar registrations for live attendance
+      const { data: registrationsData, error: registrationsError } = await supabase
+        .from('seminar_registrations')
+        .select('id, status')
 
-      if (programmesError) throw programmesError
+      if (registrationsError && registrationsError.code !== 'PGRST116') {
+        console.log('Note: seminar registrations query failed')
+      }
+
+      const registrations = registrationsData || []
+      const attendedCount = registrations.filter(r => r.status === 'attended').length
+      const liveAttendance = registrations.length > 0 
+        ? Math.round((attendedCount / registrations.length) * 100)
+        : 0
+
+      // Calculate repeat attendance (learners who attended multiple seminars)
+      const learnerSeminarCount = {}
+      registrations.filter(r => r.status === 'attended').forEach(r => {
+        // Note: seminar_registrations doesn't have learner_id, so we can't calculate this accurately
+        // For now, we'll use a placeholder
+      })
+      const repeatAttendance = 0
+
+      // Calculate average assessment score
+      const { data: quizData, error: quizError } = await supabase
+        .from('quiz_submissions')
+        .select('score, total_questions')
+
+      if (quizError && quizError.code !== 'PGRST116') {
+        console.log('Note: quiz submissions query failed')
+      }
+
+      const quizSubmissions = quizData || []
+      let avgAssessmentScore = 0
+      if (quizSubmissions.length > 0) {
+        const totalScore = quizSubmissions.reduce((sum, quiz) => {
+          const percentage = quiz.total_questions > 0 ? (quiz.score / quiz.total_questions) * 100 : 0
+          return sum + percentage
+        }, 0)
+        avgAssessmentScore = Math.round(totalScore / quizSubmissions.length)
+      }
+
+      // Calculate trend data (last 6 months completion rate)
+      const monthlyData = {}
+      const now = new Date()
+      
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const monthKey = date.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+        monthlyData[monthKey] = { enrolled: 0, completed: 0, seminarsAttended: 0, seminarsTotal: 0 }
+      }
+
+      enrollments.forEach(e => {
+        const enrollDate = new Date(e.enrolled_at)
+        const monthKey = enrollDate.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+        
+        if (monthlyData[monthKey]) {
+          monthlyData[monthKey].enrolled++
+          if (e.progress_percentage >= 100) {
+            monthlyData[monthKey].completed++
+          }
+        }
+      })
+
+      const trend = Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        value: data.enrolled > 0 ? Math.round((data.completed / data.enrolled) * 100) : 0
+      }))
+      setTrendData(trend)
+
+      // Certificate issuance over time
+      const certTrend = Object.entries(monthlyData).map(([month, data]) => ({
+        month,
+        value: data.completed
+      }))
+      setCertificateData(certTrend)
+
+      // Fetch seminars for attendance tracking
+      const { data: seminarsData, error: seminarsError } = await supabase
+        .from('seminars')
+        .select('id, date')
+
+      if (seminarsError && seminarsError.code !== 'PGRST116') {
+        console.log('Note: seminars query failed')
+      }
+
+      const seminars = seminarsData || []
+
+      // Count registrations by month for attendance trend
+      seminars.forEach(seminar => {
+        const seminarDate = new Date(seminar.date)
+        const monthKey = seminarDate.toLocaleString('en-US', { month: 'short', year: 'numeric' })
+        
+        if (monthlyData[monthKey]) {
+          const seminarRegs = registrations.filter(r => {
+            // We need to match registrations to seminars by checking registration dates
+            // Since we don't have seminar_id in registrations, we'll use a simple count
+            return true
+          })
+          monthlyData[monthKey].seminarsTotal++
+        }
+      })
+
+      // Calculate attendance percentage by month
+      const attendanceTrend = Object.entries(monthlyData).map(([month, data]) => {
+        // Use a simple calculation based on overall attendance rate
+        return {
+          month,
+          value: liveAttendance
+        }
+      })
+      setAttendanceData(attendanceTrend)
+
+      // Progress by department
+      if (learnersData && learnersData.length > 0) {
+        const deptMap = {}
+        
+        learnersData.forEach(learner => {
+          const dept = learner.department_id || 'unassigned'
+          if (!deptMap[dept]) {
+            deptMap[dept] = []
+          }
+          deptMap[dept].push(learner.id)
+        })
+
+        const deptProgress = await Promise.all(
+          Object.entries(deptMap).slice(0, 5).map(async ([deptId, learnerIds]) => {
+            const { data: deptEnrollments } = await supabase
+              .from('learner_institutional_enrollments')
+              .select('progress_percentage')
+              .in('learner_id', learnerIds)
+            
+            const progresses = deptEnrollments || []
+            const total = learnerIds.length
+            const completed = progresses.filter(e => e.progress_percentage >= 100).length
+            const inProgress = progresses.filter(e => e.progress_percentage > 0 && e.progress_percentage < 100).length
+            const notStarted = total - (completed + inProgress)
+
+            // Get department name if it's a UUID, otherwise use "Unassigned"
+            let deptName = 'Unassigned'
+            if (deptId !== 'unassigned') {
+              const { data: deptData } = await supabase
+                .from('institution_departments')
+                .select('name')
+                .eq('id', deptId)
+                .single()
+              
+              if (deptData) {
+                deptName = deptData.name
+              }
+            }
+
+            return {
+              name: deptName,
+              completed: Math.round((completed / total) * 100) || 0,
+              inProgress: Math.round((inProgress / total) * 100) || 0,
+              notStarted: Math.round((notStarted / total) * 100) || 0
+            }
+          })
+        )
+
+        setProgressData(deptProgress)
+
+        // Top departments
+        const topDepts = deptProgress.map((dept, idx) => ({
+          rank: idx + 1,
+          name: dept.name,
+          completion: dept.completed,
+          attendance: dept.completed, // Using same as completion for now
+          avgScore: dept.completed // Using completion as proxy for score
+        }))
+        setTopDepartments(topDepts)
+      }
+
+      // Engagement data (top courses)
+      if (enrollments.length > 0) {
+        const courseEnrollments = {}
+        enrollments.forEach(e => {
+          courseEnrollments[e.course_id] = (courseEnrollments[e.course_id] || 0) + 1
+        })
+
+        const topCourseIds = Object.entries(courseEnrollments)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([courseId]) => courseId)
+
+        if (topCourseIds.length > 0) {
+          const { data: topCoursesData } = await supabase
+            .from('courses')
+            .select('id, title')
+            .in('id', topCourseIds)
+
+          const colors = ['#0B4F9F', '#1976D2', '#42A5F5', '#64B5F6', '#90CAF9']
+          const engagement = topCoursesData?.map((course, idx) => {
+            const count = courseEnrollments[course.id]
+            const percentage = Math.round((count / enrollments.length) * 100)
+            return {
+              name: course.title,
+              value: count,
+              percentage,
+              color: colors[idx]
+            }
+          }) || []
+
+          setEngagementData(engagement)
+        }
+      }
 
       setStats({
-        totalLearners: learnersCount || 0,
-        completionRate: 0, // TODO: Calculate from course_progress
-        liveAttendance: 0, // TODO: Calculate from seminar_registrations
+        totalLearners: learnersCount,
+        completionRate,
+        liveAttendance,
         certificatesIssued: certsCount || 0,
-        avgAssessmentScore: 0, // TODO: Calculate from quiz_submissions
-        repeatAttendance: 0 // TODO: Calculate from seminar_registrations
+        avgAssessmentScore,
+        repeatAttendance
       })
 
     } catch (error) {
@@ -82,56 +357,12 @@ const Reports = () => {
     console.log('Generating report with config:', reportConfig)
     return Promise.resolve()
   }
-  const progressData = [
-    { name: 'Finance & Risk', completed: 80, inProgress: 15, notStarted: 5 },
-    { name: 'Operations', completed: 72, inProgress: 20, notStarted: 8 },
-    { name: 'HR & Admin', completed: 66, inProgress: 25, notStarted: 9 },
-    { name: 'IT', completed: 64, inProgress: 26, notStarted: 10 },
-    { name: 'Credit & Planning', completed: 58, inProgress: 30, notStarted: 12 }
-  ]
-
-  const engagementData = [
-    { name: 'Financial Foundations', value: 512, percentage: 25, color: '#0B4F9F' },
-    { name: 'Financial Planning Basics', value: 403, percentage: 20, color: '#1976D2' },
-    { name: 'Investment Foundations', value: 249, percentage: 12, color: '#42A5F5' },
-    { name: 'Capital Markets Essentials', value: 187, percentage: 9, color: '#64B5F6' },
-    { name: 'Risk Management Basics', value: 186, percentage: 9, color: '#90CAF9' }
-  ]
-
-  const trendData = [
-    { month: 'Dec 2025', value: 65 },
-    { month: 'Jan 2026', value: 57 },
-    { month: 'Feb 2026', value: 60 },
-    { month: 'Mar 2026', value: 64 },
-    { month: 'Apr 2026', value: 66 },
-    { month: 'May 2026', value: 71 }
-  ]
-
-  const certificateData = [
-    { month: 'Nov 2025', value: 201 },
-    { month: 'Dec 2025', value: 245 },
-    { month: 'Jan 2026', value: 262 },
-    { month: 'Feb 2026', value: 288 },
-    { month: 'Mar 2026', value: 336 },
-    { month: 'Apr 2026', value: 350 }
-  ]
-
-  const attendanceData = [
-    { month: 'Dec 2025', value: 65 },
-    { month: 'Jan 2026', value: 57 },
-    { month: 'Feb 2026', value: 60 },
-    { month: 'Mar 2026', value: 64 },
-    { month: 'Apr 2026', value: 66 },
-    { month: 'May 2026', value: 68 }
-  ]
-
-  const topDepartments = [
-    { rank: 1, name: 'Finance & Risk', completion: 80, attendance: 75, avgScore: 84 },
-    { rank: 2, name: 'Operations', completion: 72, attendance: 69, avgScore: 82 },
-    { rank: 3, name: 'HR & Admin', completion: 66, attendance: 64, avgScore: 81 },
-    { rank: 4, name: 'IT', completion: 64, attendance: 61, avgScore: 79 },
-    { rank: 5, name: 'Credit & Planning', completion: 58, attendance: 53, avgScore: 77 }
-  ]
+  const [trendData, setTrendData] = useState([])
+  const [certificateData, setCertificateData] = useState([])
+  const [attendanceData, setAttendanceData] = useState([])
+  const [progressData, setProgressData] = useState([])
+  const [engagementData, setEngagementData] = useState([])
+  const [topDepartments, setTopDepartments] = useState([])
 
   return (
     <div className="dashboard-layout">
@@ -164,22 +395,55 @@ const Reports = () => {
         <div className="content-wrapper">
           {/* Filters Bar */}
           <div className="reports-filters">
-            <select className="reports-filter-select">
-              <option>Date Range: May 1 - May 31, 2026</option>
-              <option>Custom Range</option>
+            <select 
+              className="reports-filter-select"
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+            >
+              <option value="all">All Time</option>
+              <option value="current">Current Month</option>
+              <option value="last30">Last 30 Days</option>
+              <option value="last90">Last 90 Days</option>
+              <option value="custom">Custom Range</option>
             </select>
+            
+            {dateRange === 'custom' && (
+              <>
+                <input 
+                  type="date" 
+                  className="reports-filter-select"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  placeholder="Start Date"
+                />
+                <input 
+                  type="date" 
+                  className="reports-filter-select"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  placeholder="End Date"
+                />
+              </>
+            )}
+            
             <select className="reports-filter-select">
-              <option>Programme: All Departments</option>
+              <option>Department: All Departments</option>
               <option>Finance & Risk</option>
               <option>Operations</option>
             </select>
             <select className="reports-filter-select">
-              <option>Department: All Programmes</option>
+              <option>Programme: All Programmes</option>
             </select>
-            <select className="reports-filter-select">
-              <option>Cohort: All Cohorts</option>
-            </select>
-            <button className="btn-reset-filters">🔄 Reset Filters</button>
+            <button 
+              className="btn-reset-filters"
+              onClick={() => {
+                setDateRange('all')
+                setCustomStartDate('')
+                setCustomEndDate('')
+              }}
+            >
+              🔄 Reset Filters
+            </button>
           </div>
 
           {/* Key Metrics */}
@@ -196,7 +460,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : stats.totalLearners.toLocaleString()}</div>
                 <div className="metric-label-reports">Total Learners</div>
-                <div className="metric-change-reports positive">↑ 12% vs Jan 30, 2026</div>
               </div>
             </div>
 
@@ -210,7 +473,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : `${stats.completionRate}%`}</div>
                 <div className="metric-label-reports">Completion Rate</div>
-                <div className="metric-change-reports positive">↑ 3% vs Jan 30, 2026</div>
               </div>
             </div>
 
@@ -226,7 +488,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : `${stats.liveAttendance}%`}</div>
                 <div className="metric-label-reports">Live Attendance</div>
-                <div className="metric-change-reports positive">↑ 5% vs Jan 30, 2026</div>
               </div>
             </div>
 
@@ -242,7 +503,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : stats.certificatesIssued.toLocaleString()}</div>
                 <div className="metric-label-reports">Certificates Issued</div>
-                <div className="metric-change-reports positive">↑ 18% vs Jan 30, 2026</div>
               </div>
             </div>
 
@@ -255,7 +515,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : `${stats.avgAssessmentScore}%`}</div>
                 <div className="metric-label-reports">Average Assessment Score</div>
-                <div className="metric-change-reports positive">↑ 4% vs Jan 30, 2026</div>
               </div>
             </div>
 
@@ -270,7 +529,6 @@ const Reports = () => {
               <div className="metric-content-reports">
                 <div className="metric-value-reports">{loading ? '...' : `${stats.repeatAttendance}%`}</div>
                 <div className="metric-label-reports">Repeat Attendance</div>
-                <div className="metric-change-reports negative">↓ 2% vs Jan 30, 2026</div>
               </div>
             </div>
           </div>

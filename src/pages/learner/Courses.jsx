@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Search, Filter, Play, Clock, Award, BookOpen, Star, TrendingUp, ChevronRight } from 'lucide-react'
+import { Search, Filter, Play, Clock, Award, BookOpen, Star, TrendingUp, ChevronRight, Building2, AlertCircle, Ticket } from 'lucide-react'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
 import PaymentModal from '../../components/PaymentModal'
 import { useAuth } from '../../contexts/AuthContext'
@@ -42,8 +42,8 @@ const Courses = () => {
 
   const loadEnrolledCourses = async () => {
     try {
-      // Load all enrollments with course details (exclude pending payments)
-      const { data: enrollments, error } = await supabase
+      // 1. Load regular enrollments with course details (exclude pending payments)
+      const { data: regularEnrollments, error: error1 } = await supabase
         .from('enrollments')
         .select(`
           *,
@@ -61,18 +61,97 @@ const Courses = () => {
         .neq('payment_status', 'pending')
         .order('last_accessed_at', { ascending: false })
 
-      if (error) throw error
+      if (error1 && error1.code !== 'PGRST116') {
+        console.error('Error loading regular enrollments:', error1)
+      }
 
-      if (!enrollments) {
+      // 2. Load institutional enrollments (courses assigned by company)
+      // First get user's learner_id
+      const { data: learnerData } = await supabase
+        .from('institution_learners')
+        .select('id, institution_id, institutions(name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      let institutionalData = []
+      if (learnerData) {
+        // Get enrollments for this learner
+        const { data: enrollments, error: error2 } = await supabase
+          .from('learner_institutional_enrollments')
+          .select('*')
+          .eq('learner_id', learnerData.id)
+          .neq('status', 'cancelled')
+          .order('enrolled_at', { ascending: false })
+
+        if (error2 && error2.code !== 'PGRST116') {
+          console.error('Error loading institutional enrollments:', error2)
+        }
+
+        if (enrollments && enrollments.length > 0) {
+          // Get course details separately for each enrollment
+          const enrichedEnrollments = await Promise.all(
+            enrollments.map(async (enrollment) => {
+              const { data: courseData } = await supabase
+                .from('courses')
+                .select('id, title, thumbnail_url, instructor_name, category, total_lessons, total_duration_seconds')
+                .eq('id', enrollment.course_id)
+                .single()
+
+              return {
+                ...enrollment,
+                courses: courseData,
+                institution_name: learnerData.institutions?.name || 'Your Company'
+              }
+            })
+          )
+          institutionalData = enrichedEnrollments
+        }
+      }
+
+      // 3. Transform institutional enrollments to match regular format
+      const institutionalEnrollments = (institutionalData || []).map(ie => ({
+        id: ie.id,
+        user_id: user.id,
+        course_id: ie.course_id,
+        progress_percentage: ie.progress_percentage || 0,
+        completed_at: ie.completed_at,
+        last_accessed_at: ie.last_accessed_at || ie.enrolled_at,
+        enrollment_date: ie.enrolled_at,
+        courses: ie.courses,
+        
+        // Institutional specific fields
+        source: 'institution',
+        institution_name: ie.institution_name || 'Your Company',
+        due_date: ie.due_date,
+        is_mandatory: ie.assignment_id ? true : false,
+        enrolled_via: ie.enrolled_via,
+        assignment_id: ie.assignment_id
+      }))
+
+      // 4. Transform regular enrollments
+      const regularEnrollmentsFormatted = regularEnrollments?.map(e => ({
+        ...e,
+        source: 'individual',
+        enrollment_date: e.enrolled_at
+      })) || []
+
+      // 5. Combine all enrollments
+      const allEnrollments = [
+        ...regularEnrollmentsFormatted,
+        ...institutionalEnrollments
+      ]
+
+      if (allEnrollments.length === 0) {
         setInProgressCourses([])
         setCompletedCourses([])
         setLoading(false)
         return
       }
 
-      // For each enrollment, load lessons and calculate progress
+      // 6. For each enrollment, load lessons and calculate progress
       const enrichedEnrollments = await Promise.all(
-        enrollments.map(async (enrollment) => {
+        allEnrollments.map(async (enrollment) => {
           const { data: lessons } = await supabase
             .from('lessons')
             .select('id, title, order_number')
@@ -96,29 +175,36 @@ const Courses = () => {
           return {
             id: enrollment.course_id,
             enrollmentId: enrollment.id,
-            title: enrollment.courses.title,
-            image: enrollment.courses.thumbnail_url,
-            instructor: enrollment.courses.instructor_name,
-            category: enrollment.courses.category,
-            progress: Math.round(enrollment.progress_percentage),
+            title: enrollment.courses?.title || 'Unknown Course',
+            image: enrollment.courses?.thumbnail_url,
+            instructor: enrollment.courses?.instructor_name,
+            category: enrollment.courses?.category,
+            progress: Math.round(enrollment.progress_percentage || 0),
             completedLessons: completedLessons,
             totalLessons: totalLessons,
             nextLesson: nextLesson,
             lastAccessed: lastAccessedText,
             completedDate: enrollment.completed_at,
-            duration: enrollment.courses.total_duration_seconds
+            duration: enrollment.courses?.total_duration_seconds,
+            
+            // Institutional fields
+            source: enrollment.source,
+            institutionName: enrollment.institution_name,
+            dueDate: enrollment.due_date,
+            isMandatory: enrollment.is_mandatory,
+            enrolledVia: enrollment.enrolled_via
           }
         })
       )
 
-      // Separate into in-progress and completed
+      // 7. Separate into in-progress and completed
       const inProgress = enrichedEnrollments.filter(e => e.progress < 100)
       const completed = enrichedEnrollments.filter(e => e.progress >= 100)
 
       setInProgressCourses(inProgress)
       setCompletedCourses(completed)
 
-      // Load pending payment courses separately
+      // 8. Load pending payment courses separately (only from enrollments table)
       const { data: pendingEnrollments } = await supabase
         .from('enrollments')
         .select(`
@@ -310,7 +396,27 @@ const Courses = () => {
                         </div>
                       </div>
                       <div className="course-content-horizontal" style={{color: '#1a1a1a'}}>
-                        <div className="course-category-badge" style={{color: '#0B4F9F', background: '#e3f2fd', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', marginBottom: '12px', width: 'fit-content'}}>{course.category}</div>
+                        <div style={{display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap'}}>
+                          <div className="course-category-badge" style={{color: '#0B4F9F', background: '#e3f2fd', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700'}}>{course.category}</div>
+                          {course.source === 'institution' && (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#dcfce7', color: '#166534'}}>
+                              <Building2 size={12} />
+                              <span>{course.institutionName}</span>
+                            </div>
+                          )}
+                          {course.isMandatory && (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#fee2e2', color: '#991b1b'}}>
+                              <AlertCircle size={12} />
+                              <span>Mandatory</span>
+                            </div>
+                          )}
+                          {course.enrolledVia === 'code_redemption' && (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#fef3c7', color: '#92400e'}}>
+                              <Ticket size={12} />
+                              <span>Code Redeemed</span>
+                            </div>
+                          )}
+                        </div>
                         <h3 style={{fontSize: '22px', fontWeight: '700', color: '#1a1a1a', marginBottom: '12px', lineHeight: '1.3'}}>{course.title}</h3>
                         <div className="course-instructor-horizontal">
                           <div style={{
@@ -341,12 +447,29 @@ const Courses = () => {
                         </div>
                         <div style={{padding: '16px', background: '#f5f7fa', borderRadius: '10px', marginBottom: '20px'}}>
                           <div style={{fontSize: '11px', fontWeight: '700', color: '#0B4F9F', letterSpacing: '1px', marginBottom: '6px'}}>NEXT UP:</div>
-                          <div style={{fontSize: '15px', fontWeight: '600', color: '#1a1a1a'}}>{course.nextLesson?.title || 'Start first lesson'}</div>
+                          <div style={{fontSize: '15px', fontWeight: '600', color: '#1a1a1a', marginBottom: course.dueDate ? '8px' : '0'}}>{course.nextLesson?.title || 'Start first lesson'}</div>
+                          {course.dueDate && (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#dc2626', fontWeight: '600'}}>
+                              <Clock size={14} />
+                              <span>Due: {new Date(course.dueDate).toLocaleDateString()}</span>
+                            </div>
+                          )}
                         </div>
                         <div className="course-actions-horizontal">
-                          <Link to={`/learner/courses/${course.id}/lesson/${course.nextLesson?.id}`} className="btn btn-primary">
-                            Continue Learning →
-                          </Link>
+                          {course.nextLesson?.id ? (
+                            <Link to={`/learner/courses/${course.id}/lesson/${course.nextLesson.id}`} className="btn btn-primary">
+                              Continue Learning →
+                            </Link>
+                          ) : (
+                            <button 
+                              className="btn btn-secondary" 
+                              disabled
+                              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                              title="No lessons available yet"
+                            >
+                              No Lessons Available
+                            </button>
+                          )}
                           <div className="last-accessed" style={{color: '#999'}}>Last accessed {course.lastAccessed}</div>
                         </div>
                       </div>
@@ -421,7 +544,15 @@ const Courses = () => {
                         </div>
                       </div>
                       <div className="course-content-standard" style={{color: '#1a1a1a'}}>
-                        <div className="course-category-badge" style={{color: '#0B4F9F'}}>{course.category}</div>
+                        <div style={{display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap'}}>
+                          <div className="course-category-badge" style={{color: '#0B4F9F'}}>{course.category}</div>
+                          {course.source === 'institution' && (
+                            <div style={{display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: '#dcfce7', color: '#166534'}}>
+                              <Building2 size={12} />
+                              <span>{course.institutionName}</span>
+                            </div>
+                          )}
+                        </div>
                         <h3 className="course-title-standard" style={{color: '#1a1a1a'}}>{course.title}</h3>
                         <div className="course-instructor-standard">
                           <div style={{

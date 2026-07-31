@@ -56,16 +56,6 @@ export async function validateInvitationToken(token) {
       }
     }
 
-    // Check seat availability
-    const institution = invitation.institutions
-    if (institution.used_seats >= institution.total_seats) {
-      return { 
-        valid: false, 
-        error: 'No available seats at this institution. Please contact your administrator.',
-        invitation 
-      }
-    }
-
     return { valid: true, invitation }
 
   } catch (error) {
@@ -95,7 +85,7 @@ export async function checkEmailExists(email) {
  * Accept invitation and create institution learner
  * Called after user has signed up or logged in
  */
-export async function acceptInvitation(invitationId, userId) {
+export async function acceptInvitation(invitationId, userId, userEmail, userName) {
   try {
     // Get invitation details
     const { data: invitation, error: invError } = await supabase
@@ -106,23 +96,14 @@ export async function acceptInvitation(invitationId, userId) {
 
     if (invError) throw invError
 
-    // Check seat availability again (race condition protection)
-    const institution = invitation.institutions
-    if (institution.used_seats >= institution.total_seats) {
-      return {
-        success: false,
-        error: 'No available seats at this institution'
-      }
-    }
-
-    // Start transaction (using Supabase RPC would be better, but this works)
-    
-    // 1. Create institution_learner record
+    // Create institution_learner record with user data
     const { data: learner, error: learnerError } = await supabase
       .from('institution_learners')
       .insert({
         institution_id: invitation.institution_id,
         user_id: userId,
+        user_name: userName,
+        user_email: userEmail,
         department_id: invitation.department_id,
         employee_id: invitation.employee_id,
         job_title: invitation.job_title,
@@ -145,19 +126,16 @@ export async function acceptInvitation(invitationId, userId) {
       throw learnerError
     }
 
-    // 2. Update invitation status
+    // Update invitation status
     const { error: updateError } = await supabase
       .from('learner_invitations')
       .update({
         status: 'accepted',
-        accepted_at: new Date().toISOString(),
-        accepted_by_user_id: userId
+        accepted_at: new Date().toISOString()
       })
       .eq('id', invitationId)
 
     if (updateError) throw updateError
-
-    // 3. Seat count will be updated automatically by trigger
 
     return {
       success: true,
@@ -197,27 +175,15 @@ export async function signupAndAcceptInvitation(invitationData, password, fullNa
       throw new Error('Failed to create user account')
     }
 
-    // 2. Create profile (if not created automatically)
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: invitationData.email,
-        full_name: fullName,
-        role: 'learner',
-        created_at: new Date().toISOString()
-      })
-
-    if (profileError && profileError.code !== '23505') {
-      console.error('Profile creation error:', profileError)
-    }
-
-    // 3. Accept invitation
-    const acceptResult = await acceptInvitation(invitationData.id, authData.user.id)
+    // 2. Accept invitation with user data
+    const acceptResult = await acceptInvitation(
+      invitationData.id, 
+      authData.user.id,
+      invitationData.email,
+      fullName
+    )
 
     if (!acceptResult.success) {
-      // Rollback: Delete the auth user would be ideal, but we can't do that easily
-      // The user account will exist but won't be linked to institution
       return acceptResult
     }
 
@@ -253,8 +219,18 @@ export async function loginAndAcceptInvitation(email, password, invitationId) {
       throw new Error('Login failed')
     }
 
-    // 2. Accept invitation
-    const acceptResult = await acceptInvitation(invitationId, authData.user.id)
+    // Get user's full name from metadata
+    const fullName = authData.user.user_metadata?.full_name || 
+                     authData.user.user_metadata?.name || 
+                     email.split('@')[0]
+
+    // 2. Accept invitation with user data
+    const acceptResult = await acceptInvitation(
+      invitationId, 
+      authData.user.id,
+      email,
+      fullName
+    )
 
     return acceptResult
 

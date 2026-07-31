@@ -1,0 +1,274 @@
+.redeem-card {
+  max-width: 700px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 48px;
+  text-align: center;
+}
+
+.redeem-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: white;
+}
+
+.redeem-card h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+
+.redeem-subtitle {
+  font-size: 15px;
+  color: #666;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.redeem-form {
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.code-input {
+  font-size: 18px !important;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 2px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.btn-large {
+  padding: 16px 32px;
+  font-size: 16px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.redeem-info {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.redeem-info h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 16px;
+}
+
+.redeem-info ol {
+  margin: 0;
+  padding-left: 24px;
+  color: #666;
+  line-height: 2;
+}
+
+.redeem-info ol li {
+  margin-bottom: 8px;
+}
+
+/* Course Preview */
+.course-preview {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  border-radius: 12px;
+  margin-bottom: 32px;
+  text-align: left;
+  color: white;
+}
+
+.course-preview img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: white;
+}
+
+.course-preview-placeholder {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.course-preview-content {
+  flex: 1;
+}
+
+.course-preview-content h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: white;
+}
+
+.course-preview-content p {
+  font-size: 14px;
+  margin: 0 0 12px 0;
+  opacity: 0.9;
+}
+
+.course-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Verification Section */
+.verification-section {
+  text-align: left;
+}
+
+.verification-section h2 {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.verification-subtitle {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.verification-form .form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f7ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.info-box strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #0B4F9F;
+}
+
+/* Success State */
+.success-card {
+  padding: 60px 48px;
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  background: #10B981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  color: white;
+}
+
+.success-subtitle {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 32px;
+}
+
+.success-details {
+  max-width: 400px;
+  margin: 32px auto;
+  text-align: left;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #666;
+  font-size: 14px;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.pending {
+  background: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FB923C;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.button-group .btn {
+  min-width: 150px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .redeem-card {
+    padding: 32px 24px;
+  }
+
+  .course-preview {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group .btn {
+    width: 100%;
+  }
+}

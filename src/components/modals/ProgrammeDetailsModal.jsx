@@ -1,56 +1,120 @@
-import React, { useState } from 'react'
-import { X, BookOpen, Users, Calendar, TrendingUp, Download, Award, Clock } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, BookOpen, Users, Calendar, TrendingUp, Download, Award, Clock, ShoppingCart, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { supabase } from '../../lib/supabase'
 import './Modal.css'
 
 const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
   const [activeTab, setActiveTab] = useState('overview')
+  const [courseDetails, setCourseDetails] = useState(null)
+  const [lessons, setLessons] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [enrolledLearners, setEnrolledLearners] = useState([])
+
+  useEffect(() => {
+    if (isOpen && programme) {
+      fetchCourseDetails()
+    }
+  }, [isOpen, programme])
+
+  const fetchCourseDetails = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch full course details
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', programme.id)
+        .single()
+
+      if (courseError) throw courseError
+
+      setCourseDetails(courseData)
+
+      // Fetch lessons for this course
+      const { data: lessonsData, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('course_id', programme.id)
+        .order('order_index', { ascending: true })
+
+      if (lessonsError) {
+        console.log('No lessons found:', lessonsError)
+        setLessons([])
+      } else {
+        setLessons(lessonsData || [])
+      }
+
+      // Fetch enrolled learners
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('enrollments')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            full_name,
+            email,
+            avatar_url
+          )
+        `)
+        .eq('course_id', programme.id)
+
+      if (enrollmentsError) {
+        console.log('No enrollments found:', enrollmentsError)
+        setEnrolledLearners([])
+      } else {
+        setEnrolledLearners(enrollmentsData || [])
+      }
+
+    } catch (error) {
+      console.error('Error fetching course details:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePurchaseCourse = () => {
+    // This will be implemented later - for now just show an alert
+    alert(`Purchase flow for ${courseDetails?.title}\n\nPrice: ${courseDetails?.currency} ${courseDetails?.price}\n\nThis will open the purchase modal where you can:\n- Select number of seats\n- Complete payment\n- Generate enrollment codes\n\nComing soon!`)
+  }
 
   if (!isOpen || !programme) return null
 
-  // Mock data for progress by department
+  // Calculate real stats from enrolled learners
+  const totalEnrolled = enrolledLearners.length
+  const avgProgress = totalEnrolled > 0
+    ? Math.round(enrolledLearners.reduce((sum, e) => sum + (e.progress || 0), 0) / totalEnrolled)
+    : 0
+  const completedCount = enrolledLearners.filter(e => e.progress === 100).length
+  const inProgressCount = enrolledLearners.filter(e => e.progress > 0 && e.progress < 100).length
+  const notStartedCount = enrolledLearners.filter(e => e.progress === 0).length
+  const completionRate = totalEnrolled > 0 
+    ? Math.round((completedCount / totalEnrolled) * 100)
+    : 0
+
+  // Real completion distribution
+  const completionData = totalEnrolled > 0 ? [
+    { name: 'Completed', value: Math.round((completedCount / totalEnrolled) * 100), color: '#4caf50' },
+    { name: 'In Progress', value: Math.round((inProgressCount / totalEnrolled) * 100), color: '#2196f3' },
+    { name: 'Not Started', value: Math.round((notStartedCount / totalEnrolled) * 100), color: '#ff9800' }
+  ] : [
+    { name: 'Completed', value: 0, color: '#4caf50' },
+    { name: 'In Progress', value: 0, color: '#2196f3' },
+    { name: 'Not Started', value: 100, color: '#ff9800' }
+  ]
+
+  // Mock data for progress by department (can be enhanced later)
   const departmentProgress = [
-    { name: 'Credit & Risk', enrolled: 89, avgProgress: 75 },
-    { name: 'Finance', enrolled: 78, avgProgress: 68 },
-    { name: 'Operations', enrolled: 65, avgProgress: 72 },
-    { name: 'HR & Admin', enrolled: 42, avgProgress: 65 },
-    { name: 'IT', enrolled: 25, avgProgress: 80 }
+    { name: 'Credit & Risk', enrolled: Math.floor(totalEnrolled * 0.3), avgProgress: avgProgress + 5 },
+    { name: 'Finance', enrolled: Math.floor(totalEnrolled * 0.26), avgProgress: avgProgress - 2 },
+    { name: 'Operations', enrolled: Math.floor(totalEnrolled * 0.22), avgProgress: avgProgress + 3 },
+    { name: 'HR & Admin', enrolled: Math.floor(totalEnrolled * 0.14), avgProgress: avgProgress - 5 },
+    { name: 'IT', enrolled: Math.floor(totalEnrolled * 0.08), avgProgress: avgProgress + 10 }
   ]
 
-  // Mock completion distribution
-  const completionData = [
-    { name: 'Completed', value: 73, color: '#4caf50' },
-    { name: 'In Progress', value: 22, color: '#2196f3' },
-    { name: 'Not Started', value: 5, color: '#ff9800' }
-  ]
-
-  // Mock enrolled learners
-  const enrolledLearners = [
-    { id: 'RDB-1001', name: 'Juanee Mukamana', avatar: 'https://i.pravatar.cc/150?img=1', department: 'Credit & Risk', progress: 85, lastActive: '2 hours ago' },
-    { id: 'RDB-1002', name: 'Maria Ndayishimiye', avatar: 'https://i.pravatar.cc/150?img=5', department: 'Finance', progress: 72, lastActive: '1 day ago' },
-    { id: 'RDB-1003', name: 'Emmanuel Kaziwe', avatar: 'https://i.pravatar.cc/150?img=12', department: 'Operations', progress: 68, lastActive: '3 hours ago' },
-    { id: 'RDB-1004', name: 'Aline Cyuenza', avatar: 'https://i.pravatar.cc/150?img=9', department: 'HR & Admin', progress: 55, lastActive: '5 hours ago' },
-    { id: 'RDB-1005', name: 'Dieudonné Bahigize', avatar: 'https://i.pravatar.cc/150?img=13', department: 'IT', progress: 90, lastActive: '30 min ago' },
-  ]
-
-  // Mock upcoming sessions
-  const upcomingSessions = [
-    { date: 'May 08, 2026', time: '9:00 AM (EAT)', topic: 'Credit Risk Fundamentals', speaker: 'Dr. Anan Hakizimana', registered: 245 },
-    { date: 'May 15, 2026', time: '2:00 PM (EAT)', topic: 'Advanced Risk Analysis', speaker: 'Peace Uwase', registered: 198 },
-    { date: 'May 22, 2026', time: '3:00 PM (EAT)', topic: 'Portfolio Management', speaker: 'David Nkundanze', registered: 210 }
-  ]
-
-  // Mock courses in programme
-  const courses = [
-    { name: 'Introduction to Credit Risk', progress: 95, completed: 284, total: 299 },
-    { name: 'Credit Assessment Methods', progress: 88, completed: 263, total: 299 },
-    { name: 'Risk Mitigation Strategies', progress: 75, completed: 224, total: 299 },
-    { name: 'Financial Statement Analysis', progress: 68, completed: 203, total: 299 },
-    { name: 'Loan Portfolio Management', progress: 62, completed: 185, total: 299 },
-    { name: 'Regulatory Compliance', progress: 55, completed: 164, total: 299 },
-    { name: 'Advanced Credit Models', progress: 48, completed: 143, total: 299 },
-    { name: 'Case Studies & Capstone', progress: 35, completed: 104, total: 299 }
-  ]
+  // Check if course is paid
+  const isPaidCourse = courseDetails?.is_paid || parseFloat(courseDetails?.price || 0) > 0
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -71,12 +135,20 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
             </div>
             <div>
               <h2 style={{ marginBottom: '4px' }}>{programme.name}</h2>
-              <div style={{ display: 'flex', gap: '12px', fontSize: '14px', color: '#666' }}>
+              <div style={{ display: 'flex', gap: '12px', fontSize: '14px', color: '#666', flexWrap: 'wrap' }}>
                 <span>{programme.code}</span>
                 <span>•</span>
-                <span>{programme.dept}</span>
+                <span>{programme.invitedSpeaker}</span>
                 <span>•</span>
-                <span>{programme.enrolled} learners enrolled</span>
+                <span>{enrolledLearners.length} learners enrolled</span>
+                {isPaidCourse && (
+                  <>
+                    <span>•</span>
+                    <span style={{ color: '#0B4F9F', fontWeight: 600 }}>
+                      {courseDetails?.currency} {parseFloat(courseDetails?.price).toLocaleString()}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -95,30 +167,37 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
             Overview
           </button>
           <button 
+            className={`modal-tab ${activeTab === 'details' ? 'active' : ''}`}
+            onClick={() => setActiveTab('details')}
+          >
+            <BookOpen size={16} />
+            Course Details
+          </button>
+          <button 
             className={`modal-tab ${activeTab === 'learners' ? 'active' : ''}`}
             onClick={() => setActiveTab('learners')}
           >
             <Users size={16} />
-            Enrolled Learners ({programme.enrolled})
+            Enrolled Learners ({enrolledLearners.length})
           </button>
           <button 
-            className={`modal-tab ${activeTab === 'courses' ? 'active' : ''}`}
-            onClick={() => setActiveTab('courses')}
+            className={`modal-tab ${activeTab === 'lessons' ? 'active' : ''}`}
+            onClick={() => setActiveTab('lessons')}
           >
             <BookOpen size={16} />
-            Courses (8)
-          </button>
-          <button 
-            className={`modal-tab ${activeTab === 'sessions' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sessions')}
-          >
-            <Calendar size={16} />
-            Live Sessions (3)
+            Lessons ({lessons.length})
           </button>
         </div>
 
         {/* Body */}
         <div className="modal-body">
+          {loading ? (
+            <div style={{ padding: '60px', textAlign: 'center' }}>
+              <div className="spinner" style={{ width: '48px', height: '48px', margin: '0 auto 16px', border: '4px solid #f3f3f3', borderTop: '4px solid #0B4F9F', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ color: '#666' }}>Loading course details...</p>
+            </div>
+          ) : (
+            <>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div>
@@ -128,7 +207,7 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div>
                       <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>Total Enrolled</div>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#0B4F9F' }}>{programme.enrolled}</div>
+                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#0B4F9F' }}>{enrolledLearners.length}</div>
                     </div>
                     <Users size={24} color="#0B4F9F" />
                   </div>
@@ -138,7 +217,7 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div>
                       <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>Avg Progress</div>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#4caf50' }}>{programme.progress}</div>
+                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#4caf50' }}>{avgProgress}%</div>
                     </div>
                     <TrendingUp size={24} color="#4caf50" />
                   </div>
@@ -148,7 +227,7 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div>
                       <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>Completion Rate</div>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#ff9800' }}>{programme.completionRate}</div>
+                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#ff9800' }}>{completionRate}%</div>
                     </div>
                     <Award size={24} color="#ff9800" />
                   </div>
@@ -157,10 +236,10 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                 <div className="details-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                     <div>
-                      <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>Active Learners</div>
-                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#2196f3' }}>264</div>
+                      <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>Total Lessons</div>
+                      <div style={{ fontSize: '28px', fontWeight: '700', color: '#2196f3' }}>{lessons.length}</div>
                     </div>
-                    <Clock size={24} color="#2196f3" />
+                    <BookOpen size={24} color="#2196f3" />
                   </div>
                 </div>
               </div>
@@ -209,22 +288,102 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                 </div>
               </div>
 
-              {/* Next Live Session */}
-              <div className="details-card" style={{ marginTop: '20px', background: '#f0f7ff', border: '2px solid #0B4F9F' }}>
-                <h3 className="details-card-title" style={{ color: '#0B4F9F' }}>Next Live Session</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                  <div>
-                    <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>
-                      {programme.upcomingSession}
+              {/* Course Info Card */}
+              {courseDetails && (
+                <div className="details-card" style={{ marginTop: '20px' }}>
+                  <h3 className="details-card-title">Course Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Level</div>
+                      <div style={{ fontSize: '16px', fontWeight: '600', textTransform: 'capitalize' }}>{courseDetails.level}</div>
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666' }}>
-                      Speaker: {programme.invitedSpeaker}
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Language</div>
+                      <div style={{ fontSize: '16px', fontWeight: '600' }}>{courseDetails.language}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Duration</div>
+                      <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                        {Math.round(courseDetails.total_duration_seconds / 60)} minutes
+                      </div>
                     </div>
                   </div>
-                  <button className="btn btn-primary">
-                    <Calendar size={16} />
-                    View Details
-                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Course Details Tab */}
+          {activeTab === 'details' && courseDetails && (
+            <div>
+              <div className="details-card">
+                {courseDetails.thumbnail_url && (
+                  <img 
+                    src={courseDetails.thumbnail_url}
+                    alt={courseDetails.title}
+                    style={{
+                      width: '100%',
+                      height: '300px',
+                      objectFit: 'cover',
+                      borderRadius: '12px',
+                      marginBottom: '24px'
+                    }}
+                  />
+                )}
+
+                <h3 style={{ marginBottom: '12px' }}>Description</h3>
+                <p style={{ color: '#666', lineHeight: '1.8', marginBottom: '24px' }}>
+                  {courseDetails.description || 'No description available'}
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #e0e0e0' }}>
+                  <div>
+                    <h4 style={{ marginBottom: '12px' }}>Course Details</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Instructor:</span>
+                        <span style={{ fontWeight: '600' }}>{courseDetails.instructor_name}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Category:</span>
+                        <span style={{ fontWeight: '600' }}>{courseDetails.category}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Level:</span>
+                        <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>{courseDetails.level}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Language:</span>
+                        <span style={{ fontWeight: '600' }}>{courseDetails.language}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 style={{ marginBottom: '12px' }}>Stats & Pricing</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Total Lessons:</span>
+                        <span style={{ fontWeight: '600' }}>{courseDetails.total_lessons}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Duration:</span>
+                        <span style={{ fontWeight: '600' }}>
+                          {Math.floor(courseDetails.total_duration_seconds / 3600)}h {Math.floor((courseDetails.total_duration_seconds % 3600) / 60)}m
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Enrollments:</span>
+                        <span style={{ fontWeight: '600' }}>{courseDetails.enrollment_count}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#666' }}>Price:</span>
+                        <span style={{ fontWeight: '700', color: '#0B4F9F', fontSize: '18px' }}>
+                          {isPaidCourse ? `${courseDetails.currency} ${parseFloat(courseDetails.price).toLocaleString()}` : 'FREE'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -237,7 +396,7 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                 <div>
                   <h3 style={{ margin: 0 }}>Enrolled Learners</h3>
                   <p style={{ margin: '4px 0 0', color: '#666', fontSize: '14px' }}>
-                    {enrolledLearners.length} learners shown (showing first 5)
+                    {enrolledLearners.length} learners enrolled in this course
                   </p>
                 </div>
                 <button className="btn btn-outline btn-sm">
@@ -246,26 +405,32 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                 </button>
               </div>
 
+              {enrolledLearners.length === 0 ? (
+                <div style={{ padding: '60px', textAlign: 'center' }}>
+                  <Users size={48} style={{ color: '#ccc', margin: '0 auto 16px' }} />
+                  <h3 style={{ marginBottom: '8px', color: '#666' }}>No Learners Enrolled</h3>
+                  <p style={{ color: '#999' }}>Assign this course to employees or generate enrollment codes to get started.</p>
+                </div>
+              ) : (
               <div className="table-container">
                 <table>
                   <thead>
                     <tr>
                       <th>Learner</th>
-                      <th>Employee ID</th>
-                      <th>Department</th>
+                      <th>Email</th>
                       <th>Progress</th>
-                      <th>Last Active</th>
+                      <th>Enrolled Date</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {enrolledLearners.map((learner) => (
-                      <tr key={learner.id}>
+                    {enrolledLearners.slice(0, 10).map((enrollment) => (
+                      <tr key={enrollment.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <img 
-                              src={learner.avatar} 
-                              alt={learner.name}
+                              src={enrollment.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${enrollment.user_id}`}
+                              alt={enrollment.profiles?.full_name}
                               style={{
                                 width: '36px',
                                 height: '36px',
@@ -273,23 +438,22 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                                 objectFit: 'cover'
                               }}
                             />
-                            <span style={{ fontWeight: '500' }}>{learner.name}</span>
+                            <span style={{ fontWeight: '500' }}>{enrollment.profiles?.full_name || 'Learner'}</span>
                           </div>
                         </td>
-                        <td>{learner.id}</td>
-                        <td>{learner.department}</td>
+                        <td>{enrollment.profiles?.email}</td>
                         <td>
                           <div className="progress-cell">
                             <div className="progress-bar">
                               <div 
                                 className="progress-fill" 
-                                style={{width: `${learner.progress}%`}}
+                                style={{width: `${enrollment.progress || 0}%`}}
                               ></div>
                             </div>
-                            <span className="progress-text">{learner.progress}%</span>
+                            <span className="progress-text">{enrollment.progress || 0}%</span>
                           </div>
                         </td>
-                        <td>{learner.lastActive}</td>
+                        <td>{new Date(enrollment.enrolled_at).toLocaleDateString()}</td>
                         <td>
                           <button className="btn btn-outline btn-sm">View</button>
                         </td>
@@ -298,120 +462,83 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           )}
 
-          {/* Courses Tab */}
-          {activeTab === 'courses' && (
+          {/* Lessons Tab */}
+          {activeTab === 'lessons' && (
             <div>
               <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ margin: 0 }}>Programme Courses</h3>
+                <h3 style={{ margin: 0 }}>Course Lessons</h3>
                 <p style={{ margin: '4px 0 0', color: '#666', fontSize: '14px' }}>
-                  8 courses in this programme
+                  {lessons.length} lessons in this course
                 </p>
               </div>
 
+              {lessons.length === 0 ? (
+                <div style={{ padding: '60px', textAlign: 'center' }}>
+                  <BookOpen size={48} style={{ color: '#ccc', margin: '0 auto 16px' }} />
+                  <h3 style={{ marginBottom: '8px', color: '#666' }}>No Lessons Available</h3>
+                  <p style={{ color: '#999' }}>The trainer hasn't added lessons to this course yet.</p>
+                </div>
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {courses.map((course, index) => (
-                  <div key={index} className="details-card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ 
-                            background: '#e8f4fd', 
-                            color: '#0B4F9F', 
-                            padding: '2px 8px', 
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            fontWeight: '600'
-                          }}>
-                            Course {index + 1}
-                          </span>
-                          <h4 style={{ margin: 0 }}>{course.name}</h4>
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#666' }}>
-                          {course.completed} of {course.total} learners completed
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#0B4F9F' }}>
-                        {course.progress}%
-                      </div>
-                    </div>
+                {lessons.map((lesson, index) => {
+                  // Calculate how many learners completed this lesson
+                  const completedCount = 0 // This would need lesson_progress table
+                  const progressPercent = enrolledLearners.length > 0 
+                    ? Math.round((completedCount / enrolledLearners.length) * 100)
+                    : 0
 
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{width: `${course.progress}%`}}
-                      ></div>
+                  return (
+                    <div key={lesson.id} className="details-card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ 
+                              background: '#e8f4fd', 
+                              color: '#0B4F9F', 
+                              padding: '2px 8px', 
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              Lesson {index + 1}
+                            </span>
+                            <h4 style={{ margin: 0 }}>{lesson.title}</h4>
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#666' }}>
+                            {lesson.description || 'No description available'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                            Duration: {lesson.duration_seconds ? `${Math.round(lesson.duration_seconds / 60)} minutes` : 'N/A'}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#0B4F9F' }}>
+                            {progressPercent}%
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            completed
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="progress-bar">
+                        <div 
+                          className="progress-fill" 
+                          style={{width: `${progressPercent}%`}}
+                        ></div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+              )}
             </div>
           )}
-
-          {/* Sessions Tab */}
-          {activeTab === 'sessions' && (
-            <div>
-              <div style={{ marginBottom: '20px' }}>
-                <h3 style={{ margin: 0 }}>Upcoming Live Sessions</h3>
-                <p style={{ margin: '4px 0 0', color: '#666', fontSize: '14px' }}>
-                  {upcomingSessions.length} sessions scheduled
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {upcomingSessions.map((session, index) => (
-                  <div key={index} className="details-card">
-                    <div style={{ display: 'flex', gap: '20px' }}>
-                      <div style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '12px',
-                        background: '#0B4F9F',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        flexShrink: 0
-                      }}>
-                        <div style={{ fontSize: '24px', fontWeight: '700' }}>
-                          {session.date.split(' ')[1].replace(',', '')}
-                        </div>
-                        <div style={{ fontSize: '12px' }}>
-                          {session.date.split(' ')[0]}
-                        </div>
-                      </div>
-
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ margin: '0 0 8px 0' }}>{session.topic}</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '14px', color: '#666' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Clock size={16} />
-                            <span>{session.time}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Users size={16} />
-                            <span>Speaker: {session.speaker}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Award size={16} />
-                            <span>{session.registered} learners registered</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <button className="btn btn-primary">
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            </>
           )}
         </div>
 
@@ -421,17 +548,19 @@ const ProgrammeDetailsModal = ({ isOpen, onClose, programme }) => {
             Close
           </button>
           <div style={{ display: 'flex', gap: '12px' }}>
+            {isPaidCourse && courseDetails && (
+              <button className="btn btn-primary" onClick={handlePurchaseCourse} style={{ background: '#10B981' }}>
+                <ShoppingCart size={16} />
+                Purchase Course - {courseDetails.currency} {parseFloat(courseDetails.price).toLocaleString()}
+              </button>
+            )}
+            <button className="btn btn-outline">
+              <Users size={16} />
+              Assign to Learners
+            </button>
             <button className="btn btn-outline">
               <Download size={16} />
               Export Report
-            </button>
-            <button className="btn btn-outline">
-              <Users size={16} />
-              Manage Learners
-            </button>
-            <button className="btn btn-primary">
-              <Calendar size={16} />
-              Schedule Session
             </button>
           </div>
         </div>

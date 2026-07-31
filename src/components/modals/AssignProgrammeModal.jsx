@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import './Modal.css'
 
 const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = [], institutionId }) => {
-  const [assignmentType, setAssignmentType] = useState('all') // 'all', 'department', 'cohort', 'individual'
+  const [assignmentType, setAssignmentType] = useState('all') // 'all', 'department', 'cohort', 'individual', 'email'
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [cohort, setCohort] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -18,6 +18,11 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  
+  // Email-based assignment
+  const [emailInput, setEmailInput] = useState('')
+  const [emailList, setEmailList] = useState([]) // Array of { email, name, employeeId, department, jobTitle, exists, learnerId }
+  const [checkingEmails, setCheckingEmails] = useState(false)
   
   // Data from database
   const [courses, setCourses] = useState([])
@@ -39,49 +44,68 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
       // Fetch published courses
       const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
-        .select(`
-          *,
-          profiles:trainer_id (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('status', 'published')
         .order('created_at', { ascending: false })
 
-      if (coursesError) throw coursesError
+      if (coursesError) {
+        console.error('Courses error:', coursesError)
+        throw coursesError
+      }
       setCourses(coursesData || [])
 
       // Fetch institution learners
       const { data: learnersData, error: learnersError } = await supabase
         .from('institution_learners')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email,
-            avatar_url
-          ),
-          institution_departments:department_id (
-            name
-          )
-        `)
+        .select('*')
         .eq('institution_id', institutionId)
         .eq('status', 'active')
         .order('enrolled_at', { ascending: false })
 
-      if (learnersError) throw learnersError
+      if (learnersError) {
+        console.error('Learners error:', learnersError)
+        throw learnersError
+      }
       
-      const transformedLearners = (learnersData || []).map(learner => ({
-        id: learner.id,
-        userId: learner.user_id,
-        name: learner.profiles?.full_name || 'Unknown',
-        email: learner.profiles?.email || '',
-        avatar: learner.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${learner.user_id}`,
-        department: learner.institution_departments?.name || 'Unassigned',
-        departmentId: learner.department_id,
-        employeeId: learner.employee_id
-      }))
-      setLearners(transformedLearners)
+      // Get user details for each learner
+      const learnersWithDetails = await Promise.all(
+        (learnersData || []).map(async (learner) => {
+          // Get user email from auth.users
+          const { data: userData } = await supabase
+            .from('auth.users')
+            .select('email, raw_user_meta_data')
+            .eq('id', learner.user_id)
+            .single()
+
+          const userName = userData?.raw_user_meta_data?.full_name || userData?.email || 'Unknown'
+          const userEmail = userData?.email || ''
+
+          // Get department name if exists
+          let departmentName = 'Unassigned'
+          if (learner.department_id) {
+            const { data: deptData } = await supabase
+              .from('institution_departments')
+              .select('name')
+              .eq('id', learner.department_id)
+              .single()
+            departmentName = deptData?.name || 'Unassigned'
+          }
+
+          return {
+            id: learner.id,
+            userId: learner.user_id,
+            name: userName,
+            email: userEmail,
+            avatar: `https://i.pravatar.cc/150?u=${learner.user_id}`,
+            department: departmentName,
+            departmentId: learner.department_id,
+            employeeId: learner.employee_id,
+            jobTitle: learner.job_title || null
+          }
+        })
+      )
+      
+      setLearners(learnersWithDetails)
 
       // Fetch departments
       const { data: deptsData, error: deptsError } = await supabase
@@ -90,7 +114,9 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
         .eq('institution_id', institutionId)
         .order('name')
 
-      if (deptsError && deptsError.code !== 'PGRST116') throw deptsError
+      if (deptsError && deptsError.code !== 'PGRST116') {
+        console.error('Departments error:', deptsError)
+      }
       setDepartments(deptsData || [])
 
       // Fetch cohorts
@@ -100,7 +126,9 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
         .eq('institution_id', institutionId)
         .order('name')
 
-      if (cohortsError && cohortsError.code !== 'PGRST116') throw cohortsError
+      if (cohortsError && cohortsError.code !== 'PGRST116') {
+        console.error('Cohorts error:', cohortsError)
+      }
       setCohorts(cohortsData || [])
 
     } catch (err) {
@@ -118,6 +146,86 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
     (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
+  // Email validation
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return re.test(email.toLowerCase())
+  }
+
+  // Check if emails exist in the system
+  const checkEmployeeEmails = async (emails) => {
+    setCheckingEmails(true)
+    const results = []
+    
+    for (const emailData of emails) {
+      try {
+        const { data, error } = await supabase
+          .rpc('check_employee_exists', {
+            p_institution_id: institutionId,
+            p_email: emailData.email
+          })
+        
+        if (error) throw error
+        
+        const exists = data && data.length > 0 && data[0].employee_exists
+        results.push({
+          ...emailData,
+          exists: exists,
+          learnerId: exists ? data[0].learner_id : null,
+          userId: exists ? data[0].user_id : null,
+          fullName: exists ? data[0].full_name : emailData.name
+        })
+      } catch (err) {
+        console.error('Error checking email:', emailData.email, err)
+        results.push({
+          ...emailData,
+          exists: false,
+          learnerId: null
+        })
+      }
+    }
+    
+    setCheckingEmails(false)
+    return results
+  }
+
+  // Add email to list
+  const handleAddEmail = async () => {
+    const trimmedEmail = emailInput.trim().toLowerCase()
+    
+    if (!trimmedEmail) return
+    
+    if (!validateEmail(trimmedEmail)) {
+      setError('Please enter a valid email address')
+      return
+    }
+    
+    // Check if already in list
+    if (emailList.find(e => e.email === trimmedEmail)) {
+      setError('This email is already in the list')
+      return
+    }
+    
+    // Check if email exists
+    const checked = await checkEmployeeEmails([{ email: trimmedEmail, name: '', employeeId: '', department: '', jobTitle: '' }])
+    
+    setEmailList(prev => [...prev, checked[0]])
+    setEmailInput('')
+    setError(null)
+  }
+
+  // Remove email from list
+  const handleRemoveEmail = (email) => {
+    setEmailList(prev => prev.filter(e => e.email !== email))
+  }
+
+  // Update email data
+  const handleUpdateEmailData = (email, field, value) => {
+    setEmailList(prev => prev.map(e => 
+      e.email === email ? { ...e, [field]: value } : e
+    ))
+  }
+
   // Filter learners based on selected department and assignment type
   const getTargetLearners = () => {
     switch (assignmentType) {
@@ -130,13 +238,15 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
         return learners
       case 'individual':
         return learners.filter(l => learnerSelection.includes(l.id))
+      case 'email':
+        return [] // Email-based doesn't use learner list
       default:
         return []
     }
   }
 
   const targetLearners = getTargetLearners()
-  const targetCount = targetLearners.length
+  const targetCount = assignmentType === 'email' ? emailList.length : targetLearners.length
 
   const handleLearnerToggle = (learnerId) => {
     setLearnerSelection(prev => 
@@ -170,7 +280,7 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
     }
 
     if (targetCount === 0) {
-      setError('Please select at least one learner')
+      setError('Please select at least one learner or enter email addresses')
       return
     }
 
@@ -182,6 +292,107 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
     setSubmitting(true)
 
     try {
+      const currentUser = (await supabase.auth.getUser()).data.user
+
+      // EMAIL-BASED ASSIGNMENT
+      if (assignmentType === 'email') {
+        const existingEmployees = emailList.filter(e => e.exists)
+        const newEmployees = emailList.filter(e => !e.exists)
+
+        // 1. Assign to existing employees directly
+        if (existingEmployees.length > 0) {
+          const enrollments = existingEmployees.map(emp => ({
+            institution_id: institutionId,
+            learner_id: emp.learnerId,
+            course_id: selectedCourse.id,
+            enrolled_via: 'email_assignment',
+            status: 'not_started',
+            progress_percentage: 0,
+            due_date: dueDate || null,
+            is_mandatory: isMandatory,
+            enrolled_at: new Date().toISOString(),
+            employee_id: emp.employeeId || null,
+            department: emp.department || null,
+            job_title: emp.jobTitle || null,
+            employee_verified: true,
+            verified_at: new Date().toISOString(),
+            verified_by: currentUser.id
+          }))
+
+          const { error: enrollError } = await supabase
+            .from('learner_institutional_enrollments')
+            .insert(enrollments)
+
+          if (enrollError) throw enrollError
+
+          // Create notifications for existing employees
+          if (sendNotification) {
+            const notifications = existingEmployees.map(emp => ({
+              institution_id: institutionId,
+              recipient_user_id: emp.userId,
+              type: 'course_assigned',
+              title: `New ${isMandatory ? 'Mandatory' : ''} Course Assigned`,
+              message: customMessage || `You have been assigned the course: ${selectedCourse.title}`,
+              link: `/learner/courses/${selectedCourse.id}`,
+              status: 'pending',
+              send_email: true,
+              context: {
+                course_id: selectedCourse.id,
+                course_title: selectedCourse.title,
+                due_date: dueDate,
+                is_mandatory: isMandatory
+              }
+            }))
+
+            await supabase
+              .from('institution_notifications')
+              .insert(notifications)
+          }
+        }
+
+        // 2. Create pending assignments for new employees
+        if (newEmployees.length > 0) {
+          const pendingAssignments = newEmployees.map(emp => ({
+            institution_id: institutionId,
+            course_id: selectedCourse.id,
+            employee_email: emp.email,
+            employee_name: emp.name || null,
+            employee_id: emp.employeeId || null,
+            department_id: departments.find(d => d.name === emp.department)?.id || null,
+            job_title: emp.jobTitle || null,
+            start_date: startDate,
+            due_date: dueDate || null,
+            is_mandatory: isMandatory,
+            custom_message: customMessage || null,
+            assigned_by: currentUser.id,
+            status: 'pending'
+          }))
+
+          const { error: pendingError } = await supabase
+            .from('pending_course_assignments')
+            .insert(pendingAssignments)
+
+          if (pendingError) throw pendingError
+        }
+
+        // Success message
+        const assignedCount = existingEmployees.length
+        const pendingCount = newEmployees.length
+        
+        if (onAssign) {
+          await onAssign({
+            courseId: selectedCourse.id,
+            assignedCount,
+            pendingCount,
+            totalCount: targetCount
+          })
+        }
+
+        onClose()
+        return
+      }
+
+      // TRADITIONAL ASSIGNMENT (existing code)
       // 1. Create course assignment record
       const { data: assignment, error: assignmentError } = await supabase
         .from('institution_course_assignments')
@@ -198,14 +409,14 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
           send_notification: sendNotification,
           custom_message: customMessage.trim() || null,
           total_assigned: targetCount,
-          assigned_by: (await supabase.auth.getUser()).data.user.id
+          assigned_by: currentUser.id
         })
         .select()
         .single()
 
       if (assignmentError) throw assignmentError
 
-      // 2. Create enrollments for each learner
+      // 2. Create enrollments for each learner WITH employee tracking data
       const enrollments = targetLearners.map(learner => ({
         institution_id: institutionId,
         learner_id: learner.id,
@@ -215,7 +426,14 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
         status: 'not_started',
         progress_percentage: 0,
         due_date: dueDate || null,
-        enrolled_at: new Date().toISOString()
+        enrolled_at: new Date().toISOString(),
+        // Employee tracking data for analytics
+        employee_id: learner.employeeId || null,
+        department: learner.department || null,
+        job_title: learner.jobTitle || null,
+        employee_verified: !!(learner.employeeId), // Verified if we have employee ID
+        verified_at: learner.employeeId ? new Date().toISOString() : null,
+        verified_by: learner.employeeId ? currentUser.id : null
       }))
 
       const { error: enrollmentsError } = await supabase
@@ -399,7 +617,11 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
                     <option value="department">Specific Department</option>
                     <option value="cohort">Specific Cohort</option>
                     <option value="individual">Select Individuals</option>
+                    <option value="email">By Email (Like Coursera)</option>
                   </select>
+                  <small className="form-hint">
+                    {assignmentType === 'email' && 'Enter employee emails - invitations will be sent to those without accounts'}
+                  </small>
                 </div>
 
                 {assignmentType === 'department' && (
@@ -512,6 +734,177 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
                   </div>
                 )}
 
+                {assignmentType === 'email' && (
+                  <div>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label className="form-label">Enter Employee Emails</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="email"
+                          value={emailInput}
+                          onChange={(e) => setEmailInput(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEmail())}
+                          className="form-input"
+                          placeholder="employee@company.com"
+                          style={{ flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddEmail}
+                          className="btn btn-secondary"
+                          disabled={checkingEmails || !emailInput.trim()}
+                        >
+                          {checkingEmails ? <Loader size={16} className="spinner" /> : 'Add'}
+                        </button>
+                      </div>
+                      <small className="form-hint">
+                        Press Enter or click Add. We'll check if they have accounts.
+                      </small>
+                    </div>
+
+                    {emailList.length > 0 && (
+                      <div style={{ 
+                        border: '1px solid #e0e0e0', 
+                        borderRadius: '8px',
+                        background: 'white',
+                        marginBottom: '16px'
+                      }}>
+                        <div style={{ 
+                          padding: '12px 16px', 
+                          borderBottom: '1px solid #e0e0e0',
+                          background: '#f8f9fa',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <strong>{emailList.length} employee{emailList.length !== 1 ? 's' : ''}</strong>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {emailList.filter(e => e.exists).length} existing, {emailList.filter(e => !e.exists).length} new (will receive invitation)
+                          </div>
+                        </div>
+
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                          {emailList.map((emp, index) => (
+                            <div
+                              key={emp.email}
+                              style={{
+                                padding: '12px 16px',
+                                borderBottom: index < emailList.length - 1 ? '1px solid #f0f0f0' : 'none'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                    <Mail size={16} style={{ color: '#666' }} />
+                                    <strong style={{ fontSize: '14px' }}>{emp.email}</strong>
+                                    {emp.exists ? (
+                                      <span style={{ 
+                                        fontSize: '11px', 
+                                        padding: '2px 8px', 
+                                        background: '#10B981', 
+                                        color: 'white', 
+                                        borderRadius: '4px',
+                                        fontWeight: '600'
+                                      }}>
+                                        ✓ Has Account
+                                      </span>
+                                    ) : (
+                                      <span style={{ 
+                                        fontSize: '11px', 
+                                        padding: '2px 8px', 
+                                        background: '#F59E0B', 
+                                        color: 'white', 
+                                        borderRadius: '4px',
+                                        fontWeight: '600'
+                                      }}>
+                                        ⓘ Will Send Invitation
+                                      </span>
+                                    )}
+                                  </div>
+                                  {emp.exists && emp.fullName && (
+                                    <div style={{ fontSize: '12px', color: '#666', marginLeft: '24px' }}>
+                                      {emp.fullName}
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEmail(emp.email)}
+                                  style={{
+                                    padding: '4px 8px',
+                                    background: 'transparent',
+                                    border: '1px solid #e0e0e0',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    color: '#DC2626'
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+
+                              {!emp.exists && (
+                                <div style={{ marginLeft: '24px', marginTop: '8px' }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                                    <input
+                                      type="text"
+                                      placeholder="Full Name (optional)"
+                                      value={emp.name || ''}
+                                      onChange={(e) => handleUpdateEmailData(emp.email, 'name', e.target.value)}
+                                      style={{
+                                        padding: '6px 8px',
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '4px',
+                                        fontSize: '12px'
+                                      }}
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Employee ID (optional)"
+                                      value={emp.employeeId || ''}
+                                      onChange={(e) => handleUpdateEmailData(emp.email, 'employeeId', e.target.value)}
+                                      style={{
+                                        padding: '6px 8px',
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '4px',
+                                        fontSize: '12px'
+                                      }}
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Department (optional)"
+                                      value={emp.department || ''}
+                                      onChange={(e) => handleUpdateEmailData(emp.email, 'department', e.target.value)}
+                                      style={{
+                                        padding: '6px 8px',
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '4px',
+                                        fontSize: '12px'
+                                      }}
+                                    />
+                                    <input
+                                      type="text"
+                                      placeholder="Job Title (optional)"
+                                      value={emp.jobTitle || ''}
+                                      onChange={(e) => handleUpdateEmailData(emp.email, 'jobTitle', e.target.value)}
+                                      style={{
+                                        padding: '6px 8px',
+                                        border: '1px solid #e0e0e0',
+                                        borderRadius: '4px',
+                                        fontSize: '12px'
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div style={{ marginTop: '12px', padding: '12px', background: '#f0f7ff', borderRadius: '6px' }}>
                   <strong style={{ color: '#0B4F9F' }}>
                     {targetCount} employee{targetCount !== 1 ? 's' : ''} will be assigned this course
@@ -611,6 +1004,27 @@ const AssignProgrammeModal = ({ isOpen, onClose, onAssign, selectedLearners = []
                     <span>Total Cost:</span>
                     <span style={{ color: '#EA580C' }}>{calculateTotalCost().toLocaleString()} RWF</span>
                   </div>
+                  <div style={{ marginTop: '12px', padding: '8px', background: '#FFF', borderRadius: '4px', fontSize: '12px', color: '#666' }}>
+                    ⚠️ <strong>For Testing:</strong> Payment integration is disabled. Course will be assigned without payment.
+                  </div>
+                </div>
+              )}
+
+              {/* FREE Course Notice */}
+              {selectedCourse && selectedCourse.price === 0 && targetCount > 0 && (
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#ECFDF5', 
+                  border: '2px solid #10B981',
+                  borderRadius: '8px',
+                  marginBottom: '16px'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: 600, color: '#059669' }}>
+                    ✅ FREE Course
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#047857' }}>
+                    This course is free. You can assign it to {targetCount} employee{targetCount !== 1 ? 's' : ''} at no cost!
+                  </p>
                 </div>
               )}
             </div>

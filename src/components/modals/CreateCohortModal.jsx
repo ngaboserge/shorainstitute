@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { X, Users, BookOpen, Calendar, Building } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { X, Users, BookOpen, Calendar, Building, Loader } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 import './Modal.css'
 
 const CreateCohortModal = ({ isOpen, onClose, onCreate, institutionId }) => {
@@ -12,17 +13,72 @@ const CreateCohortModal = ({ isOpen, onClose, onCreate, institutionId }) => {
   const [description, setDescription] = useState('')
   const [maxLearners, setMaxLearners] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [loadingCourses, setLoadingCourses] = useState(false)
+  const [availableProgrammes, setAvailableProgrammes] = useState([])
+  const [departments, setDepartments] = useState([])
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCourses()
+      fetchDepartments()
+    }
+  }, [isOpen])
+
+  const fetchCourses = async () => {
+    try {
+      setLoadingCourses(true)
+      
+      // Use the same query that works on Programmes page
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('status', 'published')
+        .order('title')
+
+      if (error) {
+        console.error('Error fetching courses:', error)
+        throw error
+      }
+
+      console.log('Fetched courses for cohort modal:', data)
+
+      // Transform courses to have the right structure
+      const transformedCourses = (data || []).map(course => ({
+        id: course.id,
+        title: course.title,
+        category: course.category || 'General',
+        duration: course.duration || null,
+        description: course.description,
+        instructor_name: course.instructor_name || 'Unknown Instructor'
+      }))
+
+      setAvailableProgrammes(transformedCourses)
+    } catch (error) {
+      console.error('Error fetching courses:', error)
+      setAvailableProgrammes([])
+    } finally {
+      setLoadingCourses(false)
+    }
+  }
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('institution_departments')
+        .select('id, name')
+        .eq('institution_id', institutionId)
+        .order('name')
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      setDepartments(data || [])
+    } catch (error) {
+      console.error('Error fetching departments:', error)
+      setDepartments([])
+    }
+  }
 
   if (!isOpen) return null
-
-  // Mock programmes
-  const availableProgrammes = [
-    { id: 'prog-1', name: 'Financial Foundation', duration: '6 months' },
-    { id: 'prog-2', name: 'Financial Planning Basics', duration: '4 months' },
-    { id: 'prog-3', name: 'Investment Foundations', duration: '5 months' },
-    { id: 'prog-4', name: 'Capital Markets Essentials', duration: '7 months' },
-    { id: 'prog-5', name: 'Risk Management Basics', duration: '3 months' }
-  ]
 
   const generateCohortCode = () => {
     const name = cohortName.trim()
@@ -174,28 +230,54 @@ const CreateCohortModal = ({ isOpen, onClose, onCreate, institutionId }) => {
 
               <div className="form-group">
                 <label>Select Programme *</label>
-                <select
-                  value={selectedProgramme}
-                  onChange={(e) => setSelectedProgramme(e.target.value)}
-                  required
-                >
-                  <option value="">Choose a programme...</option>
-                  {availableProgrammes.map(prog => (
-                    <option key={prog.id} value={prog.id}>
-                      {prog.name} ({prog.duration})
-                    </option>
-                  ))}
-                </select>
+                {loadingCourses ? (
+                  <div style={{ padding: '20px', textAlign: 'center' }}>
+                    <Loader size={24} className="spinner" style={{ margin: '0 auto' }} />
+                    <p style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>Loading courses...</p>
+                  </div>
+                ) : availableProgrammes.length === 0 ? (
+                  <div style={{ padding: '20px', textAlign: 'center', border: '1px dashed #ccc', borderRadius: '8px' }}>
+                    <BookOpen size={32} style={{ color: '#ccc', margin: '0 auto 8px' }} />
+                    <p style={{ color: '#666', fontSize: '14px', margin: 0 }}>
+                      No published courses available. Trainers need to publish courses first.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedProgramme}
+                      onChange={(e) => setSelectedProgramme(e.target.value)}
+                      required
+                    >
+                      <option value="">Choose a course...</option>
+                      {availableProgrammes.map(prog => (
+                        <option key={prog.id} value={prog.id}>
+                          {prog.title} {prog.duration ? `(${prog.duration})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="form-hint">
+                      {availableProgrammes.length} course{availableProgrammes.length !== 1 ? 's' : ''} available
+                    </small>
+                  </>
+                )}
               </div>
 
-              {selectedProgramme && (
+              {selectedProgramme && availableProgrammes.length > 0 && (
                 <div className="info-box">
                   <strong>
-                    {availableProgrammes.find(p => p.id === selectedProgramme)?.name}
+                    {availableProgrammes.find(p => p.id === selectedProgramme)?.title}
                   </strong>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px' }}>
-                    Duration: {availableProgrammes.find(p => p.id === selectedProgramme)?.duration}
-                  </p>
+                  {availableProgrammes.find(p => p.id === selectedProgramme)?.duration && (
+                    <p style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                      Duration: {availableProgrammes.find(p => p.id === selectedProgramme)?.duration}
+                    </p>
+                  )}
+                  {availableProgrammes.find(p => p.id === selectedProgramme)?.category && (
+                    <p style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                      Category: {availableProgrammes.find(p => p.id === selectedProgramme)?.category}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -214,11 +296,19 @@ const CreateCohortModal = ({ isOpen, onClose, onCreate, institutionId }) => {
                   onChange={(e) => setDepartment(e.target.value)}
                 >
                   <option value="">All Departments</option>
-                  <option value="Finance">Finance</option>
-                  <option value="HR & Admin">HR & Admin</option>
-                  <option value="Operations">Operations</option>
-                  <option value="IT">IT</option>
-                  <option value="Credit & Risk">Credit & Risk</option>
+                  {departments.length > 0 ? (
+                    departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Finance">Finance</option>
+                      <option value="HR & Admin">HR & Admin</option>
+                      <option value="Operations">Operations</option>
+                      <option value="IT">IT</option>
+                      <option value="Credit & Risk">Credit & Risk</option>
+                    </>
+                  )}
                 </select>
                 <small className="form-hint">Restrict cohort to specific department</small>
               </div>

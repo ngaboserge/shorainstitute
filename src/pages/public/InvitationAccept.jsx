@@ -119,10 +119,10 @@ const InvitationAccept = () => {
         return
       }
 
-      // Success! Redirect to learner dashboard
-      navigate('/learner/seminars', {
+      // Success! Redirect to courses page where they can see assigned courses
+      navigate('/learner/courses', {
         state: {
-          message: `Welcome to ${result.institution.name}! You have successfully joined your institution.`
+          message: `Welcome to ${result.institution.name}! Your assigned courses are ready.`
         }
       })
 
@@ -158,10 +158,10 @@ const InvitationAccept = () => {
         return
       }
 
-      // Success! Redirect to learner dashboard
-      navigate('/learner/seminars', {
+      // Success! Redirect to courses page where they can see assigned courses
+      navigate('/learner/courses', {
         state: {
-          message: `Welcome back! You have been added to ${result.institution.name}.`
+          message: `Welcome back! You've been added to ${result.institution.name}. Your assigned courses are ready.`
         }
       })
 

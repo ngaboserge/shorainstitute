@@ -99,14 +99,68 @@ export const useInstitutionalAuth = () => {
 }
 
 /**
- * Hook specifically for Shora Institute
- * Returns the Shora Institute ID
+ * Hook specifically for getting the current user's institution
+ * Returns the actual institution ID from institution_admins table
  */
 export const useShoraInstitute = () => {
-  const SHORA_INSTITUTE_ID = '00000000-0000-0000-0000-000000000001'
-  
+  const [institutionId, setInstitutionId] = useState(null)
+  const [institutionName, setInstitutionName] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchInstitution()
+  }, [])
+
+  const fetchInstitution = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      // Get institution from institution_admins table
+      const { data, error } = await supabase
+        .from('institution_admins')
+        .select('institution_id, institutions(id, name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      if (error) {
+        console.error('Error fetching institution:', error)
+        // Fallback to checking institutions table directly
+        const { data: instData, error: instError } = await supabase
+          .from('institutions')
+          .select('id, name')
+          .eq('admin_user_id', user.id)
+          .eq('status', 'active')
+          .single()
+
+        if (!instError && instData) {
+          setInstitutionId(instData.id)
+          setInstitutionName(instData.name)
+          console.log('✅ Loaded institution from fallback:', instData.name, instData.id)
+        } else {
+          console.error('❌ No institution found for user')
+        }
+      } else if (data) {
+        setInstitutionId(data.institution_id)
+        setInstitutionName(data.institutions.name)
+        console.log('✅ Loaded institution from institution_admins:', data.institutions.name, data.institution_id)
+      }
+
+    } catch (err) {
+      console.error('Error in useShoraInstitute:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
-    institutionId: SHORA_INSTITUTE_ID,
-    institutionName: 'Shora Institute'
+    institutionId,
+    institutionName,
+    loading
   }
 }

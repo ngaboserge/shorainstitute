@@ -29,67 +29,153 @@ const Learners = () => {
   })
 
   useEffect(() => {
-    fetchLearners()
-  }, [])
+    console.log('Learners useEffect - institutionId:', institutionId)
+    if (institutionId) {
+      fetchLearners()
+    }
+  }, [institutionId])
 
   const fetchLearners = async () => {
+    if (!institutionId) {
+      console.log('❌ No institutionId available yet, skipping fetch')
+      return
+    }
+
+    console.log('✅ Fetching learners for institution:', institutionId)
+    
     try {
       setLoading(true)
 
-      // Fetch learners with profile and department info
+      // Use the database function to get learners with real user data
       const { data: learnersData, error: learnersError } = await supabase
-        .from('institution_learners')
+        .rpc('get_institution_learners_full', { p_institution_id: institutionId })
+
+      if (learnersError) {
+        console.error('Error fetching learners:', learnersError)
+        throw learnersError
+      }
+
+      console.log('📊 Active learners found:', learnersData?.length || 0)
+      if (learnersData && learnersData.length > 0) {
+        console.log('Sample learner data:', learnersData[0])
+      }
+
+      // Step 2: Get pending assignments (learners who haven't joined yet)
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('pending_course_assignments')
         .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email,
-            avatar_url
-          ),
-          institution_departments:department_id (
-            name
-          )
+          employee_email, 
+          employee_name, 
+          employee_id, 
+          department_id, 
+          created_at, 
+          course_id,
+          institution_departments(name)
         `)
         .eq('institution_id', institutionId)
-        .order('enrolled_at', { ascending: false })
-        .limit(50)
+        .eq('status', 'pending')
 
-      if (learnersError) throw learnersError
+      if (pendingError) {
+        console.error('Error fetching pending assignments:', pendingError)
+      }
 
-      // Transform data for display
-      const transformedLearners = learnersData.map(learner => ({
-        id: learner.employee_id || `LEARNER-${learner.id.substring(0, 8).toUpperCase()}`,
-        name: learner.profiles?.full_name || 'Unknown Learner',
-        email: learner.profiles?.email || '',
-        avatar: learner.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${learner.user_id}`,
-        department: learner.institution_departments?.name || 'Unassigned',
-        programme: 'Not Assigned', // TODO: Get from programme_assignments
-        progress: 0, // TODO: Calculate from course_progress - showing 0 instead of random
-        lastActive: new Date(learner.last_active_at || learner.enrolled_at).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }),
-        certificates: 0, // TODO: Count from certificates table
-        status: learner.status === 'active' ? 'Active' : learner.status === 'at_risk' ? 'At Risk' : 'Inactive'
-      }))
+      console.log('📋 Pending assignments found:', pendingData?.length || 0)
 
-      setLearners(transformedLearners)
+      // Group pending by email to avoid duplicates
+      const pendingByEmail = {}
+      pendingData?.forEach(p => {
+        if (!pendingByEmail[p.employee_email]) {
+          pendingByEmail[p.employee_email] = {
+            ...p,
+            courses: []
+          }
+        }
+        pendingByEmail[p.employee_email].courses.push(p.course_id)
+      })
+
+      // Step 3: Get user IDs for certificates lookup
+      const userIds = (learnersData || []).map(il => il.user_id).filter(id => id)
+
+      // Step 4: Get certificates
+      let certificatesData = []
+      if (userIds.length > 0) {
+        const { data: certs } = await supabase
+          .from('certificates')
+          .select('learner_id')
+          .in('learner_id', userIds)
+        
+        certificatesData = certs || []
+      }
+
+      const certsByUser = {}
+      certificatesData.forEach(c => {
+        certsByUser[c.learner_id] = (certsByUser[c.learner_id] || 0) + 1
+      })
+
+      // Step 5: Transform active learners to display format
+      const activeLearners = (learnersData || []).map(learner => {
+        const daysSinceAccess = learner.total_enrollments > 0 
+          ? Math.floor((Date.now() - new Date(learner.created_at).getTime()) / (1000 * 60 * 60 * 24))
+          : 0
+        const status = daysSinceAccess > 7 ? 'At Risk' : 'Active'
+
+        return {
+          id: learner.employee_id || learner.id.substring(0, 8).toUpperCase(),
+          name: learner.user_name || 'Unknown',
+          email: learner.user_email || 'No email',
+          department: learner.department_name || 'Unassigned',
+          programme: `${learner.total_enrollments || 0} course(s)`,
+          progress: learner.avg_progress || 0,
+          lastActive: new Date(learner.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          certificates: certsByUser[learner.user_id] || 0,
+          status,
+          isPending: false
+        }
+      })
+
+      // Step 6: Transform pending assignments to display format
+      const pendingLearners = Object.values(pendingByEmail).map(pending => {
+        return {
+          id: pending.employee_id || pending.employee_email.substring(0, 8).toUpperCase(),
+          name: pending.employee_name || pending.employee_email.split('@')[0],
+          email: pending.employee_email,
+          department: pending.institution_departments?.name || 'Unassigned',
+          programme: `${pending.courses.length} pending course(s)`,
+          progress: 0,
+          lastActive: 'Pending',
+          certificates: 0,
+          status: 'Pending',
+          isPending: true
+        }
+      })
+
+      // Combine active and pending learners
+      const allLearners = [...activeLearners, ...pendingLearners]
+
+      console.log('✅ Total learners (active + pending):', allLearners.length)
+      console.log('   - Active learners:', activeLearners.length)
+      console.log('   - Pending learners:', pendingLearners.length)
+
+      setLearners(allLearners)
 
       // Calculate stats
-      const activeCount = transformedLearners.filter(l => l.status === 'Active').length
-      const atRiskCount = transformedLearners.filter(l => l.status === 'At Risk').length
+      const activeCount = activeLearners.filter(l => l.status === 'Active').length
+      const atRiskCount = activeLearners.filter(l => l.status === 'At Risk').length
+      const totalCerts = Object.values(certsByUser).reduce((sum, count) => sum + count, 0)
       
       setStats({
-        total: transformedLearners.length,
+        total: allLearners.length,
         active: activeCount,
         atRisk: atRiskCount,
-        certificates: 0 // TODO: Calculate from certificates - showing 0 instead of 385
+        certificates: totalCerts
       })
 
     } catch (error) {
       console.error('Error fetching learners:', error)
-      // Show empty state instead of mock data
       setLearners([])
       setStats({
         total: 0,
@@ -102,17 +188,71 @@ const Learners = () => {
     }
   }
 
-  // Department segment data - show only if we have real department data
-  const segmentData = learners.length > 0 ? [
-    { name: 'Unassigned', value: learners.filter(l => l.department === 'Unassigned').length, color: '#90CAF9' },
-    // Add more departments as they get assigned
-  ].filter(s => s.value > 0) : []
+  // Department segment data - calculated from real learner departments
+  const departmentCounts = {}
+  learners.forEach(learner => {
+    const dept = learner.department || 'Unassigned'
+    departmentCounts[dept] = (departmentCounts[dept] || 0) + 1
+  })
+
+  const colors = ['#0B4F9F', '#1976D2', '#42A5F5', '#64B5F6', '#90CAF9', '#BBDEFB']
+  const segmentData = Object.entries(departmentCounts)
+    .map(([name, count], idx) => ({
+      name,
+      value: count,
+      color: colors[idx % colors.length]
+    }))
+    .filter(s => s.value > 0)
 
   const handleInvite = async (inviteData) => {
-    console.log('Invite data:', inviteData)
-    // TODO: Implement actual invite logic with database
-    // For now, just simulate success
-    return Promise.resolve()
+    try {
+      // If single invite with name provided, create learner directly
+      if (inviteData.name && inviteData.email) {
+        // Check if user exists in auth.users
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', inviteData.email.toLowerCase().trim())
+          .maybeSingle()
+
+        let userId = existingUser?.id
+
+        // If user doesn't exist, create placeholder (they'll complete profile on first login)
+        if (!userId) {
+          // For now, create an invitation that can be accepted
+          // TODO: Implement user creation via admin panel or invitation acceptance flow
+          console.log('User does not exist yet, creating invitation...')
+        }
+
+        // If we have a userId, add them directly to institution_learners
+        if (userId) {
+          const { data: learner, error: learnerError } = await supabase
+            .from('institution_learners')
+            .insert({
+              institution_id: institutionId,
+              user_id: userId,
+              employee_name: inviteData.name,
+              employee_id: inviteData.employeeId || null,
+              department: inviteData.department || 'Unassigned',
+              job_title: inviteData.jobTitle || null,
+              status: 'active'
+            })
+            .select()
+            .single()
+
+          if (learnerError) throw learnerError
+
+          console.log('Learner added successfully:', learner)
+        }
+      }
+
+      // Refresh learners list
+      await fetchLearners()
+      return Promise.resolve()
+    } catch (error) {
+      console.error('Error adding learner:', error)
+      throw error
+    }
   }
 
   const handleLearnerClick = (learner) => {
@@ -261,6 +401,7 @@ const Learners = () => {
                     <thead>
                       <tr>
                         <th>Name</th>
+                        <th>Email</th>
                         <th>Employee ID</th>
                         <th>Department</th>
                         <th>Assigned Programme</th>
@@ -274,13 +415,13 @@ const Learners = () => {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                          <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
                             Loading learners...
                           </td>
                         </tr>
                       ) : learners.length === 0 ? (
                         <tr>
-                          <td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>
+                          <td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>
                             No learners found
                           </td>
                         </tr>
@@ -292,11 +433,9 @@ const Learners = () => {
                             style={{ cursor: 'pointer' }}
                           >
                           <td>
-                            <div className="learner-info">
-                              <img src={learner.avatar} alt={learner.name} className="learner-avatar" />
-                              <span className="learner-name">{learner.name}</span>
-                            </div>
+                            <span className="learner-name">{learner.name}</span>
                           </td>
+                          <td>{learner.email}</td>
                           <td>{learner.id}</td>
                           <td>{learner.department}</td>
                           <td>{learner.programme}</td>

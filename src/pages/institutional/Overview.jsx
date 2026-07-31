@@ -46,39 +46,200 @@ const Overview = () => {
     try {
       setLoading(true)
 
-      // Fetch total learners
-      const { count: learnersCount, error: learnersError } = await supabase
+      // Fetch institution learners (only for this institution if institutionId exists)
+      const { data: learnersData, error: learnersError } = await supabase
         .from('institution_learners')
-        .select('*', { count: 'exact', head: true })
-        .eq('institution_id', institutionId)
+        .select('id, user_id, department, status')
+        .eq('institution_id', institutionId || '00000000-0000-0000-0000-000000000001')
         .eq('status', 'active')
 
-      if (learnersError) throw learnersError
+      if (learnersError && learnersError.code !== 'PGRST116') {
+        console.error('Error fetching learners:', learnersError)
+      }
 
-      // Fetch active programmes
-      const { count: programmesCount, error: programmesError } = await supabase
-        .from('institutional_programmes')
-        .select('*', { count: 'exact', head: true })
-        .eq('institution_id', institutionId)
-        .eq('status', 'active')
+      const learnersCount = learnersData?.length || 0
 
-      if (programmesError) throw programmesError
+      // Fetch active courses (created by trainers)
+      const { count: coursesCount, error: coursesError } = await supabase
+        .from('courses')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'published')
+
+      if (coursesError) throw coursesError
 
       // Fetch upcoming seminars
-      const { count: seminarsCount, error: seminarsError } = await supabase
+      const now = new Date().toISOString()
+      const { data: seminarsData, error: seminarsError} = await supabase
         .from('seminars')
-        .select('*', { count: 'exact', head: true })
-        .eq('institution_id', institutionId)
-        .gte('scheduled_at', new Date().toISOString())
+        .select('*')
+        .eq('status', 'published')
+        .gte('date', now)
+        .order('date', { ascending: true })
+        .limit(3)
 
-      if (seminarsError) throw seminarsError
+      if (seminarsError && seminarsError.code !== 'PGRST116') {
+        console.error('Error fetching seminars:', seminarsError)
+      }
+
+      // Transform seminars for display
+      const transformedSeminars = (seminarsData || []).map(seminar => {
+        const seminarDate = new Date(seminar.date)
+        const monthShort = seminarDate.toLocaleString('en-US', { month: 'short' }).toUpperCase()
+        const day = seminarDate.getDate()
+        
+        return {
+          date: `${monthShort}\n${day}`,
+          title: seminar.title,
+          speaker: seminar.speaker_name || 'TBA',
+          time: `${seminarDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} • ${seminar.start_time || 'TBA'}`,
+          registered: seminar.registration_count || 0,
+          action: 'View'
+        }
+      })
+      setUpcomingSessions(transformedSeminars)
+
+      // Fetch institutional enrollments for progress calculation
+      const { data: enrollmentsData, error: enrollError } = await supabase
+        .from('learner_institutional_enrollments')
+        .select('course_id, progress_percentage, status, learner_id')
+        .eq('institution_id', institutionId || '00000000-0000-0000-0000-000000000001')
+
+      if (enrollError && enrollError.code !== 'PGRST116') {
+        console.log('Note: institutional enrollments table query failed')
+      }
+
+      const enrollments = enrollmentsData || []
+      const avgProgress = enrollments.length > 0
+        ? Math.round(enrollments.reduce((sum, e) => sum + (e.progress_percentage || 0), 0) / enrollments.length)
+        : 0
 
       setStats({
-        totalLearners: learnersCount || 0,
-        avgProgress: 0, // TODO: Calculate from course_progress
-        activeProgrammes: programmesCount || 0,
-        upcomingSessions: seminarsCount || 0
+        totalLearners: learnersCount,
+        avgProgress: avgProgress,
+        activeProgrammes: coursesCount || 0,
+        upcomingSessions: seminarsData?.length || 0
       })
+
+      // Calculate progress by department
+      if (learnersData && learnersData.length > 0) {
+        const deptMap = {}
+        
+        learnersData.forEach(learner => {
+          const dept = learner.department || 'Unassigned'
+          if (!deptMap[dept]) {
+            deptMap[dept] = { learners: [], totalProgress: 0 }
+          }
+          deptMap[dept].learners.push(learner.user_id)
+        })
+
+        // Get progress for each department's learners
+        const deptProgress = await Promise.all(
+          Object.entries(deptMap).map(async ([deptName, deptData]) => {
+            const { data: deptEnrollments } = await supabase
+              .from('learner_institutional_enrollments')
+              .select('progress_percentage')
+              .in('learner_id', deptData.learners)
+            
+            const progresses = deptEnrollments || []
+            const completed = progresses.filter(e => e.progress_percentage >= 100).length
+            const inProgress = progresses.filter(e => e.progress_percentage > 0 && e.progress_percentage < 100).length
+            const notStarted = deptData.learners.length - completed - inProgress
+
+            return {
+              name: deptName,
+              completed: Math.round((completed / deptData.learners.length) * 100) || 0,
+              inProgress: Math.round((inProgress / deptData.learners.length) * 100) || 0,
+              notStarted: Math.round((notStarted / deptData.learners.length) * 100) || 0
+            }
+          })
+        )
+
+        setProgressData(deptProgress.slice(0, 5))
+      }
+
+      // Calculate engagement data (top courses by enrollment)
+      if (enrollments.length > 0) {
+        const courseEnrollments = {}
+        enrollments.forEach(e => {
+          courseEnrollments[e.course_id] = (courseEnrollments[e.course_id] || 0) + 1
+        })
+
+        // Get top 4 courses
+        const topCourseIds = Object.entries(courseEnrollments)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 4)
+          .map(([courseId]) => courseId)
+
+        if (topCourseIds.length > 0) {
+          const { data: topCoursesData } = await supabase
+            .from('courses')
+            .select('id, title')
+            .in('id', topCourseIds)
+
+          const colors = ['#0B4F9F', '#1976D2', '#42A5F5', '#64B5F6']
+          const engagement = topCoursesData?.map((course, idx) => {
+            const count = courseEnrollments[course.id]
+            const percentage = Math.round((count / enrollments.length) * 100)
+            return {
+              name: course.title,
+              value: count,
+              percentage: percentage,
+              color: colors[idx] || '#90CAF9'
+            }
+          }) || []
+
+          setEngagementData(engagement)
+
+          // Set top programmes with completion rates
+          const topProgs = await Promise.all(
+            topCoursesData?.slice(0, 5).map(async (course, idx) => {
+              const courseEnrollmentsData = enrollments.filter(e => e.course_id === course.id)
+              const completed = courseEnrollmentsData.filter(e => e.progress_percentage >= 100).length
+              const completion = courseEnrollmentsData.length > 0 
+                ? Math.round((completed / courseEnrollmentsData.length) * 100)
+                : 0
+
+              return {
+                name: course.title,
+                learners: `${courseEnrollmentsData.length} learners`,
+                completion
+              }
+            }) || []
+          )
+
+          setTopProgrammes(topProgs)
+        }
+      }
+
+      // Fetch recent activity
+      const { data: recentEnrollments } = await supabase
+        .from('learner_institutional_enrollments')
+        .select(`
+          *,
+          courses:course_id(title),
+          institution_learners:learner_id(user_id)
+        `)
+        .eq('institution_id', institutionId || '00000000-0000-0000-0000-000000000001')
+        .order('enrolled_at', { ascending: false })
+        .limit(4)
+
+      const activities = (recentEnrollments || []).map(enrollment => {
+        const timeAgo = Math.floor((Date.now() - new Date(enrollment.enrolled_at).getTime()) / (1000 * 60))
+        let timeText = `${timeAgo} minutes ago`
+        if (timeAgo > 60) {
+          const hoursAgo = Math.floor(timeAgo / 60)
+          timeText = `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`
+        }
+
+        return {
+          icon: enrollment.progress_percentage >= 100 ? '🎓' : enrollment.progress_percentage > 0 ? '📚' : '👤',
+          text: enrollment.progress_percentage >= 100 ? 'Course completed' : enrollment.progress_percentage > 0 ? 'Programme enrolled' : 'New learner registered',
+          course: enrollment.courses?.title || 'Unknown Course',
+          time: timeText
+        }
+      })
+
+      setRecentActivity(activities)
 
     } catch (error) {
       console.error('Error fetching overview data:', error)
@@ -93,54 +254,11 @@ const Overview = () => {
     }
   }
 
-  const progressData = [
-    { name: 'Credit & Risk', completed: 84, inProgress: 12, notStarted: 4 },
-    { name: 'Finance', completed: 79, inProgress: 16, notStarted: 5 },
-    { name: 'HR & Admin', completed: 72, inProgress: 20, notStarted: 8 },
-    { name: 'Operations', completed: 68, inProgress: 24, notStarted: 8 },
-    { name: 'IT', completed: 61, inProgress: 28, notStarted: 11 },
-  ]
-
-  const engagementData = [
-    { name: 'Financial Foundations', value: 512, percentage: '25%', color: '#0B4F9F' },
-    { name: 'Financial Planning Basics', value: 403, percentage: '20%', color: '#1976D2' },
-    { name: 'Investment Foundations', value: 249, percentage: '12%', color: '#42A5F5' },
-    { name: 'Capital Markets Essentials', value: 187, percentage: '9%', color: '#64B5F6' },
-  ]
-
-  const upcomingSessions = [
-    {
-      date: 'JUN\n03',
-      title: 'Wealth Creation Through Smart Investing',
-      speaker: 'Alex Ntale',
-      time: 'June 3, 2026 • 2:00 PM - 3:30 PM (EAT)',
-      registered: 120,
-      action: 'View'
-    },
-    {
-      date: 'JUN\n10',
-      title: 'Retirement Planning for Professionals',
-      speaker: 'Peace Uwase',
-      time: 'June 10, 2026 • 2:00 PM - 3:30 PM (EAT)',
-      registered: 98,
-      action: 'View'
-    },
-    {
-      date: 'JUN\n24',
-      title: 'Financial Statement Analysis for Non-Finance Managers',
-      speaker: 'Jean Claude Habarurema',
-      time: 'June 24, 2026 • 2:00 PM - 3:30 PM (EAT)',
-      registered: 76,
-      action: 'View'
-    },
-  ]
-
-  const recentActivity = [
-    { icon: '👤', text: 'New learner registered', course: 'Financial Foundations', time: '23 minutes ago' },
-    { icon: '🎓', text: 'Course completed', course: 'Investment Foundations', time: '1 hour ago' },
-    { icon: '📜', text: 'Certificate issued', course: 'Investment Foundations', time: '1 hour ago' },
-    { icon: '📚', text: 'Programme enrolled', course: 'Financial Planning Basics', time: '3 hours ago' },
-  ]
+  const [progressData, setProgressData] = useState([])
+  const [engagementData, setEngagementData] = useState([])
+  const [upcomingSessions, setUpcomingSessions] = useState([])
+  const [recentActivity, setRecentActivity] = useState([])
+  const [topProgrammes, setTopProgrammes] = useState([])
 
   return (
     <div className="dashboard-layout">
@@ -282,17 +400,23 @@ const Overview = () => {
                 <a href="#" className="link-text">View all →</a>
               </div>
               <div className="engagement-list">
-                {engagementData.map((item, index) => (
-                  <div key={index} className="engagement-item">
-                    <div className="engagement-bar">
-                      <div className="engagement-fill" style={{width: item.percentage, background: item.color}}></div>
-                    </div>
-                    <div className="engagement-info">
-                      <span className="engagement-name">{item.name}</span>
-                      <span className="engagement-value">{item.value} learners ({item.percentage})</span>
-                    </div>
+                {engagementData.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                    No engagement data available yet
                   </div>
-                ))}
+                ) : (
+                  engagementData.map((item, index) => (
+                    <div key={index} className="engagement-item">
+                      <div className="engagement-bar">
+                        <div className="engagement-fill" style={{width: `${item.percentage}%`, background: item.color}}></div>
+                      </div>
+                      <div className="engagement-info">
+                        <span className="engagement-name">{item.name}</span>
+                        <span className="engagement-value">{item.value} learners ({item.percentage}%)</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -304,22 +428,22 @@ const Overview = () => {
               <a href="#" className="link-text">View all →</a>
             </div>
             <div className="top-programmes-grid">
-              {[
-                { name: 'Financial Foundations', learners: '512 learners', completion: 75 },
-                { name: 'Financial Planning Basics', learners: '403 learners', completion: 68 },
-                { name: 'Investment Foundations', learners: '310 learners', completion: 60 },
-                { name: 'Capital Markets Essentials', learners: '271 learners', completion: 55 },
-                { name: 'Risk Management Basics', learners: '280 learners', completion: 50 },
-              ].map((prog, index) => (
-                <div key={index} className="programme-item">
-                  <div className="programme-number">{index + 1}</div>
-                  <div className="programme-details">
-                    <div className="programme-name">{prog.name}</div>
-                    <div className="programme-learners">{prog.learners}</div>
-                  </div>
-                  <div className="programme-completion">{prog.completion}%</div>
+              {topProgrammes.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                  No programme data available yet
                 </div>
-              ))}
+              ) : (
+                topProgrammes.map((prog, index) => (
+                  <div key={index} className="programme-item">
+                    <div className="programme-number">{index + 1}</div>
+                    <div className="programme-details">
+                      <div className="programme-name">{prog.name}</div>
+                      <div className="programme-learners">{prog.learners}</div>
+                    </div>
+                    <div className="programme-completion">{prog.completion}%</div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

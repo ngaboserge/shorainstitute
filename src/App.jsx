@@ -21,7 +21,13 @@ import InstitutionalReports from './pages/institutional/Reports'
 import InstitutionalCertificates from './pages/institutional/Certificates'
 import InstitutionalBilling from './pages/institutional/Billing'
 import InstitutionalSettings from './pages/institutional/Settings'
+import PendingApprovals from './pages/institutional/PendingApprovals'
 import ProgrammeDetails from './pages/institutional/ProgrammeDetails'
+import PurchaseCourses from './pages/institutional/PurchaseCourses'
+import ManageCodes from './pages/institutional/ManageCodes'
+import AssignCourse from './pages/institutional/AssignCourse'
+import Assignments from './pages/institutional/Assignments'
+import EnrollmentCodes from './pages/institutional/EnrollmentCodes'
 import TrainerDashboard from './pages/trainer/Dashboard'
 import TrainerProfile from './pages/trainer/Profile'
 import TrainerAnalytics from './pages/trainer/Analytics'
@@ -60,6 +66,7 @@ import OnboardingAssessment from './pages/public/OnboardingAssessment'
 import PaymentSuccess from './pages/public/PaymentSuccess'
 import SeminarRegistrationForm from './pages/public/SeminarRegistrationForm'
 import InvitationAccept from './pages/public/InvitationAccept'
+import RedeemCode from './pages/learner/RedeemCode'
 import './App.css'
 
 function App() {
@@ -114,7 +121,13 @@ function App() {
         <Route path="/institutional/reports" element={<InstitutionalAuthGuard><InstitutionalReports /></InstitutionalAuthGuard>} />
         <Route path="/institutional/certificates" element={<InstitutionalAuthGuard><InstitutionalCertificates /></InstitutionalAuthGuard>} />
         <Route path="/institutional/billing" element={<InstitutionalAuthGuard><InstitutionalBilling /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/billing/purchase" element={<InstitutionalAuthGuard><PurchaseCourses /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/billing/codes" element={<InstitutionalAuthGuard><ManageCodes /></InstitutionalAuthGuard>} />
         <Route path="/institutional/settings" element={<InstitutionalAuthGuard><InstitutionalSettings /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/approvals" element={<InstitutionalAuthGuard><PendingApprovals /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/assign-course" element={<InstitutionalAuthGuard><AssignCourse /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/assignments" element={<InstitutionalAuthGuard><Assignments /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/enrollment-codes" element={<InstitutionalAuthGuard><EnrollmentCodes /></InstitutionalAuthGuard>} />
         
         {/* Trainer Portal Routes - Protected */}
         <Route path="/trainer/dashboard" element={<ProtectedRoute requiredRole="trainer"><TrainerDashboard /></ProtectedRoute>} />
@@ -152,6 +165,7 @@ function App() {
         <Route path="/learner/community" element={<ProtectedRoute requiredRole="learner"><LearnerCommunity /></ProtectedRoute>} />
         <Route path="/learner/profile" element={<ProtectedRoute requiredRole="learner"><LearnerProfile /></ProtectedRoute>} />
         <Route path="/learner/settings" element={<ProtectedRoute requiredRole="learner"><LearnerProfile /></ProtectedRoute>} />
+        <Route path="/learner/redeem-code" element={<ProtectedRoute requiredRole="learner"><RedeemCode /></ProtectedRoute>} />
       </Routes>
       </Router>
     </AuthProvider>

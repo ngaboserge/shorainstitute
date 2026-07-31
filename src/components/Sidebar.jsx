@@ -11,11 +11,15 @@ import {
   Award,
   CreditCard,
   Settings,
-  HelpCircle,
-  LogOut,
-  Search,
+  DollarSign,
   User,
-  DollarSign
+  CheckSquare,
+  LogOut,
+  Ticket,
+  Clock,
+  HelpCircle,
+  Search,
+  ClipboardList
 } from 'lucide-react'
 import shoraLogo from '../assets/shora-logo.png'
 import './Sidebar.css'
@@ -42,7 +46,10 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/institutional/overview', icon: LayoutDashboard, label: 'Overview' },
     { path: '/institutional/learners', icon: Users, label: 'Learners' },
     { path: '/institutional/programmes', icon: BookOpen, label: 'Programmes' },
+    { path: '/institutional/assignments', icon: ClipboardList, label: 'Assignments' },
+    { path: '/institutional/enrollment-codes', icon: Ticket, label: 'Enrollment Codes' },
     { path: '/institutional/live-seminars', icon: Video, label: 'Live Seminars' },
+    { path: '/institutional/approvals', icon: Clock, label: 'Pending Approvals' },
     { path: '/institutional/reports', icon: BarChart3, label: 'Reports & Analytics' },
     { path: '/institutional/certificates', icon: Award, label: 'Certificates' },
     { path: '/institutional/billing', icon: CreditCard, label: 'Billing & Subscriptions' },
@@ -69,6 +76,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/learner/courses', icon: BookOpen, label: 'My Learning' },
     { path: '/learner/browse', icon: Search, label: 'Browse Courses' },
     { path: '/learner/seminars', icon: Video, label: 'Live Seminars' },
+    { path: '/learner/redeem-code', icon: Ticket, label: 'Redeem Code' },
     { path: '/learner/paths', icon: BarChart3, label: 'Learning Paths' },
     { path: '/learner/assessments', icon: Award, label: 'Assessments & Assignments' },
     { path: '/learner/certificates', icon: Award, label: 'Certificates' },

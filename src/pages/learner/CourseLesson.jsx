@@ -205,7 +205,7 @@ const CourseLesson = () => {
       // Check if course is completed
       const isCompleted = progressPercentage === 100
 
-      // Update enrollment
+      // Update data
       const updateData = {
         progress_percentage: progressPercentage,
         last_accessed_at: new Date().toISOString()
@@ -217,22 +217,51 @@ const CourseLesson = () => {
         console.log('🎉 Course completed! Setting completed_at timestamp')
       }
 
-      const { data: updateResult, error: updateError } = await supabase
+      // Update regular enrollment (if exists)
+      const { error: updateError1 } = await supabase
         .from('enrollments')
         .update(updateData)
         .eq('user_id', user.id)
         .eq('course_id', id)
-        .select()
 
-      if (updateError) {
-        console.error('❌ Error updating enrollment:', updateError)
-        throw updateError
+      if (updateError1 && updateError1.code !== 'PGRST116') {
+        console.error('❌ Error updating regular enrollment:', updateError1)
+      } else {
+        console.log('✅ Regular enrollment progress updated')
       }
 
-      console.log(`✅ Enrollment progress updated: ${progressPercentage}%`, updateResult)
+      // Update institutional enrollment (if exists)
+      // First get learner_id from institution_learners
+      const { data: learnerData } = await supabase
+        .from('institution_learners')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (learnerData) {
+        const instUpdateData = {
+          ...updateData,
+          status: isCompleted ? 'completed' : 'in_progress'
+        }
+
+        const { error: updateError2 } = await supabase
+          .from('learner_institutional_enrollments')
+          .update(instUpdateData)
+          .eq('learner_id', learnerData.id)
+          .eq('course_id', id)
+
+        if (updateError2 && updateError2.code !== 'PGRST116') {
+          console.error('❌ Error updating institutional enrollment:', updateError2)
+        } else {
+          console.log('✅ Institutional enrollment progress updated')
+        }
+      }
+
+      console.log(`✅ Progress updated to ${progressPercentage}%`)
     } catch (error) {
       console.error('Error updating enrollment progress:', error)
-      alert(`Failed to update progress: ${error.message}`)
+      // Don't alert user - this is not critical
     }
   }
 
@@ -240,9 +269,12 @@ const CourseLesson = () => {
     setLoading(true)
     
     try {
-      // Check if user is enrolled with active access (paid or free —
-      // pending/rejected payments do not unlock course content)
-      const { data: enrollment, error: enrollError } = await supabase
+      // Check if user is enrolled (regular OR institutional)
+      let hasAccess = false
+      let enrollmentId = null
+
+      // 1. Check regular enrollment with active access
+      const { data: regularEnrollment } = await supabase
         .from('enrollments')
         .select('*')
         .eq('user_id', user.id)
@@ -250,21 +282,63 @@ const CourseLesson = () => {
         .in('payment_status', ['free', 'approved'])
         .maybeSingle()
 
-      if (enrollError) throw enrollError
+      if (regularEnrollment) {
+        hasAccess = true
+        enrollmentId = regularEnrollment.id
+        
+        // Update last_accessed_at
+        await supabase
+          .from('enrollments')
+          .update({ last_accessed_at: new Date().toISOString() })
+          .eq('id', regularEnrollment.id)
+      }
 
-      if (!enrollment) {
+      // 2. Check institutional enrollment (assigned by company)
+      if (!hasAccess) {
+        // Get learner_id first
+        const { data: learnerData } = await supabase
+          .from('institution_learners')
+          .select('id, institution_id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle()
+
+        if (learnerData) {
+          const { data: instEnrollment } = await supabase
+            .from('learner_institutional_enrollments')
+            .select('*')
+            .eq('learner_id', learnerData.id)
+            .eq('course_id', id)
+            .neq('status', 'cancelled')
+            .maybeSingle()
+
+          if (instEnrollment) {
+            hasAccess = true
+            enrollmentId = instEnrollment.id
+            
+            // Update last_accessed_at
+            await supabase
+              .from('learner_institutional_enrollments')
+              .update({ 
+                last_accessed_at: new Date().toISOString(),
+                status: instEnrollment.status === 'not_started' ? 'in_progress' : instEnrollment.status
+              })
+              .eq('id', instEnrollment.id)
+
+            console.log('✅ Accessing course via institutional enrollment')
+          }
+        }
+      }
+
+      if (!hasAccess) {
+        console.log('❌ No valid enrollment found')
         setIsEnrolled(false)
         setLoading(false)
         return
       }
 
       setIsEnrolled(true)
-
-      // Update last_accessed_at
-      await supabase
-        .from('enrollments')
-        .update({ last_accessed_at: new Date().toISOString() })
-        .eq('id', enrollment.id)
+      console.log('✅ User has access to course')
       
       // Load course
       const { data: courseData, error: courseError } = await supabase
