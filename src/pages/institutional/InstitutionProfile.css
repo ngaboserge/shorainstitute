@@ -1,0 +1,41 @@
+/* Institution Profile Page - Uses same styles as Cohorts/Departments wizard */
+
+/* Reusing cohort-wizard, cohort-main, cohort-summary classes from Departments.css */
+/* This ensures consistent styling across all wizard pages */
+
+.profile-logo-preview {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-logo-preview img {
+  max-width: 120px;
+  max-height: 80px;
+  border: 1px solid #E0E0E0;
+  border-radius: 4px;
+  padding: 8px;
+  background: white;
+}
+
+.profile-info-card {
+  background: #F5F5F5;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.profile-info-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.profile-info-card p {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}

@@ -202,7 +202,7 @@ const EnrollmentCodes = () => {
 
   const fetchCodesForPurchase = async (purchaseId) => {
     try {
-      console.log('Fetching codes for purchase:', purchaseId)
+      
       
       const { data, error } = await supabase
         .from('institution_enrollment_codes')
@@ -215,7 +215,7 @@ const EnrollmentCodes = () => {
         throw error
       }
       
-      console.log('Fetched codes:', data)
+      
       setCodes(data || [])
       setSelectedPurchase(purchaseId)
       
@@ -244,7 +244,7 @@ const EnrollmentCodes = () => {
       const course = courses.find(c => c.id === generateForm.courseId)
       if (!course) throw new Error('Course not found')
 
-      console.log('Generating codes for course:', course.title)
+      
 
       // Create purchase record
       const { data: purchase, error: purchaseError } = await supabase
@@ -269,7 +269,7 @@ const EnrollmentCodes = () => {
         throw purchaseError
       }
 
-      console.log('Purchase created:', purchase.id)
+      
 
       // Generate codes
       const codesToGenerate = parseInt(generateForm.quantity)
@@ -321,7 +321,7 @@ const EnrollmentCodes = () => {
           console.error('Error updating purchase count:', updateError)
         }
 
-        console.log(`Successfully generated ${codeInserts.length} codes`)
+        
       } else {
         throw new Error('Failed to generate any codes')
       }
@@ -638,7 +638,7 @@ const EnrollmentCodes = () => {
                                 className="btn btn-sm btn-secondary"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  console.log('View Codes clicked for purchase:', purchase.id)
+                                  
                                   fetchCodesForPurchase(purchase.id)
                                 }}
                                 style={{ cursor: 'pointer', pointerEvents: 'auto' }}

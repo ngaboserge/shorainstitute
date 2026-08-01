@@ -51,12 +51,12 @@ const Programmes = () => {
         throw coursesError
       }
 
-      console.log('Fetched courses:', coursesData)
+      
 
       // Courses already have instructor_name, no need for separate query!
       if (coursesData && coursesData.length > 0) {
-        console.log('Course columns:', Object.keys(coursesData[0]))
-        console.log('First course instructor:', coursesData[0].instructor_name)
+        )
+        
       }
 
       // Fetch enrollment counts for each course (ONLY for this institution)
@@ -68,7 +68,7 @@ const Programmes = () => {
         .eq('institution_id', institutionId)
 
       if (enrollmentError) {
-        console.log('Note: institutional enrollments table not found, showing without enrollment data')
+        
         // Continue without enrollment data - it's okay
       }
 
@@ -178,13 +178,13 @@ const Programmes = () => {
   }
 
   const handleCreateCohort = async (cohortData) => {
-    console.log('Create cohort data:', cohortData)
+    
     // TODO: Implement actual cohort creation logic with database
     return Promise.resolve()
   }
 
   const handleAssignProgramme = async (assignmentData) => {
-    console.log('Assignment data:', assignmentData)
+    
     
     try {
       // Show success message
@@ -214,6 +214,13 @@ const Programmes = () => {
           subtitle="Manage enrolled programmes, cohorts, assignments, and learner progress across departments."
           actions={
             <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => navigate('/institutional/programmes/browse')}
+              >
+                <BookOpen size={18} />
+                Browse Catalogue
+              </button>
               <button 
                 className="btn btn-primary"
                 onClick={() => navigate('/institutional/assign-course')}
