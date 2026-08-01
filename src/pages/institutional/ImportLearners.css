@@ -1,0 +1,89 @@
+/* Import Learners Page Styles */
+
+.csv-upload-area {
+  border: 2px dashed #2196F3;
+  border-radius: 12px;
+  padding: 60px 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #F5F9FF;
+}
+
+.csv-upload-area:hover {
+  border-color: #1976D2;
+  background: #E3F2FD;
+}
+
+.csv-upload-area h4 {
+  margin: 16px 0 8px 0;
+  color: #1a1a1a;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.csv-upload-area p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.column-mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.validation-error-item {
+  padding: 8px 12px;
+  background: white;
+  border-left: 3px solid #D32F2F;
+  margin-bottom: 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+
+.preview-sample {
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+  font-style: italic;
+}
+
+.import-progress {
+  width: 100%;
+  height: 8px;
+  background: #E0E0E0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.import-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2196F3 0%, #1976D2 100%);
+  transition: width 0.3s;
+}
+
+.import-stats {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.import-stat {
+  text-align: center;
+}
+
+.import-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.import-stat-label {
+  font-size: 14px;
+  color: #666;
+}

@@ -48,7 +48,7 @@ const ProgrammeDetails = () => {
         .order('order_number', { ascending: true })
 
       if (lessonsError) {
-        console.log('No lessons found:', lessonsError)
+        
         setLessons([])
       } else {
         setLessons(lessonsData || [])
@@ -61,17 +61,17 @@ const ProgrammeDetails = () => {
         .eq('course_id', id)
         .eq('institution_id', institutionId)
 
-      console.log('📊 Enrollments found:', enrollments?.length)
+      
 
       if (enrollError) {
-        console.log('Error fetching enrollments:', enrollError)
+        
         setEnrolledLearners([])
       } else if (enrollments && enrollments.length > 0) {
         // Use the same function as Learners page to get full learner data
         const { data: allLearnersData, error: learnersError } = await supabase
           .rpc('get_institution_learners_full', { p_institution_id: institutionId })
 
-        console.log('👥 All institution learners:', allLearnersData?.length)
+        
 
         if (learnersError) {
           console.error('Error fetching learners:', learnersError)
@@ -94,13 +94,13 @@ const ProgrammeDetails = () => {
             }
           })
           
-          console.log('✅ Enriched enrollments:', enrichedEnrollments.length)
-          console.log('Sample:', enrichedEnrollments[0])
+          
+          
           
           setEnrolledLearners(enrichedEnrollments)
         }
       } else {
-        console.log('No enrollments found for this course')
+        
         setEnrolledLearners([])
       }
 

@@ -200,7 +200,7 @@ const CourseLesson = () => {
         ? Math.round((completedCount / totalLessons) * 100) 
         : 0
 
-      console.log(`📊 Progress calculation: ${completedCount}/${totalLessons} = ${progressPercentage}%`)
+      
 
       // Check if course is completed
       const isCompleted = progressPercentage === 100
@@ -214,7 +214,7 @@ const CourseLesson = () => {
       // If completed, set completed_at timestamp
       if (isCompleted) {
         updateData.completed_at = new Date().toISOString()
-        console.log('🎉 Course completed! Setting completed_at timestamp')
+        
       }
 
       // Update regular enrollment (if exists)
@@ -227,7 +227,7 @@ const CourseLesson = () => {
       if (updateError1 && updateError1.code !== 'PGRST116') {
         console.error('❌ Error updating regular enrollment:', updateError1)
       } else {
-        console.log('✅ Regular enrollment progress updated')
+        
       }
 
       // Update institutional enrollment (if exists)
@@ -254,11 +254,11 @@ const CourseLesson = () => {
         if (updateError2 && updateError2.code !== 'PGRST116') {
           console.error('❌ Error updating institutional enrollment:', updateError2)
         } else {
-          console.log('✅ Institutional enrollment progress updated')
+          
         }
       }
 
-      console.log(`✅ Progress updated to ${progressPercentage}%`)
+      
     } catch (error) {
       console.error('Error updating enrollment progress:', error)
       // Don't alert user - this is not critical
@@ -325,20 +325,20 @@ const CourseLesson = () => {
               })
               .eq('id', instEnrollment.id)
 
-            console.log('✅ Accessing course via institutional enrollment')
+            
           }
         }
       }
 
       if (!hasAccess) {
-        console.log('❌ No valid enrollment found')
+        
         setIsEnrolled(false)
         setLoading(false)
         return
       }
 
       setIsEnrolled(true)
-      console.log('✅ User has access to course')
+      
       
       // Load course
       const { data: courseData, error: courseError } = await supabase
@@ -405,7 +405,7 @@ const CourseLesson = () => {
 
   // Handle lesson completion
   const handleLessonComplete = async () => {
-    console.log('✅ Lesson completed! Updating enrollment progress...')
+    
     await updateEnrollmentProgress()
     loadAllData() // Refresh to show updated progress
   }
@@ -568,7 +568,7 @@ const CourseLesson = () => {
             userId={user?.id}
             courseId={id}
             onProgress={(percent) => {
-              console.log('Progress:', Math.round(percent) + '%')
+              // Progress tracking
             }}
             onComplete={handleLessonComplete}
           />

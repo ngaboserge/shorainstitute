@@ -211,15 +211,6 @@ const ManageLessons = () => {
 
   // Edit lesson - Enhanced to match create flow
   const handleEditLesson = (lesson) => {
-    console.log('=== EDIT LESSON CLICKED ===')
-    console.log('Lesson object:', JSON.stringify(lesson, null, 2))
-    console.log('Lesson ID:', lesson.id)
-    console.log('Lesson title:', lesson.title)
-    console.log('Lesson description:', lesson.description)
-    console.log('Lesson duration_seconds:', lesson.duration_seconds)
-    console.log('Lesson is_preview:', lesson.is_preview)
-    console.log('Lesson learning_objectives:', lesson.learning_objectives)
-    
     // Reset resources first
     setLessonResources([])
     setNewResource({ title: '', file_url: '', file_type: '', description: '' })
@@ -237,7 +228,6 @@ const ManageLessons = () => {
       video_type: lesson.video_type || null
     }
     
-    console.log('Setting editingLesson to:', JSON.stringify(lessonCopy, null, 2))
     setEditingLesson(lessonCopy)
     
     setLearningObjectives(lesson.learning_objectives || [])
@@ -249,7 +239,7 @@ const ManageLessons = () => {
     }
     
     setShowAddLesson(true)
-    console.log('=== MODAL SHOULD NOW OPEN ===')
+    
   }
 
   // Load lesson resources
@@ -641,12 +631,6 @@ const ManageLessons = () => {
 
             <div className="modal-body" style={{maxHeight: '600px', overflowY: 'auto', padding: '24px'}}>
               
-              {/* Debug info */}
-              {console.log('=== MODAL RENDERING ===')}
-              {console.log('editingLesson state:', editingLesson)}
-              {console.log('editingLesson.title value:', editingLesson?.title)}
-              {console.log('editingLesson.description value:', editingLesson?.description)}
-              
               {/* Lesson Title */}
               <div className="form-group" style={{marginBottom: '24px'}}>
                 <label style={{fontWeight: 600, display: 'block', marginBottom: '8px'}}>Lesson Title *</label>
@@ -664,10 +648,6 @@ const ManageLessons = () => {
                   }}
                   autoFocus
                 />
-                {/* Debug display */}
-                <div style={{fontSize: '11px', color: '#999', marginTop: '4px'}}>
-                  Debug: title = "{editingLesson?.title || 'EMPTY'}"
-                </div>
               </div>
 
               {/* Description */}

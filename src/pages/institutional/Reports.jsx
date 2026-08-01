@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { Download, FileDown, Calendar, FileText } from 'lucide-react'
@@ -9,6 +10,7 @@ import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Reports.css'
 
 const Reports = () => {
+  const navigate = useNavigate()
   const { institutionId } = useShoraInstitute()
   const [showReportModal, setShowReportModal] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,7 @@ const Reports = () => {
       const { data: enrollmentsData, error: enrollmentsError } = await enrollmentsQuery
 
       if (enrollmentsError && enrollmentsError.code !== 'PGRST116') {
-        console.log('Note: institutional enrollments query failed')
+        
       }
 
       const enrollments = enrollmentsData || []
@@ -118,7 +120,7 @@ const Reports = () => {
         .select('*', { count: 'exact', head: true })
 
       if (certsError && certsError.code !== 'PGRST116') {
-        console.log('Note: certificates query failed')
+        
       }
 
       // Fetch seminar registrations for live attendance
@@ -127,7 +129,7 @@ const Reports = () => {
         .select('id, status')
 
       if (registrationsError && registrationsError.code !== 'PGRST116') {
-        console.log('Note: seminar registrations query failed')
+        
       }
 
       const registrations = registrationsData || []
@@ -150,7 +152,7 @@ const Reports = () => {
         .select('score, total_questions')
 
       if (quizError && quizError.code !== 'PGRST116') {
-        console.log('Note: quiz submissions query failed')
+        
       }
 
       const quizSubmissions = quizData || []
@@ -204,7 +206,7 @@ const Reports = () => {
         .select('id, date')
 
       if (seminarsError && seminarsError.code !== 'PGRST116') {
-        console.log('Note: seminars query failed')
+        
       }
 
       const seminars = seminarsData || []
@@ -354,7 +356,7 @@ const Reports = () => {
   }
 
   const handleGenerateReport = async (reportConfig) => {
-    console.log('Generating report with config:', reportConfig)
+    
     return Promise.resolve()
   }
   const [trendData, setTrendData] = useState([])
@@ -373,6 +375,13 @@ const Reports = () => {
           subtitle="Institutional admin views, performance and exports learning impact reports."
           actions={
             <>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => navigate('/institutional/reports/schedule')}
+              >
+                <Calendar size={18} />
+                Schedule Reports
+              </button>
               <button className="btn btn-secondary">
                 <Download size={18} />
                 Download PDF Report

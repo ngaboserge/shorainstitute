@@ -1,0 +1,111 @@
+/* Programme Catalogue Page Styles */
+
+.programme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.programme-card {
+  background: white;
+  border: 2px solid #E0E0E0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.programme-card:hover {
+  border-color: #2196F3;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+  transform: translateY(-2px);
+}
+
+.programme-card.selected {
+  border-color: #4CAF50;
+  background: #F1F8F4;
+}
+
+.selected-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #4CAF50;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.programme-header {
+  margin-bottom: 12px;
+}
+
+.programme-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.category-badge {
+  display: inline-block;
+  background: #E3F2FD;
+  color: #1976D2;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.programme-description {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.programme-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #E0E0E0;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.meta-item svg {
+  color: #999;
+}
+
+.search-box {
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .programme-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}

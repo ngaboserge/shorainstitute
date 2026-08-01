@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Users, GraduationCap, BookOpen, Calendar, TrendingUp, Download } from 'lucide-react'
+import { Users, GraduationCap, BookOpen, Calendar, TrendingUp, Download, CheckCircle, Circle, ArrowRight } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { supabase } from '../../lib/supabase'
 import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Overview.css'
 
 const Overview = () => {
+  const navigate = useNavigate()
   const { institutionId } = useShoraInstitute()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -16,12 +18,23 @@ const Overview = () => {
     activeProgrammes: 0,
     upcomingSessions: 0
   })
+  const [setupProgress, setSetupProgress] = useState({
+    profileComplete: false,
+    departmentsCreated: false,
+    learnersImported: false,
+    programmesSelected: false,
+    cohortsCreated: false,
+    reportsScheduled: false
+  })
   const [userName, setUserName] = useState('Admin')
 
   useEffect(() => {
-    fetchOverviewData()
+    if (institutionId) {
+      fetchOverviewData()
+      checkSetupProgress()
+    }
     fetchUserName()
-  }, [])
+  }, [institutionId])
 
   const fetchUserName = async () => {
     try {
@@ -39,6 +52,71 @@ const Overview = () => {
       }
     } catch (error) {
       console.error('Error fetching user name:', error)
+    }
+  }
+
+  const checkSetupProgress = async () => {
+    try {
+      // Check profile completion
+      const { data: institution } = await supabase
+        .from('institutions')
+        .select('primary_contact_name, primary_contact_email, city')
+        .eq('id', institutionId)
+        .single()
+      
+      const profileComplete = !!(institution?.primary_contact_name && institution?.primary_contact_email && institution?.city)
+
+      // Check departments created
+      const { count: deptCount } = await supabase
+        .from('institution_departments')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+      
+      const departmentsCreated = (deptCount || 0) > 0
+
+      // Check learners imported
+      const { count: learnerCount } = await supabase
+        .from('institution_learners')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+      
+      const learnersImported = (learnerCount || 0) > 0
+
+      // Check cohorts created
+      const { count: cohortCount } = await supabase
+        .from('institution_cohorts')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+      
+      const cohortsCreated = (cohortCount || 0) > 0
+
+      // Check programmes selected
+      const { count: progCount } = await supabase
+        .from('institution_programmes')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+      
+      const programmesSelected = (progCount || 0) > 0
+
+      // Check reports scheduled
+      const { count: reportCount } = await supabase
+        .from('institution_report_schedules')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+      
+      const reportsScheduled = (reportCount || 0) > 0
+
+      setSetupProgress({
+        profileComplete,
+        departmentsCreated,
+        learnersImported,
+        programmesSelected,
+        cohortsCreated,
+        reportsScheduled
+      })
+    } catch (err) {
+      console.error('Error checking setup progress:', err)
     }
   }
 
@@ -105,7 +183,7 @@ const Overview = () => {
         .eq('institution_id', institutionId || '00000000-0000-0000-0000-000000000001')
 
       if (enrollError && enrollError.code !== 'PGRST116') {
-        console.log('Note: institutional enrollments table query failed')
+        
       }
 
       const enrollments = enrollmentsData || []
@@ -282,6 +360,203 @@ const Overview = () => {
         />
         
         <div className="content-wrapper">
+          {/* Setup Progress Tracker */}
+          <div className="card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, #0B4F9F 0%, #1976D2 100%)', color: 'white', border: 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 600 }}>Get Started with Your Institution</h3>
+                <p style={{ margin: 0, opacity: 0.9, fontSize: '14px' }}>
+                  Complete these steps to set up your learning portal
+                </p>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '20px', fontSize: '14px', fontWeight: 600 }}>
+                {Object.values(setupProgress).filter(Boolean).length} of 6 complete
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              {/* Step 1: Profile */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/settings/profile')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.profileComplete ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>1. Institution Profile</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Set up your institution details and contact information
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.profileComplete ? 'Complete' : 'Start setup'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+
+              {/* Step 2: Departments */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/departments')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.departmentsCreated ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>2. Create Departments</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Organize your institution into academic and administrative units
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.departmentsCreated ? 'Complete' : 'Create departments'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+
+              {/* Step 3: Import Learners */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/learners')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.learnersImported ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>3. Import Learners</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Add your learners individually or via CSV import
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.learnersImported ? 'Complete' : 'Add learners'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+
+              {/* Step 4: Select Programmes */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/programmes/browse')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.programmesSelected ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>4. Select Programmes</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Browse and select learning programmes for your institution
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.programmesSelected ? 'Complete' : 'Browse catalogue'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+
+              {/* Step 5: Create Cohorts */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/cohorts')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.cohortsCreated ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>5. Create Cohorts</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Organize learners into scheduled programme groups
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.cohortsCreated ? 'Complete' : 'Create cohort'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+
+              {/* Step 6: Schedule Reports */}
+              <div 
+                style={{ 
+                  background: 'rgba(255,255,255,0.15)', 
+                  padding: '16px', 
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onClick={() => navigate('/institutional/reports/schedule')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  {setupProgress.reportsScheduled ? (
+                    <CheckCircle size={24} color="#4CAF50" style={{ background: 'white', borderRadius: '50%' }} />
+                  ) : (
+                    <Circle size={24} />
+                  )}
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>6. Schedule Reports</h4>
+                </div>
+                <p style={{ margin: '0 0 8px 36px', fontSize: '13px', opacity: 0.9 }}>
+                  Configure automated progress reports
+                </p>
+                <div style={{ marginLeft: '36px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500 }}>
+                  {setupProgress.reportsScheduled ? 'Complete' : 'Schedule reports'}
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Stats Grid */}
           <div className="stats-grid">
             <div className="stat-card">

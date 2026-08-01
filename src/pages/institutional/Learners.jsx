@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Users, TrendingUp, AlertTriangle, Award, Download, Plus, Search, Filter } from 'lucide-react'
+import { Users, TrendingUp, AlertTriangle, Award, Download, Plus, Search, Filter, Upload } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
 import InviteLearnersModal from '../../components/modals/InviteLearnersModal'
 import BulkImportModal from '../../components/modals/BulkImportModal'
@@ -12,6 +13,7 @@ import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Learners.css'
 
 const Learners = () => {
+  const navigate = useNavigate()
   const { institutionId } = useShoraInstitute()
   const [searchTerm, setSearchTerm] = useState('')
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -29,7 +31,7 @@ const Learners = () => {
   })
 
   useEffect(() => {
-    console.log('Learners useEffect - institutionId:', institutionId)
+    
     if (institutionId) {
       fetchLearners()
     }
@@ -37,11 +39,11 @@ const Learners = () => {
 
   const fetchLearners = async () => {
     if (!institutionId) {
-      console.log('❌ No institutionId available yet, skipping fetch')
+      
       return
     }
 
-    console.log('✅ Fetching learners for institution:', institutionId)
+    
     
     try {
       setLoading(true)
@@ -55,9 +57,9 @@ const Learners = () => {
         throw learnersError
       }
 
-      console.log('📊 Active learners found:', learnersData?.length || 0)
+      
       if (learnersData && learnersData.length > 0) {
-        console.log('Sample learner data:', learnersData[0])
+        
       }
 
       // Step 2: Get pending assignments (learners who haven't joined yet)
@@ -79,7 +81,7 @@ const Learners = () => {
         console.error('Error fetching pending assignments:', pendingError)
       }
 
-      console.log('📋 Pending assignments found:', pendingData?.length || 0)
+      
 
       // Group pending by email to avoid duplicates
       const pendingByEmail = {}
@@ -156,10 +158,6 @@ const Learners = () => {
       // Combine active and pending learners
       const allLearners = [...activeLearners, ...pendingLearners]
 
-      console.log('✅ Total learners (active + pending):', allLearners.length)
-      console.log('   - Active learners:', activeLearners.length)
-      console.log('   - Pending learners:', pendingLearners.length)
-
       setLearners(allLearners)
 
       // Calculate stats
@@ -221,7 +219,7 @@ const Learners = () => {
         if (!userId) {
           // For now, create an invitation that can be accepted
           // TODO: Implement user creation via admin panel or invitation acceptance flow
-          console.log('User does not exist yet, creating invitation...')
+          
         }
 
         // If we have a userId, add them directly to institution_learners
@@ -242,7 +240,7 @@ const Learners = () => {
 
           if (learnerError) throw learnerError
 
-          console.log('Learner added successfully:', learner)
+          
         }
       }
 
@@ -261,7 +259,7 @@ const Learners = () => {
   }
 
   const handleAssignProgramme = async (assignmentData) => {
-    console.log('Assignment data:', assignmentData)
+    
     // TODO: Implement actual assignment logic with database
     // For now, just simulate success
     return Promise.resolve()
@@ -279,6 +277,13 @@ const Learners = () => {
               <select className="date-range-select">
                 <option>May 1 - May 31, 2026</option>
               </select>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => navigate('/institutional/learners/import')}
+              >
+                <Upload size={18} />
+                Import CSV
+              </button>
               <button 
                 className="btn btn-primary"
                 onClick={() => setShowInviteModal(true)}

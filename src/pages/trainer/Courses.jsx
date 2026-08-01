@@ -99,7 +99,7 @@ const TrainerCourses = () => {
 
   // Handle edit course
   const handleEditCourse = (course) => {
-    console.log('Editing course:', course)
+    
     setEditingCourse({ ...course })
     setLearningObjectives(course.learning_objectives || [''])
     setRequirements(course.requirements || [''])

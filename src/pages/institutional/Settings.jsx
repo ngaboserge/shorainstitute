@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
-import { Users, Plus } from 'lucide-react'
+import { Users, Plus, Edit } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import { useAuth } from '../../contexts/AuthContext'
 import './Settings.css'
 
 const Settings = () => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Organization Profile')
   const { institutionId } = useShoraInstitute()
   const { user } = useAuth()
@@ -143,7 +145,16 @@ const Settings = () => {
             <div className="settings-content">
               <div className="settings-grid">
                 <div className="card settings-card">
-                  <h3 className="settings-card-title">Organization Profile</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h3 className="settings-card-title">Organization Profile</h3>
+                    <button 
+                      className="btn btn-primary btn-sm"
+                      onClick={() => navigate('/institutional/settings/profile')}
+                    >
+                      <Edit size={16} />
+                      Edit Profile
+                    </button>
+                  </div>
                   
                   <div className="org-profile-section">
                     <div className="org-logo-section">
@@ -327,7 +338,13 @@ const Settings = () => {
                     <h3 className="card-title">Team Admins ({teamAdmins.length})</h3>
                     <p className="card-subtitle">Manage team access and permissions.</p>
                   </div>
-                  {teamAdmins.length > 0 && <a href="#" className="view-all-admins">View all admins →</a>}
+                  <button 
+                    className="btn btn-primary btn-sm"
+                    onClick={() => navigate('/institutional/settings/administrators')}
+                  >
+                    <Users size={16} />
+                    Manage Administrators
+                  </button>
                 </div>
 
                 {loading ? (
@@ -341,7 +358,10 @@ const Settings = () => {
                     <p style={{ color: '#666', marginBottom: '24px' }}>
                       Invite team members to help manage your institution's portal.
                     </p>
-                    <button className="btn btn-primary">
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => navigate('/institutional/settings/administrators')}
+                    >
                       <Plus size={18} />
                       Invite First Admin
                     </button>

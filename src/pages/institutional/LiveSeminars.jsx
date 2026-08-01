@@ -43,7 +43,7 @@ const LiveSeminars = () => {
         .select('seminar_id, status')
       
       if (regError) {
-        console.log('No registrations data:', regError)
+        
       }
 
       // Count registrations by seminar
@@ -138,7 +138,7 @@ const LiveSeminars = () => {
   }
 
   const handleBulkRegister = async (registrationData) => {
-    console.log('Bulk registration data:', registrationData)
+    
     // TODO: Implement actual registration logic with database
     return Promise.resolve()
   }

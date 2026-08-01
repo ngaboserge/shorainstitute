@@ -1,0 +1,70 @@
+/* Administrators Page Styles */
+
+/* Reuses common styles from other institutional pages */
+/* Additional specific styles below */
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.role-badge.super-admin {
+  background: #FFEBEE;
+  color: #D32F2F;
+}
+
+.role-badge.programme-admin {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.role-badge.report-viewer {
+  background: #F5F5F5;
+  color: #666;
+}
+
+.admin-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.admin-status-indicator.active {
+  background: #4CAF50;
+}
+
+.admin-status-indicator.inactive {
+  background: #9E9E9E;
+}
+
+.admin-status-indicator.pending {
+  background: #FF9800;
+}
+
+.permission-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+}
+
+.permission-list li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.permission-list li:before {
+  content: "✓";
+  color: #4CAF50;
+  font-weight: bold;
+}

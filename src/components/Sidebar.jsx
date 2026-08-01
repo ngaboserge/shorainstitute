@@ -19,7 +19,8 @@ import {
   Clock,
   HelpCircle,
   Search,
-  ClipboardList
+  ClipboardList,
+  Building2
 } from 'lucide-react'
 import shoraLogo from '../assets/shora-logo.png'
 import './Sidebar.css'
@@ -45,7 +46,9 @@ const Sidebar = ({ type = 'institutional' }) => {
   const institutionalMenuItems = [
     { path: '/institutional/overview', icon: LayoutDashboard, label: 'Overview' },
     { path: '/institutional/learners', icon: Users, label: 'Learners' },
+    { path: '/institutional/departments', icon: Building2, label: 'Departments' },
     { path: '/institutional/programmes', icon: BookOpen, label: 'Programmes' },
+    { path: '/institutional/cohorts', icon: Users, label: 'Cohorts' },
     { path: '/institutional/assignments', icon: ClipboardList, label: 'Assignments' },
     { path: '/institutional/enrollment-codes', icon: Ticket, label: 'Enrollment Codes' },
     { path: '/institutional/live-seminars', icon: Video, label: 'Live Seminars' },
@@ -53,6 +56,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/institutional/reports', icon: BarChart3, label: 'Reports & Analytics' },
     { path: '/institutional/certificates', icon: Award, label: 'Certificates' },
     { path: '/institutional/billing', icon: CreditCard, label: 'Billing & Subscriptions' },
+    { path: '/institutional/settings/administrators', icon: Users, label: 'Administrators' },
     { path: '/institutional/settings', icon: Settings, label: 'Settings' },
   ]
 

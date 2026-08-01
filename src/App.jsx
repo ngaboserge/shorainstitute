@@ -15,12 +15,18 @@ import InstitutionalLogin from './pages/auth/InstitutionalLogin'
 import InstitutionalSignup from './pages/auth/InstitutionalSignup'
 import InstitutionalOverview from './pages/institutional/Overview'
 import InstitutionalLearners from './pages/institutional/Learners'
-import InstitutionalProgrammes from './pages/institutional/Programmes'
+import ImportLearners from './pages/institutional/ImportLearners'
+import InstitutionalProgrammes from './pages/institutional/ProgrammesNew'
 import InstitutionalLiveSeminars from './pages/institutional/LiveSeminars'
-import InstitutionalReports from './pages/institutional/Reports'
 import InstitutionalCertificates from './pages/institutional/Certificates'
 import InstitutionalBilling from './pages/institutional/Billing'
 import InstitutionalSettings from './pages/institutional/Settings'
+import InstitutionProfile from './pages/institutional/InstitutionProfile'
+import Administrators from './pages/institutional/Administrators'
+import Departments from './pages/institutional/Departments'
+import CreateDepartment from './pages/institutional/CreateDepartment'
+import Cohorts from './pages/institutional/Cohorts'
+import CreateCohort from './pages/institutional/CreateCohort'
 import PendingApprovals from './pages/institutional/PendingApprovals'
 import ProgrammeDetails from './pages/institutional/ProgrammeDetails'
 import PurchaseCourses from './pages/institutional/PurchaseCourses'
@@ -28,6 +34,9 @@ import ManageCodes from './pages/institutional/ManageCodes'
 import AssignCourse from './pages/institutional/AssignCourse'
 import Assignments from './pages/institutional/Assignments'
 import EnrollmentCodes from './pages/institutional/EnrollmentCodes'
+import ProgrammeCatalogue from './pages/institutional/ProgrammeCatalogue'
+import ScheduleReports from './pages/institutional/ScheduleReports'
+import InstitutionalReports from './pages/institutional/ReportsNew'
 import TrainerDashboard from './pages/trainer/Dashboard'
 import TrainerProfile from './pages/trainer/Profile'
 import TrainerAnalytics from './pages/trainer/Analytics'
@@ -115,15 +124,24 @@ function App() {
         {/* Institutional Portal Routes - Protected with InstitutionalAuthGuard */}
         <Route path="/institutional/overview" element={<InstitutionalAuthGuard><InstitutionalOverview /></InstitutionalAuthGuard>} />
         <Route path="/institutional/learners" element={<InstitutionalAuthGuard><InstitutionalLearners /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/learners/import" element={<InstitutionalAuthGuard><ImportLearners /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/departments" element={<InstitutionalAuthGuard><Departments /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/departments/create" element={<InstitutionalAuthGuard><CreateDepartment /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/cohorts" element={<InstitutionalAuthGuard><Cohorts /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/cohorts/create" element={<InstitutionalAuthGuard><CreateCohort /></InstitutionalAuthGuard>} />
         <Route path="/institutional/programmes" element={<InstitutionalAuthGuard><InstitutionalProgrammes /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/programmes/browse" element={<InstitutionalAuthGuard><ProgrammeCatalogue /></InstitutionalAuthGuard>} />
         <Route path="/institutional/programmes/:id" element={<InstitutionalAuthGuard><ProgrammeDetails /></InstitutionalAuthGuard>} />
         <Route path="/institutional/live-seminars" element={<InstitutionalAuthGuard><InstitutionalLiveSeminars /></InstitutionalAuthGuard>} />
         <Route path="/institutional/reports" element={<InstitutionalAuthGuard><InstitutionalReports /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/reports/schedule" element={<InstitutionalAuthGuard><ScheduleReports /></InstitutionalAuthGuard>} />
         <Route path="/institutional/certificates" element={<InstitutionalAuthGuard><InstitutionalCertificates /></InstitutionalAuthGuard>} />
         <Route path="/institutional/billing" element={<InstitutionalAuthGuard><InstitutionalBilling /></InstitutionalAuthGuard>} />
         <Route path="/institutional/billing/purchase" element={<InstitutionalAuthGuard><PurchaseCourses /></InstitutionalAuthGuard>} />
         <Route path="/institutional/billing/codes" element={<InstitutionalAuthGuard><ManageCodes /></InstitutionalAuthGuard>} />
         <Route path="/institutional/settings" element={<InstitutionalAuthGuard><InstitutionalSettings /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/settings/profile" element={<InstitutionalAuthGuard><InstitutionProfile /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/settings/administrators" element={<InstitutionalAuthGuard><Administrators /></InstitutionalAuthGuard>} />
         <Route path="/institutional/approvals" element={<InstitutionalAuthGuard><PendingApprovals /></InstitutionalAuthGuard>} />
         <Route path="/institutional/assign-course" element={<InstitutionalAuthGuard><AssignCourse /></InstitutionalAuthGuard>} />
         <Route path="/institutional/assignments" element={<InstitutionalAuthGuard><Assignments /></InstitutionalAuthGuard>} />
