@@ -122,10 +122,13 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
     const siteUrl = (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const cardReturnBase = (
+        process.env.XENTRIPAY_CARD_RETURN_URL_BASE?.trim() || siteUrl
+    ).replace(/\/$/, '');
     console.log(`[local-api] Payment API running at http://localhost:${PORT}`);
     console.log('[local-api] Start Vite with: npm run dev  →  http://localhost:3000');
-    console.log(`[local-api] XentriPay webhook (prod): ${siteUrl}/api/webhooks/xentripay`);
-    console.log(`[local-api] Card return URL base: ${siteUrl}/payment/success?ref=...`);
+    console.log(`[local-api] XentriPay webhook: ${siteUrl}/api/webhooks/xentripay`);
+    console.log(`[local-api] Card return URL: ${cardReturnBase}/payment/success?ref=...&payment=return`);
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
         console.warn('[local-api] WARNING: SUPABASE_SERVICE_ROLE_KEY is missing — payments will not enroll');
     }
