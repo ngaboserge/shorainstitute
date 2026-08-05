@@ -31,10 +31,21 @@ const Sidebar = ({ type = 'institutional' }) => {
   const { user, profile, signOut } = useAuth()
   const { institution } = useInstitutionalAuth()
   const [institutionName, setInstitutionName] = useState('Your Institution')
+  const [logoUrl, setLogoUrl] = useState(null)
 
   useEffect(() => {
     if (type === 'institutional' && institution) {
       setInstitutionName(institution.name || 'Your Institution')
+      
+      // Convert Google Drive URL if needed
+      let url = institution.logo_url
+      if (url && url.includes('drive.google.com/file')) {
+        const match = url.match(/\/file\/d\/([^\/]+)/)
+        if (match) {
+          url = `https://drive.google.com/uc?export=view&id=${match[1]}`
+        }
+      }
+      setLogoUrl(url)
     }
   }, [institution, type])
 
@@ -52,11 +63,9 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/institutional/assignments', icon: ClipboardList, label: 'Assignments' },
     { path: '/institutional/enrollment-codes', icon: Ticket, label: 'Enrollment Codes' },
     { path: '/institutional/live-seminars', icon: Video, label: 'Live Seminars' },
-    { path: '/institutional/approvals', icon: Clock, label: 'Pending Approvals' },
     { path: '/institutional/reports', icon: BarChart3, label: 'Reports & Analytics' },
     { path: '/institutional/certificates', icon: Award, label: 'Certificates' },
-    { path: '/institutional/billing', icon: CreditCard, label: 'Billing & Subscriptions' },
-    { path: '/institutional/settings/administrators', icon: Users, label: 'Administrators' },
+    { path: '/institutional/billing', icon: CreditCard, label: 'Billing' },
     { path: '/institutional/settings', icon: Settings, label: 'Settings' },
   ]
 
@@ -101,7 +110,32 @@ const Sidebar = ({ type = 'institutional' }) => {
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <div className="logo-icon">
-            <img src={shoraLogo} alt="SHORA Institute" style={{ width: '120px', height: '80px', objectFit: 'contain' }} />
+            {type === 'institutional' && logoUrl ? (
+              <img 
+                src={logoUrl} 
+                alt={institution.name || 'Institution'} 
+                style={{ 
+                  width: '200px', 
+                  height: '130px', 
+                  objectFit: 'contain',
+                  maxWidth: '100%'
+                }}
+                onError={(e) => {
+                  console.error('Failed to load institution logo:', logoUrl)
+                  e.target.style.display = 'none'
+                  // Show fallback
+                  const fallback = document.createElement('img')
+                  fallback.src = shoraLogo
+                  fallback.alt = 'SHORA Institute'
+                  fallback.style.width = '200px'
+                  fallback.style.height = '130px'
+                  fallback.style.objectFit = 'contain'
+                  e.target.parentElement.appendChild(fallback)
+                }}
+              />
+            ) : (
+              <img src={shoraLogo} alt="SHORA Institute" style={{ width: '200px', height: '130px', objectFit: 'contain' }} />
+            )}
           </div>
         </div>
         <div className="sidebar-subtitle">

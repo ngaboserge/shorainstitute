@@ -20,18 +20,49 @@ const Settings = () => {
 
   const tabs = [
     'Organization Profile',
-    'Team Admins',
+    'Administrators',
     'Departments',
     'Notifications',
     'Security',
     'Integrations'
   ]
 
+  // Handle tab clicks with redirects for pages that exist
+  const handleTabClick = (tab) => {
+    if (tab === 'Administrators') {
+      navigate('/institutional/settings/administrators')
+    } else if (tab === 'Departments') {
+      navigate('/institutional/departments')
+    } else {
+      setActiveTab(tab)
+    }
+  }
+
   useEffect(() => {
-    fetchSettingsData()
+    if (institutionId) {
+      fetchSettingsData()
+    }
   }, [institutionId])
 
+  // Refetch when returning to this page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (institutionId && !loading) {
+        fetchSettingsData()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [institutionId, loading])
+
   const fetchSettingsData = async () => {
+    if (!institutionId) {
+      console.log('No institution ID available')
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
 
@@ -42,20 +73,40 @@ const Settings = () => {
         .eq('id', institutionId)
         .single()
 
-      if (institutionError) throw institutionError
+      if (institutionError) {
+        console.error('Institution error:', institutionError)
+        throw institutionError
+      }
+      
+      // Convert Google Drive URL if needed
+      if (institution?.logo_url && institution.logo_url.includes('drive.google.com/file')) {
+        const match = institution.logo_url.match(/\/file\/d\/([^\/]+)/)
+        if (match) {
+          institution.logo_url = `https://drive.google.com/uc?export=view&id=${match[1]}`
+        }
+      }
+      
+      console.log('Loaded institution data:', institution)
       setInstitutionData(institution)
 
       // Fetch team admins - currently just the current user
       setTeamAdmins([])
 
-      // Fetch departments
-      const { data: depts, error: deptsError } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('institution_id', institutionId)
+      // Fetch departments - don't throw error if table doesn't exist or no results
+      try {
+        const { data: depts, error: deptsError } = await supabase
+          .from('institution_departments')
+          .select('*')
+          .eq('institution_id', institutionId)
 
-      if (deptsError && deptsError.code !== 'PGRST116') throw deptsError
-      setDepartments(depts || [])
+        if (deptsError && deptsError.code !== 'PGRST116' && deptsError.code !== 'PGRST204') {
+          console.warn('Departments error (non-fatal):', deptsError)
+        }
+        setDepartments(depts || [])
+      } catch (deptErr) {
+        console.warn('Could not fetch departments:', deptErr)
+        setDepartments([])
+      }
 
     } catch (error) {
       console.error('Error fetching settings data:', error)
@@ -76,6 +127,13 @@ const Settings = () => {
           subtitle="Manage your organization profile, team access, departments, notifications, security and integrations."
           actions={
             <>
+              <button 
+                className="btn btn-secondary"
+                onClick={fetchSettingsData}
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </button>
               <button className="btn btn-secondary">
                 <Plus size={18} />
                 Invite Admin
@@ -94,7 +152,7 @@ const Settings = () => {
               <button
                 key={tab}
                 className={`settings-tab ${activeTab === tab ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabClick(tab)}
               >
                 {tab === 'Organization Profile' && (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -102,7 +160,7 @@ const Settings = () => {
                     <circle cx="12" cy="7" r="4"/>
                   </svg>
                 )}
-                {tab === 'Team Admins' && (
+                {tab === 'Administrators' && (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
@@ -159,9 +217,39 @@ const Settings = () => {
                   <div className="org-profile-section">
                     <div className="org-logo-section">
                       <div className="org-logo-display">
-                        🛡️
+                        {institutionData?.logo_url ? (
+                          <img 
+                            src={institutionData.logo_url} 
+                            alt={`${institutionData.name} logo`}
+                            style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'contain',
+                              borderRadius: '8px'
+                            }}
+                            onError={(e) => {
+                              console.error('Failed to load logo from:', institutionData.logo_url)
+                              e.target.style.display = 'none'
+                            }}
+                          />
+                        ) : null}
+                        {(!institutionData?.logo_url || !institutionData) && (
+                          <div style={{ fontSize: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                            🛡️
+                          </div>
+                        )}
                       </div>
-                      <button className="btn-upload-logo">Change Logo</button>
+                      <button 
+                        className="btn-upload-logo"
+                        onClick={() => navigate('/institutional/settings/profile')}
+                      >
+                        Change Logo
+                      </button>
+                      {institutionData?.logo_url && (
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: '4px', wordBreak: 'break-all' }}>
+                          {institutionData.logo_url}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="org-info-form">
@@ -190,36 +278,41 @@ const Settings = () => {
                           <div className="form-row">
                             <div className="form-group">
                               <label className="form-label-settings">Sector</label>
-                              <span className="form-value" style={{ color: '#999' }}>Not configured</span>
+                              <span className="form-value">{institutionData.type || 'Not configured'}</span>
                             </div>
                             <div className="form-group">
                               <label className="form-label-settings">Account Manager</label>
-                              <span className="form-value" style={{ color: '#999' }}>Not assigned</span>
+                              <span className="form-value">{institutionData.primary_contact_name || 'Not assigned'}</span>
                             </div>
                           </div>
 
                           <div className="form-row">
                             <div className="form-group">
                               <label className="form-label-settings">Website</label>
-                              <span className="form-value" style={{ color: '#999' }}>Not configured</span>
+                              <span className="form-value">{institutionData.website || 'Not configured'}</span>
                             </div>
                             <div className="form-group">
                               <label className="form-label-settings">Phone</label>
-                              <span className="form-value" style={{ color: '#999' }}>Not configured</span>
+                              <span className="form-value">{institutionData.contact_phone || 'Not configured'}</span>
                             </div>
                           </div>
 
-                          <div className="form-group full-width">
-                            <label className="form-label-settings">Email</label>
-                            <span className="form-value">{institutionData.admin_email || 'Not configured'}</span>
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label className="form-label-settings">Email</label>
+                              <span className="form-value">{institutionData.contact_email || 'Not configured'}</span>
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label-settings">Physical Office</label>
+                              <span className="form-value">{institutionData.city ? `${institutionData.city}${institutionData.country ? `, ${institutionData.country}` : ''}` : 'Not configured'}</span>
+                            </div>
                           </div>
 
-                          <div className="form-group full-width">
-                            <label className="form-label-settings">Physical Office</label>
-                            <span className="form-value" style={{ color: '#999' }}>Not configured</span>
-                          </div>
-
-                          <button className="btn btn-primary" style={{ marginTop: '20px' }}>
+                          <button 
+                            className="btn btn-primary" 
+                            style={{ marginTop: '20px' }}
+                            onClick={() => navigate('/institutional/settings/profile')}
+                          >
                             Edit Organization Profile
                           </button>
                         </>
@@ -330,132 +423,44 @@ const Settings = () => {
             </div>
           )}
 
-          {activeTab === 'Team Admins' && (
+          {activeTab === 'Notifications' && (
             <div className="settings-content">
               <div className="card">
-                <div className="team-admins-header">
-                  <div>
-                    <h3 className="card-title">Team Admins ({teamAdmins.length})</h3>
-                    <p className="card-subtitle">Manage team access and permissions.</p>
-                  </div>
-                  <button 
-                    className="btn btn-primary btn-sm"
-                    onClick={() => navigate('/institutional/settings/administrators')}
-                  >
-                    <Users size={16} />
-                    Manage Administrators
-                  </button>
+                <h3 className="card-title">Notification Preferences</h3>
+                <p className="card-subtitle">Manage how and when you receive notifications.</p>
+                
+                <div style={{ padding: '40px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔔</div>
+                  <p style={{ color: '#666' }}>Notification settings coming soon</p>
                 </div>
-
-                {loading ? (
-                  <div style={{ padding: '60px', textAlign: 'center', color: '#666' }}>
-                    Loading team admins...
-                  </div>
-                ) : teamAdmins.length === 0 ? (
-                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
-                    <h3 style={{ marginBottom: '8px', color: '#1a1a1a' }}>No Team Admins Yet</h3>
-                    <p style={{ color: '#666', marginBottom: '24px' }}>
-                      Invite team members to help manage your institution's portal.
-                    </p>
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => navigate('/institutional/settings/administrators')}
-                    >
-                      <Plus size={18} />
-                      Invite First Admin
-                    </button>
-                  </div>
-                ) : (
-                  <table className="settings-table">
-                    <thead>
-                      <tr>
-                        <th>Admin User</th>
-                        <th>Role</th>
-                        <th>Permissions</th>
-                        <th>Last Active</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamAdmins.map((admin, index) => (
-                        <tr key={index}>
-                          <td>
-                            <div className="admin-user-cell">
-                              <img src={admin.avatar} alt={admin.name} className="admin-avatar" />
-                              <div className="admin-info">
-                                <div className="admin-name">{admin.name}</div>
-                                <div className="admin-email">{admin.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="role-badge">{admin.role}</span>
-                          </td>
-                          <td className="permissions-cell">{admin.permissions}</td>
-                          <td>{admin.lastActive}</td>
-                          <td>
-                            <span className="status-badge-active">{admin.status}</span>
-                          </td>
-                          <td>
-                            <button className="btn-table-action">⋮</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
               </div>
             </div>
           )}
 
-          {activeTab === 'Departments' && (
+          {activeTab === 'Security' && (
             <div className="settings-content">
               <div className="card">
-                <div className="departments-header">
-                  <div>
-                    <h3 className="card-title">Departments ({departments.length})</h3>
-                    <p className="card-subtitle">Organize learners and data by department.</p>
-                  </div>
-                  <button className="btn btn-secondary">
-                    <Plus size={16} />
-                    Add Department
-                  </button>
+                <h3 className="card-title">Security Settings</h3>
+                <p className="card-subtitle">Manage your security and authentication settings.</p>
+                
+                <div style={{ padding: '40px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+                  <p style={{ color: '#666' }}>Security settings coming soon</p>
                 </div>
+              </div>
+            </div>
+          )}
 
-                {loading ? (
-                  <div style={{ padding: '60px', textAlign: 'center', color: '#666' }}>
-                    Loading departments...
-                  </div>
-                ) : departments.length === 0 ? (
-                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏢</div>
-                    <h3 style={{ marginBottom: '8px', color: '#1a1a1a' }}>No Departments Yet</h3>
-                    <p style={{ color: '#666', marginBottom: '24px' }}>
-                      Create departments to organize your learners and track progress by team.
-                    </p>
-                    <button className="btn btn-primary">
-                      <Plus size={18} />
-                      Create First Department
-                    </button>
-                  </div>
-                ) : (
-                  <div className="departments-grid">
-                    {departments.map((dept, index) => (
-                      <div key={index} className="department-card">
-                        <div className="dept-icon">{dept.icon || '📁'}</div>
-                        <div className="dept-info">
-                          <h4 className="dept-name">{dept.name}</h4>
-                          <div className="dept-stats">
-                            <span>{dept.learner_count || 0} learners</span>
-                            <span>{dept.admin_count || 0} admins</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+          {activeTab === 'Integrations' && (
+            <div className="settings-content">
+              <div className="card">
+                <h3 className="card-title">System Integrations</h3>
+                <p className="card-subtitle">Connect external systems and services.</p>
+                
+                <div style={{ padding: '40px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔌</div>
+                  <p style={{ color: '#666' }}>Integrations coming soon</p>
+                </div>
               </div>
             </div>
           )}

@@ -35,23 +35,46 @@ const CreateDepartment = () => {
 
   const fetchAdmins = async () => {
     try {
+      // Fetch admins with their email and full_name from institution_admins table
       const { data, error } = await supabase
         .from('institution_admins')
-        .select('id, user_id')
+        .select('id, user_id, email, full_name')
         .eq('institution_id', institutionId)
         .eq('status', 'active')
 
       if (error) throw error
 
-      // Get user names
       if (data && data.length > 0) {
+        // For admins with email, use it directly
+        // For admins without email (old data), try to get from users table
         const adminsWithNames = await Promise.all(
           data.map(async (admin) => {
-            const { data: userData } = await supabase.auth.admin.getUserById(admin.user_id)
-            return {
-              id: admin.id,
-              name: userData?.user?.raw_user_meta_data?.full_name || 'Unknown Admin',
-              email: userData?.user?.email || ''
+            if (admin.email && admin.full_name) {
+              // Admin has email and name in institution_admins
+              return {
+                id: admin.id,
+                name: admin.full_name,
+                email: admin.email
+              }
+            } else if (admin.user_id) {
+              // Try to get from users table
+              const { data: userData } = await supabase
+                .from('users')
+                .select('email, full_name')
+                .eq('id', admin.user_id)
+                .maybeSingle()
+              
+              return {
+                id: admin.id,
+                name: userData?.full_name || userData?.email?.split('@')[0] || 'Admin',
+                email: userData?.email || 'No email'
+              }
+            } else {
+              return {
+                id: admin.id,
+                name: admin.email?.split('@')[0] || 'Admin',
+                email: admin.email || 'No email'
+              }
             }
           })
         )

@@ -60,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('Loading profile for user:', userId)
       
+      // Try to get profile from users table first
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -68,18 +69,38 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.error('Error loading profile:', error)
-        setProfile(null)
+      }
+
+      // If profile exists in users table, use it
+      if (data) {
+        console.log('Profile loaded from users table:', data)
+        setProfile(data)
         return
       }
 
-      if (!data) {
-        console.log('Profile not found in database')
+      // Fallback: get user data from auth.users metadata
+      console.log('Profile not in users table, checking auth metadata')
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      
+      if (authUser) {
+        // Create profile from auth metadata
+        const profileFromAuth = {
+          id: authUser.id,
+          email: authUser.email,
+          full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+          role: authUser.user_metadata?.role || 'learner',
+          avatar_url: authUser.user_metadata?.avatar_url,
+          created_at: authUser.created_at
+        }
+        console.log('Profile created from auth metadata:', profileFromAuth)
+        setProfile(profileFromAuth)
+        
+        // Note: Not saving to users table as it has role constraints that don't support all role types
+        // Auth metadata is the source of truth
+      } else {
+        console.log('No auth user found')
         setProfile(null)
-        return
       }
-
-      console.log('Profile loaded successfully:', data)
-      setProfile(data)
     } catch (error) {
       console.error('Exception loading profile:', error)
       setProfile(null)

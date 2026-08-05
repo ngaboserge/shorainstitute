@@ -50,7 +50,7 @@ const Cohorts = () => {
 
       if (error) throw error
 
-      // Enrich with member counts
+      // Enrich with member counts and programme names
       if (data && data.length > 0) {
         const enrichedCohorts = await Promise.all(
           data.map(async (cohort) => {
@@ -59,9 +59,22 @@ const Cohorts = () => {
               .select('*', { count: 'exact', head: true })
               .eq('cohort_id', cohort.id)
 
+            // Fetch programme name if programme_id exists
+            let programmeName = null
+            if (cohort.programme_id) {
+              const { data: courseData } = await supabase
+                .from('courses')
+                .select('title')
+                .eq('id', cohort.programme_id)
+                .maybeSingle()
+              
+              programmeName = courseData?.title || null
+            }
+
             return {
               ...cohort,
-              memberCount: count || cohort.enrolled_count || 0
+              memberCount: count || cohort.enrolled_count || 0,
+              programmeName
             }
           })
         )
@@ -289,7 +302,7 @@ const Cohorts = () => {
                             )}
                           </div>
                         </td>
-                        <td>{cohort.programme_id ? 'Programme Assigned' : '—'}</td>
+                        <td>{cohort.programmeName || '—'}</td>
                         <td>{cohort.department?.name || '—'}</td>
                         <td>
                           <strong>{cohort.memberCount}</strong>

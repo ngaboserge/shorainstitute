@@ -40,13 +40,40 @@ const Departments = () => {
 
       if (error) throw error
 
-      setDepartments(data || [])
+      // Fetch learner counts for each department
+      const { data: learnerCounts, error: learnersError } = await supabase
+        .from('institution_learners')
+        .select('department_id')
+        .eq('institution_id', institutionId)
+        .eq('status', 'active')
+
+      if (learnersError) {
+        console.error('Error fetching learner counts:', learnersError)
+      }
+
+      // Count learners per department
+      const learnerCountMap = {}
+      learnerCounts?.forEach(learner => {
+        const deptId = learner.department_id
+        if (deptId) {
+          learnerCountMap[deptId] = (learnerCountMap[deptId] || 0) + 1
+        }
+      })
+
+      // Add learner counts to departments
+      const departmentsWithCounts = (data || []).map(dept => ({
+        ...dept,
+        learner_count: learnerCountMap[dept.id] || 0,
+        programme_count: 0 // TODO: Add programme count if needed
+      }))
+
+      setDepartments(departmentsWithCounts)
 
       // Calculate stats
-      const total = data?.length || 0
-      const academic = data?.filter(d => d.type === 'academic').length || 0
-      const administrative = data?.filter(d => d.type === 'administrative').length || 0
-      const learnersAssigned = data?.reduce((sum, d) => sum + (d.learner_count || 0), 0) || 0
+      const total = departmentsWithCounts.length || 0
+      const academic = departmentsWithCounts.filter(d => d.type === 'academic').length || 0
+      const administrative = departmentsWithCounts.filter(d => d.type === 'administrative').length || 0
+      const learnersAssigned = departmentsWithCounts.reduce((sum, d) => sum + (d.learner_count || 0), 0) || 0
 
       setStats({ total, academic, administrative, learnersAssigned })
 
@@ -198,7 +225,14 @@ const Departments = () => {
                         </td>
                         <td><strong>{dept.code || '—'}</strong></td>
                         <td>{dept.leadName || '—'}</td>
-                        <td>{dept.learner_count || 0}</td>
+                        <td>
+                          <span style={{ fontSize: '14px', fontWeight: 600 }}>{dept.learner_count || 0}</span>
+                          {dept.learner_count === 0 && (
+                            <div style={{ fontSize: '11px', color: '#FF9800', marginTop: '2px' }}>
+                              Click Edit to assign →
+                            </div>
+                          )}
+                        </td>
                         <td>{dept.programme_count || 0}</td>
                         <td>
                           <span className={`badge badge-${dept.status === 'active' ? 'success' : 'secondary'}`}>
@@ -233,15 +267,16 @@ const Departments = () => {
 
           {/* Info Panel */}
           <div className="card" style={{ marginTop: '24px', background: '#F5F5F5', border: '1px solid #E0E0E0' }}>
-            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>📌 Why departments matter</h4>
+            <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>📌 How to assign learners to departments</h4>
             <p style={{ fontSize: '13px', lineHeight: '1.6', color: '#666', marginBottom: '12px' }}>
-              Departments help you organize learners by academic and administrative units. They are used to assign learners to cohorts, learning programmes, and reporting structures.
+              Click the <strong>Edit</strong> button next to any department to assign learners to it. The Edit page has a full learner management interface where you can add or remove learners from the department without going to a separate page.
             </p>
             <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>✅ Best practices</h4>
             <ul style={{ fontSize: '13px', lineHeight: '1.8', color: '#666', paddingLeft: '20px' }}>
               <li>Set up both academic and administrative departments.</li>
               <li>Assign a department lead to streamline coordination.</li>
               <li>Keep department names clear and consistent.</li>
+              <li><strong>Assign learners to departments from the Edit page</strong> for better organization and reporting.</li>
             </ul>
           </div>
         </div>

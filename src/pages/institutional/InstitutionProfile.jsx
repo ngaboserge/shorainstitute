@@ -15,6 +15,7 @@ const InstitutionProfile = () => {
   const { institutionId } = useShoraInstitute()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [existingData, setExistingData] = useState(null)
 
   // Form data
@@ -85,6 +86,74 @@ const InstitutionProfile = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1)
     }
+  }
+
+  const handleLogoUpload = async (event) => {
+    try {
+      setUploading(true)
+      const file = event.target.files[0]
+      
+      if (!file) return
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+
+      // Validate file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB')
+        return
+      }
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${institutionId}-logo-${Date.now()}.${fileExt}`
+      const filePath = `institution-logos/${fileName}`
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('public-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        })
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('public-assets')
+        .getPublicUrl(filePath)
+
+      // Update form data with new logo URL
+      setFormData({ ...formData, logo_url: publicUrl })
+      alert('Logo uploaded successfully!')
+
+    } catch (err) {
+      console.error('Error uploading logo:', err)
+      alert(`Failed to upload logo: ${err.message}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const convertGoogleDriveUrl = (url) => {
+    // Convert Google Drive share link to direct link
+    const match = url.match(/\/file\/d\/([^\/]+)/)
+    if (match) {
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`
+    }
+    return url
+  }
+
+  const handleLogoUrlChange = (e) => {
+    let url = e.target.value
+    // Auto-convert Google Drive links
+    if (url.includes('drive.google.com')) {
+      url = convertGoogleDriveUrl(url)
+    }
+    setFormData({ ...formData, logo_url: url })
   }
 
   const handleSubmit = async () => {
@@ -249,14 +318,82 @@ const InstitutionProfile = () => {
                   </div>
 
                   <div className="form-group">
-                    <label>Logo URL</label>
-                    <input
-                      type="url"
-                      value={formData.logo_url}
-                      onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
-                      placeholder="https://example.com/logo.png"
-                    />
-                    <small className="form-help-text">URL to your institution's logo</small>
+                    <label>Logo</label>
+                    
+                    {/* Logo Preview */}
+                    {formData.logo_url && (
+                      <div style={{ 
+                        marginBottom: '12px', 
+                        padding: '12px', 
+                        border: '1px solid #E0E0E0', 
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}>
+                        <img 
+                          src={formData.logo_url} 
+                          alt="Institution logo preview" 
+                          style={{ 
+                            width: '80px', 
+                            height: '80px', 
+                            objectFit: 'contain',
+                            border: '1px solid #E0E0E0',
+                            borderRadius: '4px',
+                            padding: '4px'
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                          }}
+                        />
+                        <div style={{ flex: 1, fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
+                          {formData.logo_url}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload Button */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <input
+                        type="file"
+                        id="logo-upload"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <label 
+                        htmlFor="logo-upload" 
+                        className="btn btn-secondary"
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          cursor: uploading ? 'not-allowed' : 'pointer',
+                          opacity: uploading ? 0.6 : 1
+                        }}
+                      >
+                        {uploading ? 'Uploading...' : 'Upload from Computer'}
+                      </label>
+                      <small style={{ display: 'block', marginTop: '4px', color: '#666' }}>
+                        Max 2MB • PNG, JPG, SVG
+                      </small>
+                    </div>
+
+                    {/* URL Input */}
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ fontSize: '13px', marginBottom: '8px', color: '#666' }}>
+                        Or paste a URL:
+                      </div>
+                      <input
+                        type="url"
+                        value={formData.logo_url}
+                        onChange={handleLogoUrlChange}
+                        placeholder="https://example.com/logo.png or Google Drive link"
+                      />
+                      <small className="form-help-text">
+                        Supports direct image URLs and Google Drive links
+                      </small>
+                    </div>
                   </div>
                 </div>
               )}

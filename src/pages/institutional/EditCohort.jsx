@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import { 
   ArrowLeft, ArrowRight, Users, Calendar, BookOpen, 
-  CheckCircle, FileText, Settings, Save, ChevronRight, Building2
+  CheckCircle, FileText, Save, ChevronRight, Building2
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useShoraInstitute } from '../../hooks/useInstitutionalAuth'
 import './Cohorts.css'
 
-const CreateCohort = () => {
+const EditCohort = () => {
   const navigate = useNavigate()
+  const { id } = useParams()
   const { institutionId } = useShoraInstitute()
   const [currentStep, setCurrentStep] = useState(1)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [departments, setDepartments] = useState([])
   const [admins, setAdmins] = useState([])
   const [programmes, setProgrammes] = useState([])
   const [availableLearners, setAvailableLearners] = useState([])
   const [selectedLearners, setSelectedLearners] = useState([])
+  const [initialLearners, setInitialLearners] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
 
   // Form data
@@ -43,13 +46,54 @@ const CreateCohort = () => {
   })
 
   useEffect(() => {
-    if (institutionId) {
+    if (institutionId && id) {
+      fetchCohort()
       fetchDepartments()
       fetchAdmins()
       fetchProgrammes()
       fetchAvailableLearners()
+      fetchCohortMembers()
     }
-  }, [institutionId])
+  }, [institutionId, id])
+
+  const fetchCohort = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('institution_cohorts')
+        .select('*')
+        .eq('id', id)
+        .eq('institution_id', institutionId)
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        setFormData({
+          name: data.name || '',
+          code: data.code || '',
+          programme_id: data.programme_id || '',
+          department_id: data.department_id || '',
+          cohort_manager_id: data.cohort_manager_id || '',
+          delivery_format: data.delivery_format || 'hybrid',
+          capacity: data.capacity || '',
+          start_date: data.start_date || '',
+          end_date: data.end_date || '',
+          timezone: data.timezone || 'Africa/Kigali',
+          completion_rules: data.completion_rules || {
+            require_all_modules: true,
+            min_assessment_score: 70,
+            min_attendance: 80
+          },
+          status: data.status || 'draft'
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching cohort:', err)
+      alert(`Failed to load cohort: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchDepartments = async () => {
     try {
@@ -77,16 +121,11 @@ const CreateCohort = () => {
 
       if (error) throw error
 
-      // Get user names
       if (data && data.length > 0) {
         const adminsWithNames = await Promise.all(
           data.map(async (admin) => {
             if (admin.email && admin.full_name) {
-              return {
-                id: admin.id,
-                name: admin.full_name,
-                email: admin.email
-              }
+              return { id: admin.id, name: admin.full_name, email: admin.email }
             } else if (admin.user_id) {
               const { data: userData } = await supabase
                 .from('users')
@@ -151,7 +190,6 @@ const CreateCohort = () => {
 
       if (error) throw error
       
-      // Map to format expected by the component
       const mappedLearners = (data || []).map(learner => ({
         id: learner.id,
         full_name: learner.user_name,
@@ -163,6 +201,46 @@ const CreateCohort = () => {
       setAvailableLearners(mappedLearners)
     } catch (err) {
       console.error('Error fetching learners:', err)
+    }
+  }
+
+  const fetchCohortMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('institution_cohort_members')
+        .select(`
+          learner_id,
+          institution_learners:learner_id (
+            id,
+            user_id
+          )
+        `)
+        .eq('cohort_id', id)
+        .eq('status', 'enrolled')
+
+      if (error) throw error
+
+      const learnerIds = (data || []).map(m => m.learner_id)
+      
+      const { data: learnersData } = await supabase
+        .rpc('get_institution_learners_full', {
+          p_institution_id: institutionId
+        })
+
+      const cohortLearners = (learnersData || [])
+        .filter(l => learnerIds.includes(l.id))
+        .map(learner => ({
+          id: learner.id,
+          full_name: learner.user_name,
+          email: learner.user_email,
+          department_name: learner.department_name,
+          employee_id: learner.employee_id
+        }))
+
+      setSelectedLearners(cohortLearners)
+      setInitialLearners(cohortLearners)
+    } catch (err) {
+      console.error('Error fetching cohort members:', err)
     }
   }
 
@@ -201,15 +279,14 @@ const CreateCohort = () => {
     }
   }
 
-  const handleSubmit = async (isDraft = true) => {
+  const handleSubmit = async () => {
     try {
-      setLoading(true)
+      setSaving(true)
 
-      // Create cohort
-      const { data: cohort, error: cohortError } = await supabase
+      // Update cohort
+      const { error: cohortError } = await supabase
         .from('institution_cohorts')
-        .insert({
-          institution_id: institutionId,
+        .update({
           name: formData.name,
           code: formData.code,
           programme_id: formData.programme_id || null,
@@ -221,45 +298,62 @@ const CreateCohort = () => {
           end_date: formData.end_date || null,
           timezone: formData.timezone,
           completion_rules: formData.completion_rules,
-          status: isDraft ? 'draft' : 'active',
-          enrolled_count: selectedLearners.length
+          enrolled_count: selectedLearners.length,
+          updated_at: new Date().toISOString()
         })
-        .select()
-        .single()
+        .eq('id', id)
+        .eq('institution_id', institutionId)
 
       if (cohortError) throw cohortError
 
-      // Add learners to cohort
-      if (selectedLearners.length > 0 && cohort) {
-        const members = selectedLearners.map(learner => ({
-          cohort_id: cohort.id,
-          learner_id: learner.id,
+      // Update cohort members
+      const initialIds = initialLearners.map(l => l.id)
+      const selectedIds = selectedLearners.map(l => l.id)
+      
+      // Remove members
+      const toRemove = initialIds.filter(id => !selectedIds.includes(id))
+      if (toRemove.length > 0) {
+        const { error: removeError } = await supabase
+          .from('institution_cohort_members')
+          .delete()
+          .eq('cohort_id', id)
+          .in('learner_id', toRemove)
+
+        if (removeError) throw removeError
+      }
+
+      // Add new members
+      const toAdd = selectedIds.filter(id => !initialIds.includes(id))
+      if (toAdd.length > 0) {
+        const members = toAdd.map(learnerId => ({
+          cohort_id: id,
+          learner_id: learnerId,
           enrolled_at: new Date().toISOString(),
           status: 'enrolled',
           progress_percentage: 0
         }))
 
-        const { error: membersError } = await supabase
+        const { error: addError } = await supabase
           .from('institution_cohort_members')
           .insert(members)
 
-        if (membersError) throw membersError
+        if (addError) throw addError
       }
 
-      alert(`Cohort ${isDraft ? 'saved as draft' : 'created and activated'} successfully!`)
+      alert('Cohort updated successfully!')
       navigate('/institutional/cohorts')
 
     } catch (err) {
-      console.error('Error creating cohort:', err)
-      alert(`Failed to create cohort: ${err.message}`)
+      console.error('Error updating cohort:', err)
+      alert(`Failed to update cohort: ${err.message}`)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const steps = [
     { number: 1, title: 'Cohort Details', icon: FileText },
-    { number: 2, title: 'Select Learners', icon: Users },
+    { number: 2, title: 'Manage Learners', icon: Users },
     { number: 3, title: 'Schedule', icon: Calendar },
     { number: 4, title: 'Completion Rules', icon: CheckCircle }
   ]
@@ -270,13 +364,27 @@ const CreateCohort = () => {
      l.email?.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar type="institutional" />
+        <div className="main-content">
+          <Header title="Edit Cohort" />
+          <div className="content-wrapper" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+            <div className="spinner" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-layout">
       <Sidebar type="institutional" />
       <div className="main-content">
         <Header 
-          title="Create Cohort"
-          subtitle="Organize learners into a scheduled programme group."
+          title="Edit Cohort"
+          subtitle="Update cohort details and manage learner enrollment."
           actions={
             <button className="btn btn-secondary" onClick={() => navigate('/institutional/cohorts')}>
               <ArrowLeft size={18} />
@@ -372,9 +480,6 @@ const CreateCohort = () => {
                           </option>
                         ))}
                       </select>
-                      <small className="form-help-text">
-                        {programmes.length === 0 ? 'No programmes selected. Visit Programmes → Browse Catalogue to add programmes.' : 'Assign this cohort to a specific programme'}
-                      </small>
                     </div>
                   </div>
 
@@ -429,16 +534,15 @@ const CreateCohort = () => {
                         placeholder="e.g., 50"
                         min="1"
                       />
-                      <small className="form-help-text">Leave empty for unlimited capacity</small>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Select Learners */}
+              {/* Step 2: Manage Learners */}
               {currentStep === 2 && (
                 <div className="card">
-                  <h3 style={{ marginBottom: '24px' }}>Select Learners</h3>
+                  <h3 style={{ marginBottom: '24px' }}>Manage Learners</h3>
 
                   <div className="learner-selector">
                     {/* Available Learners */}
@@ -499,7 +603,7 @@ const CreateCohort = () => {
                     {/* Selected Learners */}
                     <div className="learner-pool">
                       <div className="pool-header">
-                        <div className="pool-title">Selected Learners</div>
+                        <div className="pool-title">Enrolled Learners</div>
                         <div className="pool-count">{selectedLearners.length}</div>
                       </div>
                       <div className="pool-list">
@@ -518,7 +622,7 @@ const CreateCohort = () => {
                         ))}
                         {selectedLearners.length === 0 && (
                           <div style={{ padding: '20px', textAlign: 'center', color: '#999' }}>
-                            No learners selected
+                            No learners enrolled
                           </div>
                         )}
                       </div>
@@ -566,12 +670,6 @@ const CreateCohort = () => {
                       <option value="Europe/London">Europe/London (GMT)</option>
                       <option value="America/New_York">America/New York (EST)</option>
                     </select>
-                  </div>
-
-                  <div className="card" style={{ background: '#F5F5F5', marginTop: '20px' }}>
-                    <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
-                      📅 The schedule defines when learners can access programme content and when assessments are due.
-                    </p>
                   </div>
                 </div>
               )}
@@ -663,12 +761,6 @@ const CreateCohort = () => {
                       </div>
                     </div>
                   </div>
-
-                  <div className="card" style={{ background: '#F5F5F5', marginTop: '20px' }}>
-                    <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
-                      ✅ These rules determine when a learner is considered to have completed the cohort programme.
-                    </p>
-                  </div>
                 </div>
               )}
 
@@ -689,24 +781,14 @@ const CreateCohort = () => {
                 )}
 
                 {currentStep === 4 && (
-                  <>
-                    <button 
-                      className="btn btn-secondary" 
-                      onClick={() => handleSubmit(true)}
-                      disabled={loading || !formData.name}
-                    >
-                      <Save size={18} />
-                      {loading ? 'Saving...' : 'Save as Draft'}
-                    </button>
-                    <button 
-                      className="btn btn-primary" 
-                      onClick={() => handleSubmit(false)}
-                      disabled={loading || !formData.name}
-                    >
-                      <CheckCircle size={18} />
-                      {loading ? 'Creating...' : 'Create & Activate'}
-                    </button>
-                  </>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={handleSubmit}
+                    disabled={saving || !formData.name}
+                  >
+                    <Save size={18} />
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
                 )}
               </div>
             </div>
@@ -805,4 +887,4 @@ const CreateCohort = () => {
   )
 }
 
-export default CreateCohort
+export default EditCohort

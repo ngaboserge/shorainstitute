@@ -44,39 +44,18 @@ const Administrators = () => {
 
       if (error) throw error
 
-      // Enrich with user data
-      if (data && data.length > 0) {
-        const enrichedAdmins = await Promise.all(
-          data.map(async (admin) => {
-            try {
-              const { data: { user } } = await supabase.auth.admin.getUserById(admin.user_id)
-              return {
-                ...admin,
-                email: user?.email || 'N/A',
-                full_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown',
-                last_sign_in: user?.last_sign_in_at || null
-              }
-            } catch (err) {
-              return {
-                ...admin,
-                email: 'N/A',
-                full_name: 'Unknown',
-                last_sign_in: null
-              }
-            }
-          })
-        )
-        setAdmins(enrichedAdmins)
+      // Set admins directly - email and full_name should be stored in institution_admins table
+      setAdmins(data || [])
 
-        // Calculate stats
-        const total = enrichedAdmins.length
-        const superAdmins = enrichedAdmins.filter(a => a.role === 'super_admin').length
-        const programmeAdmins = enrichedAdmins.filter(a => a.role === 'programme_admin').length
-        const active = enrichedAdmins.filter(a => a.status === 'active').length
+      // Calculate stats
+      if (data && data.length > 0) {
+        const total = data.length
+        const superAdmins = data.filter(a => a.role === 'super_admin').length
+        const programmeAdmins = data.filter(a => a.role === 'programme_admin').length
+        const active = data.filter(a => a.status === 'active').length
 
         setStats({ total, superAdmins, programmeAdmins, active })
       } else {
-        setAdmins([])
         setStats({ total: 0, superAdmins: 0, programmeAdmins: 0, active: 0 })
       }
 
@@ -302,17 +281,17 @@ const Administrators = () => {
                       <tr key={admin.id}>
                         <td>
                           <div>
-                            <strong>{admin.full_name}</strong>
+                            <strong>{admin.full_name || admin.email?.split('@')[0] || 'Unknown'}</strong>
                           </div>
                         </td>
-                        <td>{admin.email}</td>
+                        <td>{admin.email || 'N/A'}</td>
                         <td>{getRoleBadge(admin.role || 'programme_admin')}</td>
                         <td>
                           <span className={`badge badge-${admin.status === 'active' ? 'success' : admin.status === 'pending' ? 'warning' : 'secondary'}`}>
                             {admin.status === 'active' ? 'Active' : admin.status === 'pending' ? 'Pending' : 'Inactive'}
                           </span>
                         </td>
-                        <td>{formatLastActive(admin.last_sign_in)}</td>
+                        <td>{formatLastActive(admin.last_active_at || admin.created_at)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             <button

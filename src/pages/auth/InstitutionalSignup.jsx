@@ -88,17 +88,21 @@ const InstitutionalSignup = () => {
 
       // 2. Create profile for admin
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('users')
         .upsert({
           id: authData.user.id,
           email: formData.adminEmail.toLowerCase().trim(),
           full_name: formData.adminName,
           role: 'institutional_admin',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         })
 
-      if (profileError && profileError.code !== '23505') {
+      if (profileError) {
         console.error('Profile creation error:', profileError)
+        // Continue anyway - profile will be created from metadata
       }
 
       // 3. Create institution record

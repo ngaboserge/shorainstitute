@@ -122,7 +122,8 @@ const Learners = () => {
         const status = daysSinceAccess > 7 ? 'At Risk' : 'Active'
 
         return {
-          id: learner.employee_id || learner.id.substring(0, 8).toUpperCase(),
+          id: learner.id, // Use UUID as unique key
+          employeeId: learner.employee_id || learner.id.substring(0, 8).toUpperCase(), // Display ID
           name: learner.user_name || 'Unknown',
           email: learner.user_email || 'No email',
           department: learner.department_name || 'Unassigned',
@@ -142,7 +143,8 @@ const Learners = () => {
       // Step 6: Transform pending assignments to display format
       const pendingLearners = Object.values(pendingByEmail).map(pending => {
         return {
-          id: pending.employee_id || pending.employee_email.substring(0, 8).toUpperCase(),
+          id: `pending-${pending.employee_email}`, // Unique key for pending
+          employeeId: pending.employee_id || pending.employee_email.substring(0, 8).toUpperCase(),
           name: pending.employee_name || pending.employee_email.split('@')[0],
           email: pending.employee_email,
           department: pending.institution_departments?.name || 'Unassigned',
@@ -441,7 +443,7 @@ const Learners = () => {
                             <span className="learner-name">{learner.name}</span>
                           </td>
                           <td>{learner.email}</td>
-                          <td>{learner.id}</td>
+                          <td>{learner.employeeId}</td>
                           <td>{learner.department}</td>
                           <td>{learner.programme}</td>
                           <td>

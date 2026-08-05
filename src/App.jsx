@@ -25,8 +25,10 @@ import InstitutionProfile from './pages/institutional/InstitutionProfile'
 import Administrators from './pages/institutional/Administrators'
 import Departments from './pages/institutional/Departments'
 import CreateDepartment from './pages/institutional/CreateDepartment'
+import EditDepartment from './pages/institutional/EditDepartment'
 import Cohorts from './pages/institutional/Cohorts'
 import CreateCohort from './pages/institutional/CreateCohort'
+import EditCohort from './pages/institutional/EditCohort'
 import PendingApprovals from './pages/institutional/PendingApprovals'
 import ProgrammeDetails from './pages/institutional/ProgrammeDetails'
 import PurchaseCourses from './pages/institutional/PurchaseCourses'
@@ -127,8 +129,10 @@ function App() {
         <Route path="/institutional/learners/import" element={<InstitutionalAuthGuard><ImportLearners /></InstitutionalAuthGuard>} />
         <Route path="/institutional/departments" element={<InstitutionalAuthGuard><Departments /></InstitutionalAuthGuard>} />
         <Route path="/institutional/departments/create" element={<InstitutionalAuthGuard><CreateDepartment /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/departments/:id/edit" element={<InstitutionalAuthGuard><EditDepartment /></InstitutionalAuthGuard>} />
         <Route path="/institutional/cohorts" element={<InstitutionalAuthGuard><Cohorts /></InstitutionalAuthGuard>} />
         <Route path="/institutional/cohorts/create" element={<InstitutionalAuthGuard><CreateCohort /></InstitutionalAuthGuard>} />
+        <Route path="/institutional/cohorts/:id/edit" element={<InstitutionalAuthGuard><EditCohort /></InstitutionalAuthGuard>} />
         <Route path="/institutional/programmes" element={<InstitutionalAuthGuard><InstitutionalProgrammes /></InstitutionalAuthGuard>} />
         <Route path="/institutional/programmes/browse" element={<InstitutionalAuthGuard><ProgrammeCatalogue /></InstitutionalAuthGuard>} />
         <Route path="/institutional/programmes/:id" element={<InstitutionalAuthGuard><ProgrammeDetails /></InstitutionalAuthGuard>} />
