@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react'
 import {
-  X, DollarSign, Smartphone, CreditCard, Phone,
+  X, Smartphone, CreditCard, Phone,
   CheckCircle, XCircle, Loader, AlertCircle
 } from 'lucide-react'
 import { initiatePayment, checkPaymentStatus, formatPrice } from '../services/paymentService'
 import './PaymentModal.css'
 
 /**
- * XentriPay checkout modal.
- * MoMo: sends a payment prompt to the learner's phone, then polls status.
- * Card: redirects to the XentriPay hosted checkout page.
- * Enrollment is created server-side only after the gateway confirms payment.
+ * Compact XentriPay checkout modal.
+ * MoMo prompt + status poll; card redirects when enabled.
  */
 
 const CARD_PAYMENT_ENABLED = import.meta.env.VITE_CARD_PAYMENT_ENABLED === 'true'
 const POLL_INTERVAL_MS = 5000
-const MAX_POLLS = 60 // ~5 minutes
+const MAX_POLLS = 60
 
 const PaymentModal = ({ course, user, onClose, onSuccess }) => {
-  const [step, setStep] = useState('method') // method | processing | confirming | success | failed
+  const [step, setStep] = useState('method')
   const [paymentMethod, setPaymentMethod] = useState('momo')
   const [phone, setPhone] = useState('')
   const [referenceId, setReferenceId] = useState(null)
-  const [gatewayMessage, setGatewayMessage] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -42,9 +39,7 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
       }
 
       polls += 1
-      if (polls >= MAX_POLLS) {
-        clearInterval(interval)
-      }
+      if (polls >= MAX_POLLS) clearInterval(interval)
     }, POLL_INTERVAL_MS)
 
     return () => clearInterval(interval)
@@ -52,12 +47,11 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
 
   const handlePay = async () => {
     if (!phone.trim()) {
-      setError('Please enter your phone number')
+      setError('Enter your phone number')
       return
     }
 
     setError(null)
-    setGatewayMessage(null)
     setStep('processing')
 
     const result = await initiatePayment({
@@ -70,12 +64,6 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
 
     if (result.success && result.referenceId) {
       setReferenceId(result.referenceId)
-      setGatewayMessage(
-        result.confirmationMessage ||
-          (paymentMethod === 'momo'
-            ? 'Approve the payment prompt on your phone to continue.'
-            : 'Complete your payment on the secure checkout page.')
-      )
       setStep('confirming')
 
       if (paymentMethod === 'card' && result.redirectUrl) {
@@ -83,226 +71,161 @@ const PaymentModal = ({ course, user, onClose, onSuccess }) => {
       }
     } else {
       if (result.referenceId) setReferenceId(result.referenceId)
-      setError(result.error || 'Failed to initiate payment')
+      setError(result.error || 'Failed to start payment')
       setStep('failed')
     }
   }
+
+  const priceLabel = formatPrice(course.price, course.currency)
 
   return (
     <div className="modal-overlay" onClick={step === 'confirming' ? undefined : onClose}>
       <div className="modal-content payment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <div>
-            <h2>
-              {step === 'success' ? 'Payment Successful!'
-                : step === 'failed' ? 'Payment Failed'
-                : step === 'confirming' ? 'Confirm Your Payment'
-                : 'Complete Payment'}
-            </h2>
-            <p style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
-              Secure payment via XentriPay
-            </p>
-          </div>
-          <button className="close-btn" onClick={onClose}>
-            <X size={24} />
+          <h2>
+            {step === 'success' ? 'Payment successful'
+              : step === 'failed' ? 'Payment failed'
+              : step === 'confirming' ? 'Approve on your phone'
+              : step === 'processing' ? 'Starting…'
+              : 'Pay to enroll'}
+          </h2>
+          <button type="button" className="close-btn" onClick={onClose} aria-label="Close">
+            <X size={20} />
           </button>
         </div>
 
         <div className="modal-body">
-          {/* Payment Summary */}
-          <div className="payment-summary">
-            <div className="summary-header">
-              <DollarSign size={24} />
-              <span>Payment Summary</span>
-            </div>
-            <div className="summary-content">
-              <div className="summary-row">
-                <span>Course:</span>
-                <strong>{course.title}</strong>
-              </div>
-              <div className="summary-row">
-                <span>Instructor:</span>
-                <span>{course.instructor_name}</span>
-              </div>
-              <div className="summary-row total">
-                <span>Total Amount:</span>
-                <strong className="amount">{formatPrice(course.price, course.currency)}</strong>
+          {(step === 'method' || step === 'processing') && (
+            <div className="payment-summary compact">
+              <div className="summary-main">
+                <span className="summary-course">{course.title}</span>
+                <strong className="amount">{priceLabel}</strong>
               </div>
             </div>
-          </div>
+          )}
 
           {step === 'method' && (
             <>
-              <div className="form-group">
-                <label>Payment Method *</label>
+              {CARD_PAYMENT_ENABLED && (
+                <div className="method-toggle">
+                  <button
+                    type="button"
+                    className={`method-chip ${paymentMethod === 'momo' ? 'selected' : ''}`}
+                    onClick={() => setPaymentMethod('momo')}
+                  >
+                    <Smartphone size={16} />
+                    MoMo
+                  </button>
+                  <button
+                    type="button"
+                    className={`method-chip ${paymentMethod === 'card' ? 'selected' : ''}`}
+                    onClick={() => setPaymentMethod('card')}
+                  >
+                    <CreditCard size={16} />
+                    Card
+                  </button>
+                </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('momo')}
-                  className={`method-option ${paymentMethod === 'momo' ? 'selected' : ''}`}
-                >
-                  <div className="method-icon momo">
-                    <Smartphone size={20} />
-                  </div>
-                  <div className="method-info">
-                    <strong>MTN Mobile Money</strong>
-                    <span>Rwanda MoMo (RWF)</span>
-                  </div>
-                  {paymentMethod === 'momo' && <CheckCircle size={20} className="method-check" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => CARD_PAYMENT_ENABLED && setPaymentMethod('card')}
-                  disabled={!CARD_PAYMENT_ENABLED}
-                  className={`method-option ${paymentMethod === 'card' ? 'selected' : ''} ${!CARD_PAYMENT_ENABLED ? 'disabled' : ''}`}
-                >
-                  <div className="method-icon card">
-                    <CreditCard size={20} />
-                  </div>
-                  <div className="method-info">
-                    <strong>Card Payment</strong>
-                    <span>{CARD_PAYMENT_ENABLED ? 'Visa, Mastercard via XentriPay' : 'Coming soon — use MoMo for now'}</span>
-                  </div>
-                  {CARD_PAYMENT_ENABLED && paymentMethod === 'card' && <CheckCircle size={20} className="method-check" />}
-                </button>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  {paymentMethod === 'momo' ? 'MTN MoMo Phone Number *' : 'Phone Number *'}
+              <div className="form-group compact">
+                <label htmlFor="pay-phone">
+                  {paymentMethod === 'momo' ? 'MoMo number' : 'Phone number'}
                 </label>
                 <div className="input-with-icon">
-                  <Phone size={20} />
+                  <Phone size={18} />
                   <input
+                    id="pay-phone"
                     type="tel"
                     className="form-input"
-                    placeholder={paymentMethod === 'momo' ? '0788123456' : '+250 788 123 456'}
+                    placeholder="078xxxxxxx"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    style={{ paddingLeft: '44px' }}
+                    autoFocus
                   />
                 </div>
-                <small className="help-text">
-                  {paymentMethod === 'momo'
-                    ? 'Rwanda MTN/Airtel number (e.g. 0788123456 or +250788123456)'
-                    : 'Any phone number — local or international'}
-                </small>
               </div>
 
               {error && (
-                <div className="alert alert-error">
-                  <AlertCircle size={20} />
+                <div className="alert alert-error compact">
+                  <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
               )}
 
-              <div className="form-notice">
-                <AlertCircle size={18} />
-                <div>
-                  <strong>Pay before you enroll:</strong> Your course is unlocked automatically
-                  as soon as your payment is confirmed by XentriPay.
-                </div>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={onClose}>
-                  Cancel
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handlePay}>
-                  <CreditCard size={18} />
-                  Pay {formatPrice(course.price, course.currency)}
-                </button>
-              </div>
+              <button type="button" className="btn btn-primary btn-full pay-cta" onClick={handlePay}>
+                Pay {priceLabel}
+              </button>
+              <button type="button" className="link-cancel" onClick={onClose}>
+                Cancel
+              </button>
             </>
           )}
 
           {step === 'processing' && (
-            <div className="payment-state">
-              <Loader size={48} className="spinning state-icon processing" />
-              <p className="state-title">Starting payment…</p>
+            <div className="payment-state compact">
+              <Loader size={36} className="spinning state-icon processing" />
+              <p className="state-title">Sending payment request…</p>
             </div>
           )}
 
           {step === 'confirming' && (
-            <div className="payment-state">
+            <div className="payment-state compact">
               <div className="state-circle confirming">
-                {paymentMethod === 'momo' ? <Smartphone size={32} /> : <CreditCard size={32} />}
+                <Smartphone size={28} />
               </div>
-              <p className="state-title">Confirm your payment</p>
-              {paymentMethod === 'momo' ? (
-                <p className="state-text">
-                  A payment prompt has been sent to your phone.<br />
-                  <strong>Open MTN MoMo</strong> and approve the request to complete your purchase.
-                </p>
-              ) : (
-                <p className="state-text">
-                  Complete your payment on the secure card checkout page.
-                </p>
-              )}
-              {gatewayMessage && <p className="gateway-message">{gatewayMessage}</p>}
+              <p className="state-title">Approve on your phone</p>
+              <p className="state-text">
+                Open MTN MoMo and confirm the payment for <strong>{priceLabel}</strong>.
+              </p>
               <div className="state-waiting">
-                <Loader size={16} className="spinning" />
-                Waiting for payment confirmation…
+                <Loader size={14} className="spinning" />
+                Waiting for confirmation…
               </div>
-              {referenceId && <span className="payment-ref">Ref: {referenceId}</span>}
+              {referenceId && <span className="payment-ref">{referenceId}</span>}
             </div>
           )}
 
           {step === 'success' && (
-            <div className="payment-state">
+            <div className="payment-state compact">
               <div className="state-circle success">
-                <CheckCircle size={40} />
+                <CheckCircle size={32} />
               </div>
-              <p className="state-title">Payment Complete!</p>
-              <p className="state-text">
-                You have been enrolled in the course. You can now access all course content.
-              </p>
+              <p className="state-title">You&apos;re enrolled</p>
+              <p className="state-text">{course.title}</p>
               <button
+                type="button"
                 className="btn btn-primary btn-full"
                 onClick={() => {
                   onSuccess()
                   onClose()
                 }}
               >
-                Start Learning
+                Start learning
               </button>
             </div>
           )}
 
           {step === 'failed' && (
-            <div className="payment-state">
+            <div className="payment-state compact">
               <div className="state-circle failed">
-                <XCircle size={40} />
+                <XCircle size={32} />
               </div>
-              <p className="state-title">Payment Failed</p>
-              <div className="alert alert-error" style={{ textAlign: 'left' }}>
-                <AlertCircle size={20} />
-                <div>
-                  <span>{error || 'Something went wrong. Please try again.'}</span>
-                  {referenceId && (
-                    <div className="payment-ref" style={{ marginTop: '6px' }}>Ref: {referenceId}</div>
-                  )}
-                </div>
-              </div>
-              <p className="help-text">
-                If the problem persists, contact support with the reference above.
-              </p>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={onClose}>
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => {
-                    setStep('method')
-                    setError(null)
-                  }}
-                >
-                  Try Again
-                </button>
-              </div>
+              <p className="state-title">Payment failed</p>
+              <p className="state-text">{error || 'Please try again.'}</p>
+              {referenceId && <span className="payment-ref">{referenceId}</span>}
+              <button
+                type="button"
+                className="btn btn-primary btn-full"
+                onClick={() => {
+                  setStep('method')
+                  setError(null)
+                }}
+              >
+                Try again
+              </button>
+              <button type="button" className="link-cancel" onClick={onClose}>
+                Cancel
+              </button>
             </div>
           )}
         </div>

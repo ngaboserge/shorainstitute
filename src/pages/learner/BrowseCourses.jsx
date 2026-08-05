@@ -13,14 +13,24 @@ const BrowseCourses = () => {
   const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('All Courses')
   const [courses, setCourses] = useState([])
+  const [enrollmentsByCourse, setEnrollmentsByCourse] = useState({})
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
 
   useEffect(() => {
     loadPublishedCourses()
   }, [])
+
+  useEffect(() => {
+    if (user?.id) {
+      loadUserEnrollments()
+    } else {
+      setEnrollmentsByCourse({})
+    }
+  }, [user?.id])
 
   const loadPublishedCourses = async () => {
     try {
@@ -37,6 +47,49 @@ const BrowseCourses = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadUserEnrollments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('course_id, payment_status, progress_percentage')
+        .eq('user_id', user.id)
+        .in('payment_status', ['free', 'approved'])
+
+      if (error) throw error
+
+      const map = {}
+      for (const enrollment of data || []) {
+        map[enrollment.course_id] = enrollment
+      }
+      setEnrollmentsByCourse(map)
+    } catch (error) {
+      console.error('Error loading enrollments:', error)
+    }
+  }
+
+  const getEnrollmentState = (courseId) => {
+    const enrollment = enrollmentsByCourse[courseId]
+    if (!enrollment) return 'available'
+    const progress = Number(enrollment.progress_percentage) || 0
+    return progress >= 100 ? 'completed' : 'in_progress'
+  }
+
+  const openCourse = async (courseId) => {
+    const { data: lessons } = await supabase
+      .from('lessons')
+      .select('id')
+      .eq('course_id', courseId)
+      .order('order_number', { ascending: true })
+      .limit(1)
+
+    if (lessons?.[0]?.id) {
+      navigate(`/learner/courses/${courseId}/lesson/${lessons[0].id}`)
+      return
+    }
+
+    navigate('/learner/courses')
   }
 
   const categories = [
@@ -74,23 +127,26 @@ const BrowseCourses = () => {
     return `${symbols[currency] || currency} ${price.toLocaleString()}`
   }
 
-  const handleEnroll = async (course) => {
+  const handleCourseAction = async (course) => {
     if (!user) {
       navigate('/auth/learner/login')
       return
     }
 
-    // Check if already enrolled with active access
-    const { data: existingEnrollment } = await supabase
-      .from('enrollments')
-      .select('id, payment_status')
-      .eq('user_id', user.id)
-      .eq('course_id', course.id)
-      .in('payment_status', ['free', 'approved'])
-      .maybeSingle()
+    const state = getEnrollmentState(course.id)
 
-    if (existingEnrollment) {
-      navigate(`/learner/courses`)
+    if (state === 'completed') {
+      navigate('/learner/certificates')
+      return
+    }
+
+    if (state === 'in_progress') {
+      setActionLoadingId(course.id)
+      try {
+        await openCourse(course.id)
+      } finally {
+        setActionLoadingId(null)
+      }
       return
     }
 
@@ -103,6 +159,7 @@ const BrowseCourses = () => {
     }
 
     // Free course - enroll immediately
+    setActionLoadingId(course.id)
     try {
       const { error } = await supabase
         .from('enrollments')
@@ -115,13 +172,45 @@ const BrowseCourses = () => {
 
       if (error) throw error
 
-      // Update enrollment count
       await supabase.rpc('increment_enrollment_count', { course_id: course.id })
-
-      navigate(`/learner/courses`)
+      await loadUserEnrollments()
+      await openCourse(course.id)
     } catch (error) {
       console.error('Error enrolling:', error)
       alert('Failed to enroll. Please try again.')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const getCourseButton = (course) => {
+    const state = getEnrollmentState(course.id)
+    const busy = actionLoadingId === course.id
+
+    if (state === 'completed') {
+      return {
+        label: busy ? 'Opening…' : 'Completed',
+        className: 'btn btn-secondary btn-full',
+      }
+    }
+
+    if (state === 'in_progress') {
+      return {
+        label: busy ? 'Opening…' : 'Continue Learning',
+        className: 'btn btn-primary btn-full',
+      }
+    }
+
+    if (!course.is_paid || course.price === 0) {
+      return {
+        label: busy ? 'Enrolling…' : 'Enroll Free',
+        className: 'btn btn-warning btn-full',
+      }
+    }
+
+    return {
+      label: `Enroll - ${formatPrice(course.price, course.currency)}`,
+      className: 'btn btn-primary btn-full',
     }
   }
 
@@ -300,12 +389,20 @@ const BrowseCourses = () => {
                   </div>
                   
                   <div className="course-card-footer">
-                    <button
-                      onClick={() => handleEnroll(course)}
-                      className={`btn ${(!course.is_paid || course.price === 0) ? 'btn-warning' : 'btn-primary'} btn-full`}
-                    >
-                      {(!course.is_paid || course.price === 0) ? 'Enroll Free' : `Enroll - ${formatPrice(course.price, course.currency)}`}
-                    </button>
+                    {(() => {
+                      const button = getCourseButton(course)
+                      const state = getEnrollmentState(course.id)
+                      return (
+                        <button
+                          onClick={() => handleCourseAction(course)}
+                          className={button.className}
+                          disabled={actionLoadingId === course.id}
+                        >
+                          {button.label}
+                          {state === 'completed' ? ' ✓' : ''}
+                        </button>
+                      )
+                    })()}
                   </div>
                 </div>
               ))}
@@ -322,7 +419,8 @@ const BrowseCourses = () => {
             setShowPaymentModal(false)
             setSelectedCourse(null)
           }}
-          onSuccess={() => {
+          onSuccess={async () => {
+            await loadUserEnrollments()
             navigate('/learner/courses')
           }}
         />

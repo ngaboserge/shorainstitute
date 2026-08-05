@@ -116,7 +116,12 @@ export default async function handler(req, res) {
         }
 
         const cfg = getXentriPayConfig();
+        // Card return URL — same shape as tutor-space:
+        // {SITE_URL|XENTRIPAY_CARD_RETURN_URL_BASE}/payment/success?ref=...&payment=return
         const returnUrl = pmethod === 'cc' ? buildXentriCardReturnUrl(referenceId) : undefined;
+        if (returnUrl) {
+            console.log('[payment-initiate] Card return URL:', returnUrl);
+        }
 
         const collectionBody = {
             email,
@@ -127,6 +132,8 @@ export default async function handler(req, res) {
             currency: 'RWF',
             pmethod,
             chargesIncluded: cfg.chargesIncluded,
+            // Help webhooks match our internal reference when provider payloads vary
+            customerReference: referenceId,
             ...(returnUrl && { returl: returnUrl, redirecturl: returnUrl }),
         };
 

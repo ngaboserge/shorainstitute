@@ -222,7 +222,14 @@ export function getSiteUrl() {
     return (process.env.SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 }
 
-/** Card checkout return URL after XentriPay hosted payment. */
+/**
+ * Card checkout return URL after XentriPay hosted payment (tutor-space / Zoea-style).
+ * Prefer XENTRIPAY_CARD_RETURN_URL_BASE when SITE_URL is localhost but the gateway
+ * must redirect to a public host (or when returning to production from local card tests).
+ *
+ * Final URL shape:
+ *   {base}/payment/success?ref={referenceId}&payment=return
+ */
 export function buildXentriCardReturnUrl(referenceId) {
     const base = (
         process.env.XENTRIPAY_CARD_RETURN_URL_BASE?.trim() || getSiteUrl()
