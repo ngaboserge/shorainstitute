@@ -60,7 +60,7 @@ const Sidebar = ({ type = 'institutional' }) => {
     { path: '/institutional/departments', icon: Building2, label: 'Departments' },
     { path: '/institutional/programmes', icon: BookOpen, label: 'Programmes' },
     { path: '/institutional/cohorts', icon: Users, label: 'Cohorts' },
-    { path: '/institutional/assignments', icon: ClipboardList, label: 'Assignments' },
+    { path: '/institutional/assignments', icon: ClipboardList, label: 'Course Allocation' },
     { path: '/institutional/enrollment-codes', icon: Ticket, label: 'Enrollment Codes' },
     { path: '/institutional/live-seminars', icon: Video, label: 'Live Seminars' },
     { path: '/institutional/reports', icon: BarChart3, label: 'Reports & Analytics' },

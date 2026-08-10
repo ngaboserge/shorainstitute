@@ -6,6 +6,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import ResponsiveLayout from '../../components/ResponsiveLayout'
 
 import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import shoraLogo from '../../assets/shora-logo.png'
 import './Certificates.css'
 
 const Certificates = () => {
@@ -22,12 +24,12 @@ const Certificates = () => {
 
   const loadCertificates = async () => {
     try {
-      // Load completed courses (certificates)
+      // Load completed courses (certificates) - simple query first
       const { data: enrollments, error } = await supabase
         .from('enrollments')
         .select(`
           *,
-          courses (
+          courses:course_id (
             id,
             title,
             instructor_name,
@@ -36,13 +38,78 @@ const Certificates = () => {
         `)
         .eq('user_id', user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Enrollments query error:', error)
+        throw error
+      }
 
-      // Completed courses = certificates
-      const completed = enrollments?.filter(e => e.completion_percentage === 100).map(e => ({
+      console.log('Raw enrollments:', enrollments)
+      
+      // Log the first enrollment to see all available fields
+      if (enrollments && enrollments.length > 0) {
+        console.log('First enrollment fields:', Object.keys(enrollments[0]))
+        console.log('First enrollment data:', enrollments[0])
+      }
+
+      // For each enrollment, try to fetch institution info (optional)
+      const enrollmentsWithInstitution = await Promise.all(
+        (enrollments || []).map(async (enrollment) => {
+          // Check for different possible completion field names
+          const completionPercentage = enrollment.completion_percentage || 
+                                       enrollment.progress || 
+                                       enrollment.completion || 
+                                       enrollment.progress_percentage
+          
+          const isCompleted = enrollment.status === 'completed' || 
+                             enrollment.completed === true ||
+                             completionPercentage === 100
+          
+          console.log(`Enrollment ${enrollment.id}:`, {
+            status: enrollment.status,
+            completed: enrollment.completed,
+            completion_percentage: enrollment.completion_percentage,
+            progress: enrollment.progress,
+            isCompleted
+          })
+          
+          try {
+            // Try to get institution info for this learner
+            const { data: institutionData } = await supabase
+              .from('institution_learners')
+              .select(`
+                institution_id,
+                institutions (
+                  id,
+                  name,
+                  logo_url
+                )
+              `)
+              .eq('learner_id', user.id)
+              .maybeSingle()
+
+            return {
+              ...enrollment,
+              isCompleted,
+              completionPercentage,
+              institutionInfo: institutionData
+            }
+          } catch (err) {
+            // If no institution found, that's fine (individual learner)
+            return {
+              ...enrollment,
+              isCompleted,
+              completionPercentage,
+              institutionInfo: null
+            }
+          }
+        })
+      )
+
+      // Completed courses = certificates - use the isCompleted flag
+      const completed = enrollmentsWithInstitution?.filter(e => e.isCompleted).map(e => ({
         id: e.id,
-        title: e.courses.title,
-        course: e.courses.title,
+        title: e.courses?.title || 'Course',
+        course: e.courses?.title || 'Course',
         issueDate: new Date(e.completed_at || e.enrolled_at).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -50,135 +117,213 @@ const Certificates = () => {
         }),
         completedAt: e.completed_at || e.enrolled_at,
         verificationId: `SHORA-${new Date().getFullYear()}-${e.id.split('-')[0].toUpperCase()}`,
-        instructor: e.courses.instructor_name || 'SHORA Institute',
+        instructor: e.courses?.instructor_name || 'SHORA Institute',
+        institutionName: e.institutionInfo?.institutions?.name || null,
+        institutionLogo: e.institutionInfo?.institutions?.logo_url || null,
         status: 'issued'
       })) || []
 
       // In-progress courses eligible for certificate
-      const inProgress = enrollments?.filter(e => 
-        e.completion_percentage > 0 && e.completion_percentage < 100
+      const inProgress = enrollmentsWithInstitution?.filter(e => 
+        !e.isCompleted && (e.completionPercentage > 0 || e.status === 'active')
       ).map(e => ({
-        id: e.courses.id,
-        title: e.courses.title,
-        progress: e.completion_percentage,
-        remaining: 100 - e.completion_percentage
+        id: e.courses?.id,
+        title: e.courses?.title || 'Course',
+        progress: e.completionPercentage || 0,
+        remaining: 100 - (e.completionPercentage || 0)
       })) || []
 
+      console.log('Completed certificates:', completed)
+      console.log('In-progress courses:', inProgress)
+      
       setCertificates(completed)
       setEligibleCourses(inProgress)
     } catch (error) {
       console.error('Error loading certificates:', error)
+      // Still set loading to false so UI shows empty state
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDownloadCertificate = (cert) => {
-    const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    })
+  const handleDownloadCertificate = async (cert) => {
+    // Create a temporary certificate element for rendering
+    const certElement = document.createElement('div')
+    certElement.style.cssText = `
+      width: 1056px;
+      height: 816px;
+      background: #ffffff;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      position: absolute;
+      left: -9999px;
+      padding: 0;
+      box-sizing: border-box;
+    `
 
-    // Set colors
-    const primaryBlue = [11, 79, 159]
-    const accentYellow = [253, 183, 20]
-    const darkGray = [51, 51, 51]
+    // Prepare institution logo if available
+    const institutionLogoHtml = cert.institutionLogo ? `
+      <div style="text-align: right; max-width: 180px;">
+        <img src="${cert.institutionLogo}" 
+             style="max-height: 60px; max-width: 180px; object-fit: contain; display: block; margin: 0 0 0 auto;" 
+             crossorigin="anonymous" />
+        <div style="font-size: 9px; color: #7f8c8d; margin-top: 4px; font-family: 'Arial', sans-serif; text-transform: uppercase; letter-spacing: 1px;">Partner Institution</div>
+      </div>
+    ` : ''
 
-    // Add decorative border
-    pdf.setDrawColor(...primaryBlue)
-    pdf.setLineWidth(3)
-    pdf.rect(10, 10, 277, 190)
-    
-    pdf.setLineWidth(1)
-    pdf.rect(15, 15, 267, 180)
+    const partnershipText = cert.institutionName ? `
+      <p style="font-size: 14px; color: #7f8c8d; margin: 20px 0; font-family: 'Arial', sans-serif;">
+        In collaboration with <span style="color: #2c3e50; font-weight: 600;">${cert.institutionName}</span>
+      </p>
+    ` : ''
 
-    // Add SHORA logo text
-    pdf.setFontSize(32)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...primaryBlue)
-    pdf.text('SHORA INSTITUTE', 148.5, 40, { align: 'center' })
+    const institutionSignature = cert.institutionName ? `
+      <div style="text-align: center; flex: 1;">
+        <div style="width: 200px; margin: 0 auto;">
+          <div style="border-bottom: 2px solid #2c3e50; padding-bottom: 8px; margin-bottom: 8px; height: 30px; display: flex; align-items: flex-end; justify-content: center;">
+            <div style="font-family: 'Brush Script MT', cursive; font-size: 24px; color: #2c3e50;">Authorized</div>
+          </div>
+          <div style="font-size: 11px; color: #2c3e50; font-weight: 600; font-family: 'Arial', sans-serif; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Authorized Signatory</div>
+          <div style="font-size: 10px; color: #95a5a6; font-family: 'Arial', sans-serif; margin-top: 3px;">${cert.institutionName}</div>
+        </div>
+      </div>
+    ` : ''
 
-    // Certificate title
-    pdf.setFontSize(24)
-    pdf.setTextColor(...darkGray)
-    pdf.text('CERTIFICATE OF COMPLETION', 148.5, 55, { align: 'center' })
+    certElement.innerHTML = `
+      <div style="width: 100%; height: 100%; position: relative; background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+        
+        <!-- Top decorative header -->
+        <div style="height: 8px; background: linear-gradient(90deg, #0B4F9F 0%, #1a5fa0 50%, #0B4F9F 100%);"></div>
+        
+        <!-- Main border frame -->
+        <div style="position: absolute; top: 25px; left: 25px; right: 25px; bottom: 25px; border: 2px solid #d5d8dc; background: white;">
+          
+          <!-- Inner decorative border -->
+          <div style="position: absolute; top: 12px; left: 12px; right: 12px; bottom: 12px; border: 1px solid #ecf0f1;">
+            
+            <!-- Corner accents -->
+            <div style="position: absolute; top: -1px; left: -1px; width: 60px; height: 60px; border-top: 3px solid #0B4F9F; border-left: 3px solid #0B4F9F;"></div>
+            <div style="position: absolute; top: -1px; right: -1px; width: 60px; height: 60px; border-top: 3px solid #0B4F9F; border-right: 3px solid #0B4F9F;"></div>
+            <div style="position: absolute; bottom: -1px; left: -1px; width: 60px; height: 60px; border-bottom: 3px solid #0B4F9F; border-left: 3px solid #0B4F9F;"></div>
+            <div style="position: absolute; bottom: -1px; right: -1px; width: 60px; height: 60px; border-bottom: 3px solid #0B4F9F; border-right: 3px solid #0B4F9F;"></div>
+            
+            <!-- Content area -->
+            <div style="padding: 50px 70px;">
+              
+              <!-- Header with logos -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px;">
+                <!-- SHORA Logo -->
+                <div style="text-align: left; max-width: 180px;">
+                  <img src="${shoraLogo}" 
+                       style="max-height: 60px; max-width: 180px; object-fit: contain; display: block;" 
+                       crossorigin="anonymous" />
+                  <div style="font-size: 9px; color: #7f8c8d; margin-top: 4px; font-family: 'Arial', sans-serif; text-transform: uppercase; letter-spacing: 1px;">Financial Education</div>
+                </div>
+                
+                ${institutionLogoHtml}
+              </div>
 
-    // Decorative line
-    pdf.setDrawColor(...accentYellow)
-    pdf.setLineWidth(0.5)
-    pdf.line(90, 60, 207, 60)
+              <!-- Certificate Title -->
+              <div style="text-align: center; margin: 35px 0 30px;">
+                <div style="font-size: 16px; color: #95a5a6; letter-spacing: 4px; margin-bottom: 8px; font-family: 'Arial', sans-serif; text-transform: uppercase; font-weight: 300;">Certificate of</div>
+                <div style="font-size: 48px; font-weight: bold; color: #0B4F9F; letter-spacing: 2px; margin-bottom: 8px; font-family: 'Georgia', serif; text-transform: uppercase;">Achievement</div>
+                <div style="width: 180px; height: 2px; background: linear-gradient(90deg, transparent, #0B4F9F, transparent); margin: 15px auto;"></div>
+              </div>
 
-    // "This is to certify that"
-    pdf.setFontSize(12)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...darkGray)
-    pdf.text('This is to certify that', 148.5, 75, { align: 'center' })
+              <!-- Main Content -->
+              <div style="text-align: center; margin: 35px 0;">
+                <p style="font-size: 15px; color: #7f8c8d; margin-bottom: 18px; font-family: 'Arial', sans-serif; font-weight: 300;">This is to certify that</p>
+                
+                <h1 style="font-size: 44px; color: #2c3e50; margin: 18px 0; font-weight: 700; font-family: 'Georgia', serif; line-height: 1.2;">${profile?.full_name || 'Learner'}</h1>
+                
+                <p style="font-size: 15px; color: #7f8c8d; margin: 20px 0; font-family: 'Arial', sans-serif; font-weight: 300;">has successfully completed</p>
+                
+                <h2 style="font-size: 28px; color: #d4af37; margin: 20px 60px; line-height: 1.5; font-weight: 600; font-family: 'Georgia', serif; word-wrap: break-word; white-space: normal; word-break: normal; overflow-wrap: break-word;">${cert.course}</h2>
+                
+                ${partnershipText}
+                
+                <div style="margin-top: 25px; padding: 15px 0; background: linear-gradient(90deg, transparent, rgba(11, 79, 159, 0.05), transparent);">
+                  <p style="font-size: 13px; color: #95a5a6; font-family: 'Arial', sans-serif; font-weight: 400; margin: 0;">
+                    <span style="text-transform: uppercase; letter-spacing: 1px; font-size: 11px;">Date of Completion:</span><br/>
+                    <strong style="color: #2c3e50; font-size: 14px; letter-spacing: 0.5px;">${cert.issueDate}</strong>
+                  </p>
+                </div>
+              </div>
 
-    // Learner name
-    pdf.setFontSize(20)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...primaryBlue)
-    pdf.text(profile?.full_name || 'Learner', 148.5, 90, { align: 'center' })
+              <!-- Signature Section -->
+              <div style="display: flex; justify-content: ${cert.institutionName ? 'space-around' : 'center'}; margin-top: 50px; gap: 60px;">
+                <!-- Instructor Signature -->
+                <div style="text-align: center; flex: 1;">
+                  <div style="width: 200px; margin: 0 auto;">
+                    <div style="border-bottom: 2px solid #2c3e50; padding-bottom: 8px; margin-bottom: 8px; height: 30px; display: flex; align-items: flex-end; justify-content: center;">
+                      <div style="font-family: 'Brush Script MT', cursive; font-size: 24px; color: #2c3e50;">${cert.instructor}</div>
+                    </div>
+                    <div style="font-size: 11px; color: #2c3e50; font-weight: 600; font-family: 'Arial', sans-serif; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Course Instructor</div>
+                    <div style="font-size: 10px; color: #95a5a6; font-family: 'Arial', sans-serif; margin-top: 3px;">SHORA Institute</div>
+                  </div>
+                </div>
 
-    // "Has successfully completed"
-    pdf.setFontSize(12)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...darkGray)
-    pdf.text('has successfully completed', 148.5, 100, { align: 'center' })
+                ${institutionSignature}
+              </div>
 
-    // Course title
-    pdf.setFontSize(16)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...primaryBlue)
-    
-    // Handle long course titles (split into multiple lines if needed)
-    const courseTitle = cert.course
-    const maxWidth = 200
-    const lines = pdf.splitTextToSize(courseTitle, maxWidth)
-    const startY = 110
-    lines.forEach((line, index) => {
-      pdf.text(line, 148.5, startY + (index * 8), { align: 'center' })
-    })
+              <!-- Footer -->
+              <div style="text-align: center; margin-top: 45px; padding-top: 20px; border-top: 1px solid #ecf0f1;">
+                <div style="font-size: 10px; color: #bdc3c7; font-family: 'Arial', sans-serif; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px;">
+                  Certificate ID: <strong style="color: #7f8c8d;">${cert.verificationId}</strong>
+                </div>
+                <div style="font-size: 9px; color: #d5d8dc; font-family: 'Arial', sans-serif; letter-spacing: 0.5px;">
+                  Verify authenticity at www.shorainstitute.com/verify
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bottom decorative footer -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 8px; background: linear-gradient(90deg, #0B4F9F 0%, #1a5fa0 50%, #0B4F9F 100%);"></div>
+        
+      </div>
+    `
 
-    // Issue date
-    const dateY = startY + (lines.length * 8) + 10
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...darkGray)
-    pdf.text(`Issued on ${cert.issueDate}`, 148.5, dateY, { align: 'center' })
+    document.body.appendChild(certElement)
 
-    // Verification ID
-    pdf.setFontSize(8)
-    pdf.setTextColor(100, 100, 100)
-    pdf.text(`Verification ID: ${cert.verificationId}`, 148.5, dateY + 7, { align: 'center' })
+    try {
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Signature section
-    const sigY = 165
-    
-    // Signature line
-    pdf.setLineWidth(0.3)
-    pdf.setDrawColor(...darkGray)
-    pdf.line(110, sigY, 187, sigY)
-    
-    // Instructor name
-    pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...darkGray)
-    pdf.text(cert.instructor, 148.5, sigY + 6, { align: 'center' })
-    
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(8)
-    pdf.text('Instructor', 148.5, sigY + 11, { align: 'center' })
+      // Convert to canvas with high quality
+      const canvas = await html2canvas(certElement, {
+        scale: 3,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+        allowTaint: true
+      })
 
-    // Footer
-    pdf.setFontSize(8)
-    pdf.setTextColor(120, 120, 120)
-    pdf.text('SHORA Institute - Building Financial Literacy for Africa', 148.5, 195, { align: 'center' })
+      // Create PDF
+      const imgData = canvas.toDataURL('image/png', 1.0)
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      })
 
-    // Save the PDF
-    const fileName = `SHORA_Certificate_${cert.title.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`
-    pdf.save(fileName)
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, '', 'FAST')
+
+      // Save the PDF
+      const fileName = `SHORA_Certificate_${cert.title.replace(/\s+/g, '_')}_${new Date().getFullYear()}.pdf`
+      pdf.save(fileName)
+    } catch (error) {
+      console.error('Error generating certificate:', error)
+      alert('Error generating certificate. Please try again.')
+    } finally {
+      // Clean up
+      document.body.removeChild(certElement)
+    }
   }
 
   const handleShareCertificate = (cert) => {

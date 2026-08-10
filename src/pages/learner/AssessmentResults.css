@@ -79,12 +79,18 @@
   font-size: 14px;
   color: #6b7280;
   margin-bottom: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .summary-value {
   font-size: 28px;
   font-weight: 700;
   color: #1a1a1a;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 /* Question Review */

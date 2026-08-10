@@ -391,11 +391,17 @@
   font-size: 20px;
   font-weight: 700;
   color: #111827;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .summary-label {
   font-size: 13px;
   color: #6b7280;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 /* Preview Table */

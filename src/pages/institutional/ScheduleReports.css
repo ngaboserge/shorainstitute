@@ -454,6 +454,8 @@
   font-size: 12px;
   color: #999;
   margin-bottom: 4px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .summary-value {
@@ -461,6 +463,10 @@
   font-weight: 600;
   color: #333;
   text-transform: capitalize;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .summary-info {

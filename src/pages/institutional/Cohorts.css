@@ -48,12 +48,20 @@
   font-size: 18px;
   font-weight: 600;
   color: #1a1a1a;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .summary-subvalue {
   font-size: 14px;
   color: #666;
   margin-top: 4px;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .learner-selector {
