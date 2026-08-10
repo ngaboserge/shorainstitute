@@ -322,28 +322,30 @@
 /* Summary Section */
 .summary-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .summary-card {
-  padding: 20px;
+  padding: 14px 16px;
   border: 1px solid #e0e0e0;
-  border-radius: 12px;
+  border-radius: 8px;
   background: white;
 }
 
 .summary-card h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
+  margin: 0 0 8px 0;
+  font-size: 14px;
   color: #1a1a1a;
+  font-weight: 600;
 }
 
 .summary-card p {
-  margin: 4px 0;
-  font-size: 14px;
+  margin: 3px 0;
+  font-size: 13px;
   color: #666;
+  line-height: 1.4;
 }
 
 .summary-card.warning {
@@ -352,10 +354,10 @@
 }
 
 .total-cost {
-  font-size: 24px !important;
+  font-size: 20px !important;
   font-weight: 700 !important;
   color: #EA580C !important;
-  margin: 8px 0 !important;
+  margin: 6px 0 !important;
 }
 
 /* Step Actions */

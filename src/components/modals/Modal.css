@@ -357,14 +357,16 @@
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .summary-card svg {
   color: #6b7280;
+  width: 20px;
+  height: 20px;
 }
 
 .summary-card.success {
@@ -386,7 +388,7 @@
 }
 
 .summary-number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: #111827;
 }
