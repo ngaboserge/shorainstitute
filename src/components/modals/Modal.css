@@ -388,20 +388,28 @@
 }
 
 .summary-number {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   color: #111827;
   word-wrap: break-word;
+  word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
+  line-height: 1.4;
+  white-space: normal;
+  overflow: visible;
 }
 
 .summary-label {
-  font-size: 13px;
+  font-size: 11px;
   color: #6b7280;
   word-wrap: break-word;
+  word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
+  line-height: 1.5;
+  white-space: normal;
+  overflow: visible;
 }
 
 /* Preview Table */

@@ -336,20 +336,26 @@
 
 .summary-card h4 {
   margin: 0 0 8px 0;
-  font-size: 14px;
+  font-size: 13px;
   color: #1a1a1a;
   font-weight: 600;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .summary-card p {
   margin: 3px 0;
-  font-size: 13px;
+  font-size: 12px;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
   word-break: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
+  white-space: normal;
+  overflow: visible;
 }
 
 .summary-card.warning {
