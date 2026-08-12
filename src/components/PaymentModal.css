@@ -132,6 +132,13 @@
   margin-bottom: 6px;
 }
 
+.field-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
 .input-with-icon {
   position: relative;
 }
