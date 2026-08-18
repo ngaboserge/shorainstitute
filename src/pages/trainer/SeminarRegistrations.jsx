@@ -125,7 +125,11 @@ const SeminarRegistrations = () => {
       return
     }
 
-    const doc = new jsPDF()
+    // Use landscape for better width with many questions
+    const questions = seminar?.registration_questions || []
+    const orientation = questions.length > 2 ? 'landscape' : 'portrait'
+    const doc = new jsPDF({ orientation })
+    
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
     
@@ -136,7 +140,7 @@ const SeminarRegistrations = () => {
     
     // Header Section
     doc.setFillColor(...primaryColor)
-    doc.rect(0, 0, pageWidth, 50, 'F')
+    doc.rect(0, 0, pageWidth, 40, 'F')
     
     // Add Logo
     const logoImg = new Image()
@@ -146,79 +150,74 @@ const SeminarRegistrations = () => {
     const addLogoAndContent = () => {
       try {
         // Add logo - positioned on the left side of the header
-        const logoWidth = 35
-        const logoHeight = 35
+        const logoWidth = 30
+        const logoHeight = 30
         const logoX = 15
-        const logoY = 7.5
+        const logoY = 5
         
         doc.addImage(logoImg, 'PNG', logoX, logoY, logoWidth, logoHeight)
         
         // Title next to logo
         doc.setTextColor(255, 255, 255)
-        doc.setFontSize(22)
+        doc.setFontSize(18)
         doc.setFont('helvetica', 'bold')
-        doc.text('SHORA INSTITUTE', logoX + logoWidth + 8, 22)
+        doc.text('SHORA INSTITUTE', logoX + logoWidth + 8, 17)
         
-        doc.setFontSize(14)
+        doc.setFontSize(11)
         doc.setFont('helvetica', 'normal')
-        doc.text('Seminar Registration Report', logoX + logoWidth + 8, 32)
+        doc.text('Seminar Registration Report', logoX + logoWidth + 8, 27)
       } catch (error) {
         // Fallback if logo fails to load
         doc.setTextColor(255, 255, 255)
-        doc.setFontSize(24)
+        doc.setFontSize(20)
         doc.setFont('helvetica', 'bold')
-        doc.text('SHORA INSTITUTE', pageWidth / 2, 22, { align: 'center' })
+        doc.text('SHORA INSTITUTE', pageWidth / 2, 17, { align: 'center' })
         
-        doc.setFontSize(16)
+        doc.setFontSize(12)
         doc.setFont('helvetica', 'normal')
-        doc.text('Seminar Registration Report', pageWidth / 2, 35, { align: 'center' })
+        doc.text('Seminar Registration Report', pageWidth / 2, 27, { align: 'center' })
       }
       
       // Seminar Information Box
-      let yPos = 60
+      let yPos = 48
       doc.setFillColor(...lightBlue)
-      doc.roundedRect(15, yPos, pageWidth - 30, 50, 3, 3, 'F')
+      doc.roundedRect(15, yPos, pageWidth - 30, 35, 3, 3, 'F')
       
       doc.setTextColor(...primaryColor)
-      doc.setFontSize(14)
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
-      yPos += 10
+      yPos += 8
       doc.text(seminar.title, 20, yPos)
       
-      doc.setFontSize(10)
+      doc.setFontSize(9)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...gray)
-      yPos += 8
-      doc.text(`Date: ${new Date(seminar.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, 20, yPos)
-      yPos += 6
-      doc.text(`Time: ${seminar.start_time.slice(0, 5)} - ${seminar.end_time.slice(0, 5)}`, 20, yPos)
-      yPos += 6
-      doc.text(`Platform: ${seminar.platform || 'Zoom'}`, 20, yPos)
-      yPos += 6
-      doc.text(`Instructor: ${seminar.instructor_name}`, 20, yPos)
-      
-      // Statistics
-      yPos += 6
-      doc.setTextColor(...primaryColor)
-      doc.setFont('helvetica', 'bold')
-      doc.text(`Total Registrations: ${stats.total} / ${seminar.capacity}`, 20, yPos)
+      yPos += 7
+      const infoLine = `${new Date(seminar.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} | ${seminar.start_time.slice(0, 5)}-${seminar.end_time.slice(0, 5)} | ${seminar.platform || 'Zoom'} | ${seminar.instructor_name} | ${stats.total}/${seminar.capacity} registrations`
+      doc.text(infoLine, 20, yPos)
       
       // Registration Table
-      yPos += 15
+      yPos += 12
       
-      const questions = seminar?.registration_questions || []
+      // Create compact table with all data
       const tableColumns = [
         { header: '#', dataKey: 'num' },
         { header: 'Name', dataKey: 'name' },
         { header: 'Email', dataKey: 'email' },
         { header: 'Status', dataKey: 'status' },
-        { header: 'Registered', dataKey: 'date' }
+        { header: 'Date', dataKey: 'date' }
       ]
       
-      // Add question columns
+      // Calculate column widths
+      const baseWidth = 115 // Sum of fixed columns
+      const availableWidth = pageWidth - 30 - baseWidth
+      const questionWidth = questions.length > 0 ? Math.max(30, availableWidth / questions.length) : 0
+      
+      // Add question columns with truncated headers
       questions.forEach((q, i) => {
+        const maxLen = questionWidth > 40 ? 30 : 20
         tableColumns.push({
-          header: q.question.length > 30 ? q.question.substring(0, 27) + '...' : q.question,
+          header: q.question.length > maxLen ? q.question.substring(0, maxLen - 3) + '...' : q.question,
           dataKey: `q${i}`
         })
       })
@@ -228,46 +227,70 @@ const SeminarRegistrations = () => {
           num: index + 1,
           name: reg.user_name || 'Unknown',
           email: reg.user_email || '',
-          status: (reg.registration_status || 'registered').toUpperCase(),
-          date: new Date(reg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          status: (reg.registration_status || 'registered').toUpperCase().substring(0, 8),
+          date: new Date(reg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         }
         
-        // Add answers
+        // Add answers with smart truncation
         const answers = reg.registration_answers || {}
         questions.forEach((q, i) => {
           const answer = answers[q.id]
-          row[`q${i}`] = Array.isArray(answer) ? answer.join(', ') : answer || '-'
+          let answerText = Array.isArray(answer) ? answer.join(', ') : answer || '-'
+          
+          // Smart truncation based on column width
+          const maxLen = questionWidth > 40 ? 60 : 40
+          if (answerText.length > maxLen) {
+            answerText = answerText.substring(0, maxLen - 3) + '...'
+          }
+          row[`q${i}`] = answerText
         })
         
         return row
+      })
+      
+      const columnStyles = {
+        num: { cellWidth: 8, halign: 'center' },
+        name: { cellWidth: 28 },
+        email: { cellWidth: 38 },
+        status: { cellWidth: 18, halign: 'center' },
+        date: { cellWidth: 23 }
+      }
+      
+      // Add dynamic widths for question columns
+      questions.forEach((q, i) => {
+        columnStyles[`q${i}`] = { 
+          cellWidth: questionWidth,
+          overflow: 'linebreak',
+          cellPadding: 2,
+          valign: 'top'
+        }
       })
       
       autoTable(doc, {
         startY: yPos,
         columns: tableColumns,
         body: tableRows,
-        theme: 'grid',
+        theme: 'striped',
         headStyles: {
           fillColor: primaryColor,
           textColor: [255, 255, 255],
-          fontSize: 9,
+          fontSize: 8,
           fontStyle: 'bold',
-          halign: 'left'
+          halign: 'left',
+          overflow: 'linebreak',
+          cellPadding: 2
         },
         bodyStyles: {
-          fontSize: 8,
-          textColor: [51, 51, 51]
+          fontSize: 7,
+          textColor: [51, 51, 51],
+          overflow: 'linebreak',
+          cellPadding: 2,
+          minCellHeight: 8
         },
         alternateRowStyles: {
-          fillColor: [245, 247, 250]
+          fillColor: [248, 249, 250]
         },
-        columnStyles: {
-          num: { cellWidth: 10, halign: 'center' },
-          name: { cellWidth: 25 },
-          email: { cellWidth: 35 },
-          status: { cellWidth: 20, halign: 'center' },
-          date: { cellWidth: 25 }
-        },
+        columnStyles: columnStyles,
         margin: { left: 15, right: 15 },
         didDrawPage: (data) => {
           // Add logo to each page
@@ -280,12 +303,14 @@ const SeminarRegistrations = () => {
           }
           
           // Footer
-          doc.setFontSize(8)
+          doc.setFontSize(7)
           doc.setTextColor(...gray)
+          const pageNum = doc.internal.getCurrentPageInfo().pageNumber
+          const totalPages = doc.internal.getNumberOfPages()
           doc.text(
-            `Generated on ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+            `Page ${pageNum} of ${totalPages} | Generated on ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
             pageWidth / 2,
-            pageHeight - 10,
+            pageHeight - 8,
             { align: 'center' }
           )
         }

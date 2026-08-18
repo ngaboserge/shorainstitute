@@ -249,13 +249,23 @@ const Dashboard = () => {
                             <span className={`badge ${course.status === 'published' ? 'success' : course.status === 'draft' ? 'neutral' : 'warning'}`}>
                               {course.status}
                             </span>
-                            <span>{course.total_lessons || 0} lessons</span>
+                            <span>
+                              {(course.delivery_type === 'live' || course.delivery_type === 'hybrid')
+                                ? `${course.session_count || 0} sessions`
+                                : `${course.total_lessons || 0} lessons`
+                              }
+                            </span>
                             <span>{course.enrollment_count || 0} students</span>
                           </div>
                         </div>
                         <button 
                           className="btn btn-sm btn-outline"
-                          onClick={() => navigate(`/trainer/courses/${course.id}/manage-lessons`)}
+                          onClick={() => {
+                            const route = (course.delivery_type === 'live' || course.delivery_type === 'hybrid')
+                              ? `/trainer/courses/${course.id}/manage-sessions`
+                              : `/trainer/courses/${course.id}/manage-lessons`
+                            navigate(route)
+                          }}
                         >
                           Manage
                         </button>

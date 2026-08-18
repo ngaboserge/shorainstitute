@@ -26,7 +26,12 @@ const CreateCourse = () => {
     thumbnail: null,
     learningObjectives: [''],
     requirements: [''],
-    targetAudience: ''
+    targetAudience: '',
+    delivery_type: 'self_paced', // NEW: self_paced, live, hybrid
+    max_participants: '', // NEW: for live courses
+    start_date: '', // NEW: for live courses
+    end_date: '', // NEW: for live courses
+    enrollment_deadline: '' // NEW: for live courses
   })
 
   const [errors, setErrors] = useState({})
@@ -218,22 +223,34 @@ const CreateCourse = () => {
 
     setLoading(true)
     try {
+      // Prepare course data
+      const courseInsertData = {
+        title: courseData.title,
+        description: courseData.description,
+        instructor_id: instructorId,
+        instructor_name: profile?.full_name || 'Instructor',
+        category: courseData.category,
+        level: courseData.level,
+        language: courseData.language,
+        is_paid: courseData.is_paid,
+        price: courseData.is_paid ? courseData.price : 0,
+        currency: courseData.currency,
+        delivery_type: courseData.delivery_type,
+        status: 'draft'
+      }
+
+      // Add live course fields if applicable
+      if (courseData.delivery_type === 'live' || courseData.delivery_type === 'hybrid') {
+        courseInsertData.max_participants = courseData.max_participants || null
+        courseInsertData.start_date = courseData.start_date || null
+        courseInsertData.end_date = courseData.end_date || null
+        courseInsertData.enrollment_deadline = courseData.enrollment_deadline || null
+      }
+
       // Insert course
-      const { data: course, error } = await supabase
+      const { data: course, error} = await supabase
         .from('courses')
-        .insert({
-          title: courseData.title,
-          description: courseData.description,
-          instructor_id: instructorId,
-          instructor_name: profile?.full_name || 'Instructor',
-          category: courseData.category,
-          level: courseData.level,
-          language: courseData.language,
-          is_paid: courseData.is_paid,
-          price: courseData.is_paid ? courseData.price : 0,
-          currency: courseData.currency,
-          status: 'draft'
-        })
+        .insert(courseInsertData)
         .select()
         .single()
 
@@ -250,8 +267,14 @@ const CreateCourse = () => {
         }
       }
 
-      alert('Course saved as draft! Now add lessons.')
-      navigate(`/trainer/courses/${course.id}/manage-lessons`)
+      // Navigate based on delivery type
+      if (courseData.delivery_type === 'live' || courseData.delivery_type === 'hybrid') {
+        alert('Course saved! Now add your live sessions.')
+        navigate(`/trainer/courses/${course.id}/manage-sessions`)
+      } else {
+        alert('Course saved as draft! Now add lessons.')
+        navigate(`/trainer/courses/${course.id}/manage-lessons`)
+      }
     } catch (error) {
       console.error('Error saving course:', error)
       alert('Failed to save course. Please try again.')
@@ -335,6 +358,107 @@ const CreateCourse = () => {
               </div>
             </div>
           </section>
+
+          {/* Delivery Type */}
+          <section className="form-section">
+            <h2>Delivery Type</h2>
+            <p className="section-description">Choose how this course will be delivered to learners</p>
+            <div className="level-selector">
+              <div
+                className={`level-card ${courseData.delivery_type === 'self_paced' ? 'selected' : ''}`}
+                onClick={() => handleChange('delivery_type', 'self_paced')}
+              >
+                <h3>📚 Self-Paced</h3>
+                <p>Learners access pre-recorded content anytime</p>
+              </div>
+              <div
+                className={`level-card ${courseData.delivery_type === 'live' ? 'selected' : ''}`}
+                onClick={() => handleChange('delivery_type', 'live')}
+              >
+                <h3>🎥 Live Course</h3>
+                <p>Scheduled live sessions with the instructor</p>
+              </div>
+              <div
+                className={`level-card ${courseData.delivery_type === 'hybrid' ? 'selected' : ''}`}
+                onClick={() => handleChange('delivery_type', 'hybrid')}
+              >
+                <h3>🔄 Hybrid</h3>
+                <p>Mix of pre-recorded and live sessions</p>
+              </div>
+            </div>
+          </section>
+
+          {/* Live Course Details */}
+          {(courseData.delivery_type === 'live' || courseData.delivery_type === 'hybrid') && (
+            <section className="form-section">
+              <h2>Live Course Details</h2>
+              <p className="section-description">Set up schedule and capacity for your live course</p>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="required">Start Date</label>
+                  <input
+                    type="date"
+                    value={courseData.start_date}
+                    onChange={(e) => handleChange('start_date', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="help-text">When does the first session start?</p>
+                </div>
+
+                <div className="form-group">
+                  <label className="required">End Date</label>
+                  <input
+                    type="date"
+                    value={courseData.end_date}
+                    onChange={(e) => handleChange('end_date', e.target.value)}
+                    min={courseData.start_date || new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="help-text">When does the last session end?</p>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="required">Maximum Participants</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 15"
+                    value={courseData.max_participants}
+                    onChange={(e) => handleChange('max_participants', parseInt(e.target.value) || '')}
+                    min="1"
+                    max="100"
+                  />
+                  <p className="help-text">Limit to maintain quality (1-100)</p>
+                </div>
+
+                <div className="form-group">
+                  <label>Enrollment Deadline</label>
+                  <input
+                    type="date"
+                    value={courseData.enrollment_deadline}
+                    onChange={(e) => handleChange('enrollment_deadline', e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    max={courseData.start_date || ''}
+                  />
+                  <p className="help-text">Last date to enroll (optional)</p>
+                </div>
+              </div>
+
+              <div className="info-box" style={{
+                padding: '16px', 
+                background: '#fef3c7', 
+                border: '1px solid #f59e0b',
+                borderRadius: '8px',
+                color: '#92400e',
+                marginTop: '12px'
+              }}>
+                <p style={{margin: 0, fontSize: '14px'}}>
+                  💡 After saving, you'll be able to add individual session dates and times in the next step.
+                </p>
+              </div>
+            </section>
+          )}
 
           {/* Level */}
           <section className="form-section">
@@ -547,58 +671,6 @@ const CreateCourse = () => {
                 </>
               )}
             </button>
-          </div>
-        </div>
-
-        {/* Preview Sidebar */}
-        <div className="course-preview">
-          <h3>Course Preview</h3>
-          <div className="preview-card">
-            {thumbnailPreview ? (
-              <img src={thumbnailPreview} alt="Preview" className="preview-thumbnail" />
-            ) : (
-              <div className="preview-thumbnail-placeholder">
-                <Upload size={32} />
-                <p>No thumbnail</p>
-              </div>
-            )}
-            
-            <div className="preview-content">
-              <h4>{courseData.title || 'Course Title'}</h4>
-              <p className="preview-description">
-                {courseData.description || 'Course description will appear here...'}
-              </p>
-              
-              <div className="preview-meta">
-                {courseData.category && (
-                  <span className="preview-tag">{courseData.category}</span>
-                )}
-                <span className="preview-tag">{courseData.level}</span>
-                <span className="preview-tag">{courseData.language}</span>
-              </div>
-              
-              <div className="preview-price">
-                {courseData.is_paid && courseData.price > 0 ? (
-                  <span className="price-badge">
-                    {currencies.find(c => c.value === courseData.currency)?.symbol}
-                    {courseData.price.toLocaleString()}
-                  </span>
-                ) : (
-                  <span className="free-badge">FREE</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="preview-tips">
-            <h4>💡 Tips for Success</h4>
-            <ul>
-              <li>Use a clear, descriptive title</li>
-              <li>Write a compelling description</li>
-              <li>Choose an eye-catching thumbnail</li>
-              <li>List specific learning outcomes</li>
-              <li>Price competitively</li>
-            </ul>
           </div>
         </div>
       </div>

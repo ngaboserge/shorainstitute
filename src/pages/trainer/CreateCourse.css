@@ -40,9 +40,9 @@
 }
 
 .create-course-content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 32px;
+  display: block;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .course-form {

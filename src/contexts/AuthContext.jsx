@@ -23,8 +23,6 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth event:', event)
-        
         if (session?.user) {
           setUser(session.user)
           await loadUserProfile(session.user.id)
@@ -58,28 +56,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (userId) => {
     try {
-      console.log('Loading profile for user:', userId)
-      
-      // Try to get profile from users table first
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (error) {
-        console.error('Error loading profile:', error)
-      }
-
-      // If profile exists in users table, use it
-      if (data) {
-        console.log('Profile loaded from users table:', data)
-        setProfile(data)
-        return
-      }
-
-      // Fallback: get user data from auth.users metadata
-      console.log('Profile not in users table, checking auth metadata')
+      // Get user data from auth metadata (primary source of truth)
       const { data: { user: authUser } } = await supabase.auth.getUser()
       
       if (authUser) {
@@ -92,17 +69,12 @@ export const AuthProvider = ({ children }) => {
           avatar_url: authUser.user_metadata?.avatar_url,
           created_at: authUser.created_at
         }
-        console.log('Profile created from auth metadata:', profileFromAuth)
         setProfile(profileFromAuth)
-        
-        // Note: Not saving to users table as it has role constraints that don't support all role types
-        // Auth metadata is the source of truth
       } else {
-        console.log('No auth user found')
         setProfile(null)
       }
     } catch (error) {
-      console.error('Exception loading profile:', error)
+      console.error('Error loading profile:', error)
       setProfile(null)
     }
   }
@@ -172,15 +144,11 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Sign out from Supabase first
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       
-      // Clear local state
       setUser(null)
       setProfile(null)
-      
-      console.log('✅ Successfully logged out')
     } catch (error) {
       console.error('Sign out error:', error)
       // Still clear local state even if signOut fails

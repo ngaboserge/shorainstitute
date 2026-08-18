@@ -399,11 +399,16 @@ const TrainerCourses = () => {
                     </button>
                     <button
                       className="action-btn"
-                      onClick={() => navigate(`/trainer/courses/${course.id}/manage-lessons`)}
-                      title="Manage lessons"
+                      onClick={() => {
+                        const route = (course.delivery_type === 'live' || course.delivery_type === 'hybrid')
+                          ? `/trainer/courses/${course.id}/manage-sessions`
+                          : `/trainer/courses/${course.id}/manage-lessons`
+                        navigate(route)
+                      }}
+                      title={course.delivery_type === 'live' || course.delivery_type === 'hybrid' ? 'Manage sessions' : 'Manage lessons'}
                     >
                       <Edit2 size={18} />
-                      <span>Lessons</span>
+                      <span>{course.delivery_type === 'live' || course.delivery_type === 'hybrid' ? 'Sessions' : 'Lessons'}</span>
                     </button>
                     <button
                       className="action-btn"
