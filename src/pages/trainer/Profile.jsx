@@ -52,8 +52,8 @@ const Profile = () => {
         phone: profile.phone || '',
         location: profile.location || '',
         bio: profile.bio || '',
-        title: profile.title || 'Senior Finance & Investment Consultant',
-        expertise: profile.expertise || 'Capital Markets, Corporate Finance, Investment Strategy',
+        title: profile.title || '',
+        expertise: profile.expertise || '',
         headline: profile.headline || '',
         profile_photo_url: profile.profile_photo_url || '',
         years_experience: profile.years_experience || '',
@@ -158,14 +158,11 @@ const Profile = () => {
     }
   }
 
-  const credentials = [
-    { type: 'Chartered Financial Analyst (CFA)', issuer: 'CFA Institute', date: 'Issued Dec 2019', status: 'Verified' },
-    { type: 'Master of Business Administration (MBA)', issuer: 'University of Cape Town', date: 'Issued Dec 2015', status: 'Verified' },
-    { type: 'Bachelor of Commerce (BCom)', issuer: 'Makerere University', date: 'Issued Dec 2012', status: 'Verified' },
-    { type: 'Ethical Certificate or Credential', issuer: 'ICPAK (CPD) (New York)', date: '', status: 'Verified' }
-  ]
+  // Get credentials from profile.qualifications if available
+  const credentials = profile?.qualifications || []
 
-  const expertise = ['Capital Markets', 'Investment Strategy', 'Corporate Finance', 'Financial Modeling', 'Valuation', 'Risk Management', 'Entrepreneurial Finance']
+  // Get expertise from profile if available
+  const expertise = profile?.expertise ? profile.expertise.split(',').map(e => e.trim()) : []
   
   const topicApprovals = recentCourses.map(course => ({
     name: course.title,
@@ -635,16 +632,20 @@ const Profile = () => {
                 <div className="profile-section">
                   <div className="section-header">
                     <h3>Areas of Expertise</h3>
-                    <button className="btn-text">
+                    <button className="btn-text" onClick={() => setIsEditing(true)}>
                       <Edit size={16} />
                       Edit
                     </button>
                   </div>
-                  <div className="expertise-tags">
-                    {expertise.map((item, idx) => (
-                      <span key={idx} className="expertise-tag">{item}</span>
-                    ))}
-                  </div>
+                  {expertise.length === 0 ? (
+                    <p style={{ color: '#999', fontSize: '14px' }}>No expertise areas added yet. Edit your profile to add your specializations.</p>
+                  ) : (
+                    <div className="expertise-tags">
+                      {expertise.map((item, idx) => (
+                        <span key={idx} className="expertise-tag">{item}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Languages */}
@@ -711,25 +712,35 @@ const Profile = () => {
               <div className="card">
                 <div className="section-header">
                   <h3>Qualifications & Credentials</h3>
-                  <button className="btn btn-sm btn-primary">
+                  <button className="btn btn-sm btn-primary" onClick={() => {
+                    // TODO: Add modal to add new qualification
+                    alert('Feature coming soon: Add qualifications in edit mode')
+                  }}>
                     <span>+</span>
                     Add New
                   </button>
                 </div>
-                <div className="credentials-list">
-                  {credentials.map((cred, idx) => (
-                    <div key={idx} className="credential-item">
-                      <div className="credential-icon"><GraduationCap size={24} color="#0B4F9F" /></div>
-                      <div className="credential-content">
-                        <div className="credential-type">{cred.type}</div>
-                        <div className="credential-issuer">{cred.issuer}</div>
-                        {cred.date && <div className="credential-date">{cred.date}</div>}
+                {credentials.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <GraduationCap size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                    <p style={{ color: '#999', marginBottom: '8px' }}>No qualifications added yet</p>
+                    <p style={{ color: '#ccc', fontSize: '14px' }}>Edit your profile to add qualifications</p>
+                  </div>
+                ) : (
+                  <div className="credentials-list">
+                    {credentials.map((cred, idx) => (
+                      <div key={idx} className="credential-item">
+                        <div className="credential-icon"><GraduationCap size={24} color="#0B4F9F" /></div>
+                        <div className="credential-content">
+                          <div className="credential-type">{cred.title}</div>
+                          <div className="credential-issuer">{cred.institution}</div>
+                          {cred.year && <div className="credential-date">Completed {cred.year}</div>}
+                        </div>
+                        <span className="badge success">Verified</span>
                       </div>
-                      <span className="badge success">{cred.status}</span>
-                      <button className="btn-icon"><MoreVertical size={16} /></button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Topic Approvals */}
