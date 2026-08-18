@@ -26,7 +26,7 @@ const Dashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Load enrolled courses
+      // Load enrolled courses (exclude pending payments)
       const { data: enrollments, error: enrollError } = await supabase
         .from('enrollments')
         .select(`
@@ -37,10 +37,12 @@ const Dashboard = () => {
             thumbnail_url,
             instructor_name,
             total_lessons,
-            total_duration_seconds
+            total_duration_seconds,
+            delivery_type
           )
         `)
         .eq('user_id', user.id)
+        .neq('payment_status', 'pending')
         .order('last_accessed_at', { ascending: false })
 
       if (enrollError) throw enrollError
@@ -58,30 +60,58 @@ const Dashboard = () => {
       })
 
       // Set current course (most recent in-progress)
-      const inProgress = enrollments?.find(e => e.progress_percentage > 0 && e.progress_percentage < 100)
+      const inProgress = enrollments?.find(e => e.progress_percentage < 100)
       if (inProgress) {
-        // Load lessons for current course
-        const { data: lessons } = await supabase
-          .from('lessons')
-          .select('id, title, order_number')
-          .eq('course_id', inProgress.course_id)
-          .order('order_number')
+        const deliveryType = inProgress.courses?.delivery_type || 'self_paced'
+        
+        if (deliveryType === 'live') {
+          // For live courses, load sessions
+          const { data: sessions } = await supabase
+            .from('course_sessions')
+            .select('id, title, session_date, session_number')
+            .eq('course_id', inProgress.course_id)
+            .order('session_number')
 
-        const totalLessons = lessons?.length || 0
-        const completedLessons = Math.floor((inProgress.progress_percentage / 100) * totalLessons)
-        const nextLesson = lessons?.find(l => l.order_number > completedLessons)
+          const totalSessions = sessions?.length || 0
+          const now = new Date()
+          const nextSession = sessions?.find(s => new Date(s.session_date) >= now) || sessions?.[0]
 
-        setCurrentCourse({
-          id: inProgress.course_id,
-          title: inProgress.courses.title,
-          progress: Math.round(inProgress.progress_percentage),
-          image: inProgress.courses.thumbnail_url,
-          instructor: inProgress.courses.instructor_name,
-          totalLessons: totalLessons,
-          completedLessons: completedLessons,
-          nextLesson: nextLesson || lessons?.[0],
-          lastLesson: lessons?.[completedLessons - 1]
-        })
+          setCurrentCourse({
+            id: inProgress.course_id,
+            title: inProgress.courses.title,
+            progress: Math.round(inProgress.progress_percentage),
+            image: inProgress.courses.thumbnail_url,
+            instructor: inProgress.courses.instructor_name,
+            totalLessons: totalSessions,
+            completedLessons: 0,
+            nextLesson: nextSession ? { id: nextSession.id, title: nextSession.title } : null,
+            deliveryType: 'live'
+          })
+        } else {
+          // For self-paced courses, load lessons
+          const { data: lessons } = await supabase
+            .from('lessons')
+            .select('id, title, order_number')
+            .eq('course_id', inProgress.course_id)
+            .order('order_number')
+
+          const totalLessons = lessons?.length || 0
+          const completedLessons = Math.floor((inProgress.progress_percentage / 100) * totalLessons)
+          const nextLesson = lessons?.find(l => l.order_number > completedLessons)
+
+          setCurrentCourse({
+            id: inProgress.course_id,
+            title: inProgress.courses.title,
+            progress: Math.round(inProgress.progress_percentage),
+            image: inProgress.courses.thumbnail_url,
+            instructor: inProgress.courses.instructor_name,
+            totalLessons: totalLessons,
+            completedLessons: completedLessons,
+            nextLesson: nextLesson || lessons?.[0],
+            lastLesson: lessons?.[completedLessons - 1],
+            deliveryType: 'self_paced'
+          })
+        }
       }
 
       // Load recommended courses (published courses not enrolled in)
@@ -239,10 +269,18 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="next-lesson-info" style={{padding: '16px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '16px', marginTop: '16px'}}>
-                        <div className="next-lesson-label" style={{color: '#0B4F9F', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px'}}>NEXT LESSON</div>
-                        <div className="next-lesson-title" style={{color: '#1a1a1a', fontSize: '15px', fontWeight: '600'}}>{currentCourse.nextLesson?.title || 'Start first lesson'}</div>
+                        <div className="next-lesson-label" style={{color: '#0B4F9F', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px'}}>
+                          {currentCourse.deliveryType === 'live' ? 'NEXT SESSION' : 'NEXT LESSON'}
+                        </div>
+                        <div className="next-lesson-title" style={{color: '#1a1a1a', fontSize: '15px', fontWeight: '600'}}>
+                          {currentCourse.nextLesson?.title || (currentCourse.deliveryType === 'live' ? 'Sessions scheduled soon' : 'Start first lesson')}
+                        </div>
                       </div>
-                      {currentCourse.nextLesson?.id ? (
+                      {currentCourse.deliveryType === 'live' ? (
+                        <Link to={`/learner/live-courses/${currentCourse.id}`} className="btn btn-primary btn-full">
+                          View Sessions →
+                        </Link>
+                      ) : currentCourse.nextLesson?.id ? (
                         <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson.id}`} className="btn btn-primary btn-full">
                           Continue Learning →
                         </Link>
