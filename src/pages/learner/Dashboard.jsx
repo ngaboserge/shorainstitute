@@ -14,7 +14,7 @@ const Dashboard = () => {
     learningHours: 0,
     learningStreak: 0
   })
-  const [currentCourse, setCurrentCourse] = useState(null)
+  const [inProgressCourses, setInProgressCourses] = useState([])
   const [recommendedCourses, setRecommendedCourses] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -59,60 +59,64 @@ const Dashboard = () => {
         learningStreak: 0 // TODO: Calculate based on activity
       })
 
-      // Set current course (most recent in-progress)
-      const inProgress = enrollments?.find(e => e.progress_percentage < 100)
-      if (inProgress) {
-        const deliveryType = inProgress.courses?.delivery_type || 'self_paced'
-        
-        if (deliveryType === 'live') {
-          // For live courses, load sessions
-          const { data: sessions } = await supabase
-            .from('course_sessions')
-            .select('id, title, session_date, session_number')
-            .eq('course_id', inProgress.course_id)
-            .order('session_number')
+      // Set all in-progress courses (not just one)
+      const allInProgress = enrollments?.filter(e => e.progress_percentage < 100) || []
+      
+      const coursesWithDetails = await Promise.all(
+        allInProgress.map(async (inProgress) => {
+          const deliveryType = inProgress.courses?.delivery_type || 'self_paced'
+          
+          if (deliveryType === 'live') {
+            // For live courses, load sessions
+            const { data: sessions } = await supabase
+              .from('course_sessions')
+              .select('id, title, session_date, session_number')
+              .eq('course_id', inProgress.course_id)
+              .order('session_number')
 
-          const totalSessions = sessions?.length || 0
-          const now = new Date()
-          const nextSession = sessions?.find(s => new Date(s.session_date) >= now) || sessions?.[0]
+            const totalSessions = sessions?.length || 0
+            const now = new Date()
+            const nextSession = sessions?.find(s => new Date(s.session_date) >= now) || sessions?.[0]
 
-          setCurrentCourse({
-            id: inProgress.course_id,
-            title: inProgress.courses.title,
-            progress: Math.round(inProgress.progress_percentage),
-            image: inProgress.courses.thumbnail_url,
-            instructor: inProgress.courses.instructor_name,
-            totalLessons: totalSessions,
-            completedLessons: 0,
-            nextLesson: nextSession ? { id: nextSession.id, title: nextSession.title } : null,
-            deliveryType: 'live'
-          })
-        } else {
-          // For self-paced courses, load lessons
-          const { data: lessons } = await supabase
-            .from('lessons')
-            .select('id, title, order_number')
-            .eq('course_id', inProgress.course_id)
-            .order('order_number')
+            return {
+              id: inProgress.course_id,
+              title: inProgress.courses.title,
+              progress: Math.round(inProgress.progress_percentage),
+              image: inProgress.courses.thumbnail_url,
+              instructor: inProgress.courses.instructor_name,
+              totalLessons: totalSessions,
+              completedLessons: 0,
+              nextLesson: nextSession ? { id: nextSession.id, title: nextSession.title } : null,
+              deliveryType: 'live'
+            }
+          } else {
+            // For self-paced courses, load lessons
+            const { data: lessons } = await supabase
+              .from('lessons')
+              .select('id, title, order_number')
+              .eq('course_id', inProgress.course_id)
+              .order('order_number')
 
-          const totalLessons = lessons?.length || 0
-          const completedLessons = Math.floor((inProgress.progress_percentage / 100) * totalLessons)
-          const nextLesson = lessons?.find(l => l.order_number > completedLessons)
+            const totalLessons = lessons?.length || 0
+            const completedLessons = Math.floor((inProgress.progress_percentage / 100) * totalLessons)
+            const nextLesson = lessons?.find(l => l.order_number > completedLessons)
 
-          setCurrentCourse({
-            id: inProgress.course_id,
-            title: inProgress.courses.title,
-            progress: Math.round(inProgress.progress_percentage),
-            image: inProgress.courses.thumbnail_url,
-            instructor: inProgress.courses.instructor_name,
-            totalLessons: totalLessons,
-            completedLessons: completedLessons,
-            nextLesson: nextLesson || lessons?.[0],
-            lastLesson: lessons?.[completedLessons - 1],
-            deliveryType: 'self_paced'
-          })
-        }
-      }
+            return {
+              id: inProgress.course_id,
+              title: inProgress.courses.title,
+              progress: Math.round(inProgress.progress_percentage),
+              image: inProgress.courses.thumbnail_url,
+              instructor: inProgress.courses.instructor_name,
+              totalLessons: totalLessons,
+              completedLessons: completedLessons,
+              nextLesson: nextLesson || lessons?.[0],
+              deliveryType: 'self_paced'
+            }
+          }
+        })
+      )
+
+      setInProgressCourses(coursesWithDetails)
 
       // Load recommended courses (published courses not enrolled in)
       const enrolledIds = enrollments?.map(e => e.course_id) || []
@@ -208,107 +212,103 @@ const Dashboard = () => {
           <div className="dashboard-grid-2col">
             {/* Left Column */}
             <div className="dashboard-left">
-              {/* Continue Learning Card */}
-              {currentCourse ? (
-                <div className="card continue-learning-card">
-                  <div className="card-header-flex">
-                    <h3>Continue Where You Left Off</h3>
-                  </div>
-                  <div className="course-resume">
-                    <div className="course-resume-image">
-                      {currentCourse.image ? (
-                        <img src={currentCourse.image} alt={currentCourse.title} />
-                      ) : (
-                        <div style={{
-                          width: '100%',
-                          height: '200px',
-                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <BookOpen size={48} color="white" />
-                        </div>
-                      )}
-                      <div className="play-overlay">
-                        <button className="btn-play-large">
-                          <Play size={32} fill="white" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="course-resume-content">
-                      <div className="course-category" style={{color: '#0B4F9F'}}>IN PROGRESS</div>
-                      <h4 className="course-resume-title" style={{color: '#1a1a1a', fontSize: '20px', fontWeight: '700'}}>{currentCourse.title}</h4>
-                      <div className="course-instructor-small" style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px'}}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '14px',
-                          fontWeight: '600'
-                        }}>
-                          {currentCourse.instructor?.charAt(0) || 'T'}
-                        </div>
-                        <span style={{color: '#666', fontSize: '14px', fontWeight: '500'}}>{currentCourse.instructor || 'Instructor'}</span>
-                      </div>
-                      <div className="progress-section">
-                        <div className="progress-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
-                          <span className="progress-label" style={{color: '#666', fontSize: '13px', fontWeight: '600'}}>Your Progress</span>
-                          <span className="progress-percent" style={{color: '#0B4F9F', fontSize: '13px', fontWeight: '700'}}>{currentCourse.progress}% complete</span>
-                        </div>
-                        <div className="progress-bar-large">
-                          <div className="progress-fill" style={{width: `${currentCourse.progress}%`}}></div>
-                        </div>
-                        <div className="lessons-info" style={{color: '#666', fontSize: '13px', marginTop: '8px'}}>
-                          {currentCourse.completedLessons} of {currentCourse.totalLessons} lessons completed
-                        </div>
-                      </div>
-                      <div className="next-lesson-info" style={{padding: '16px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '16px', marginTop: '16px'}}>
-                        <div className="next-lesson-label" style={{color: '#0B4F9F', fontSize: '11px', fontWeight: '700', letterSpacing: '1px', marginBottom: '6px'}}>
-                          {currentCourse.deliveryType === 'live' ? 'NEXT SESSION' : 'NEXT LESSON'}
-                        </div>
-                        <div className="next-lesson-title" style={{color: '#1a1a1a', fontSize: '15px', fontWeight: '600'}}>
-                          {currentCourse.nextLesson?.title || (currentCourse.deliveryType === 'live' ? 'Sessions scheduled soon' : 'Start first lesson')}
-                        </div>
-                      </div>
-                      {currentCourse.deliveryType === 'live' ? (
-                        <Link to={`/learner/live-courses/${currentCourse.id}`} className="btn btn-primary btn-full">
-                          View Sessions →
-                        </Link>
-                      ) : currentCourse.nextLesson?.id ? (
-                        <Link to={`/learner/courses/${currentCourse.id}/lesson/${currentCourse.nextLesson.id}`} className="btn btn-primary btn-full">
-                          Continue Learning →
-                        </Link>
-                      ) : (
-                        <button 
-                          className="btn btn-secondary btn-full" 
-                          disabled
-                          style={{ opacity: 0.6, cursor: 'not-allowed' }}
-                          title="No lessons available yet"
-                        >
-                          No Lessons Available
-                        </button>
-                      )}
-                    </div>
-                  </div>
+              {/* Continue Learning Section - All Courses */}
+              <div className="card">
+                <div className="card-header-flex">
+                  <h3>Continue Learning</h3>
+                  {inProgressCourses.length > 0 && (
+                    <Link to="/learner/courses" className="view-all-link">
+                      View All →
+                    </Link>
+                  )}
                 </div>
-              ) : (
-                <div className="card">
-                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
-                    <BookOpen size={64} color="#ccc" style={{ margin: '0 auto 20px' }} />
-                    <h3 style={{ color: '#666', marginBottom: '8px' }}>No courses in progress</h3>
-                    <p style={{ color: '#999', marginBottom: '24px' }}>Start learning by enrolling in a course</p>
+                
+                {inProgressCourses.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                    <BookOpen size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+                    <h4 style={{ color: '#666', marginBottom: '8px' }}>No courses in progress</h4>
+                    <p style={{ color: '#999', marginBottom: '20px' }}>Start learning by enrolling in a course</p>
                     <Link to="/learner/browse" className="btn btn-primary">
                       Browse Courses
                     </Link>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {inProgressCourses.map((course) => (
+                      <div key={course.id} className="course-resume" style={{borderBottom: inProgressCourses.length > 1 ? '1px solid #e5e7eb' : 'none', paddingBottom: '24px'}}>
+                        <div className="course-resume-image">
+                          {course.image ? (
+                            <img src={course.image} alt={course.title} />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '200px',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <BookOpen size={48} color="white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="course-resume-content">
+                          <div className="course-category" style={{color: '#0B4F9F'}}>IN PROGRESS</div>
+                          <h4 className="course-resume-title" style={{color: '#1a1a1a', fontSize: '18px', fontWeight: '700'}}>{course.title}</h4>
+                          <div className="course-instructor-small" style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px'}}>
+                            <div style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              {course.instructor?.charAt(0) || 'T'}
+                            </div>
+                            <span style={{color: '#666', fontSize: '13px', fontWeight: '500'}}>{course.instructor || 'Instructor'}</span>
+                          </div>
+                          <div className="progress-section">
+                            <div className="progress-header" style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                              <span className="progress-label" style={{color: '#666', fontSize: '12px', fontWeight: '600'}}>Your Progress</span>
+                              <span className="progress-percent" style={{color: '#0B4F9F', fontSize: '12px', fontWeight: '700'}}>{course.progress}% complete</span>
+                            </div>
+                            <div className="progress-bar-large">
+                              <div className="progress-fill" style={{width: `${course.progress}%`}}></div>
+                            </div>
+                            <div className="lessons-info" style={{color: '#666', fontSize: '12px', marginTop: '6px'}}>
+                              {course.completedLessons} of {course.totalLessons} {course.deliveryType === 'live' ? 'sessions' : 'lessons'}
+                            </div>
+                          </div>
+                          <div style={{display: 'flex', gap: '8px', marginTop: '12px'}}>
+                            {course.deliveryType === 'live' ? (
+                              <Link to={`/learner/live-courses/${course.id}`} className="btn btn-primary btn-sm">
+                                View Sessions →
+                              </Link>
+                            ) : course.nextLesson?.id ? (
+                              <Link to={`/learner/courses/${course.id}/lesson/${course.nextLesson.id}`} className="btn btn-primary btn-sm">
+                                Continue →
+                              </Link>
+                            ) : (
+                              <button 
+                                className="btn btn-secondary btn-sm" 
+                                disabled
+                                style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                              >
+                                No Lessons
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
 
 
