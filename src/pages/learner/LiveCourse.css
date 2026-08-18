@@ -27,8 +27,8 @@
 }
 
 .course-header-card {
-  background: linear-gradient(135deg, #0B4F9F 0%, #083d7a 100%);
-  color: white;
+  background: linear-gradient(135deg, #0B4F9F 0%, #083d7a 100%) !important;
+  color: white !important;
   border-radius: 16px;
   padding: 40px;
   margin-bottom: 32px;
@@ -40,6 +40,7 @@
   font-weight: 700;
   margin-bottom: 16px;
   line-height: 1.2;
+  color: white !important;
 }
 
 .course-meta {
@@ -54,13 +55,13 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
 .course-description {
   font-size: 16px;
   line-height: 1.6;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.95) !important;
   margin-top: 16px;
 }
 
