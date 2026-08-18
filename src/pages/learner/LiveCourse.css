@@ -27,12 +27,12 @@
 }
 
 .course-header-card {
-  background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%);
+  background: linear-gradient(135deg, #0B4F9F 0%, #083d7a 100%);
   color: white;
   border-radius: 16px;
   padding: 40px;
   margin-bottom: 32px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(11, 79, 159, 0.15);
 }
 
 .course-header-content h1 {

@@ -31,7 +31,10 @@ const LiveCourse = () => {
         .eq('id', courseId)
         .single()
 
-      if (courseError) throw courseError
+      if (courseError) {
+        console.error('Error loading course:', courseError)
+        throw courseError
+      }
       setCourse(courseData)
 
       // Load enrollment
@@ -44,40 +47,38 @@ const LiveCourse = () => {
 
       setEnrollment(enrollmentData)
 
-      // Load sessions with attendance
+      // Load sessions
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('course_sessions')
-        .select(`
-          *,
-          session_attendance (
-            id,
-            status,
-            attended_at
-          )
-        `)
+        .select('*')
         .eq('course_id', courseId)
         .order('session_number')
 
-      if (sessionsError) throw sessionsError
+      if (sessionsError) {
+        console.error('Error loading sessions:', sessionsError)
+        setSessions([])
+      } else {
+        console.log('Sessions loaded:', sessionsData)
+        
+        // Check attendance for current user for each session
+        const enrichedSessions = await Promise.all(
+          (sessionsData || []).map(async (session) => {
+            const { data: attendance } = await supabase
+              .from('session_attendance')
+              .select('*')
+              .eq('session_id', session.id)
+              .eq('user_id', user.id)
+              .maybeSingle()
 
-      // Check attendance for current user
-      const enrichedSessions = await Promise.all(
-        (sessionsData || []).map(async (session) => {
-          const { data: attendance } = await supabase
-            .from('session_attendance')
-            .select('*')
-            .eq('session_id', session.id)
-            .eq('learner_id', user.id)
-            .maybeSingle()
+            return {
+              ...session,
+              userAttendance: attendance
+            }
+          })
+        )
 
-          return {
-            ...session,
-            userAttendance: attendance
-          }
-        })
-      )
-
-      setSessions(enrichedSessions)
+        setSessions(enrichedSessions)
+      }
     } catch (error) {
       console.error('Error loading live course:', error)
     } finally {
@@ -108,12 +109,12 @@ const LiveCourse = () => {
     const now = new Date()
     const sessionDate = new Date(session.session_date)
     
-    if (session.userAttendance?.status === 'attended') {
+    if (session.userAttendance?.attendance_status === 'attended') {
       return { label: 'Attended', color: '#10b981', icon: CheckCircle }
     }
     
     if (sessionDate < now) {
-      if (session.userAttendance?.status === 'absent') {
+      if (session.userAttendance?.attendance_status === 'absent') {
         return { label: 'Missed', color: '#ef4444', icon: XCircle }
       }
       return { label: 'Past', color: '#9ca3af', icon: Clock }
