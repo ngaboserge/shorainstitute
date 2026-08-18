@@ -79,6 +79,7 @@ import OnboardingAssessment from './pages/public/OnboardingAssessment'
 import PaymentSuccess from './pages/public/PaymentSuccess'
 import SeminarRegistrationForm from './pages/public/SeminarRegistrationForm'
 import InvitationAccept from './pages/public/InvitationAccept'
+import PublicTrainerProfile from './pages/public/TrainerProfile'
 import RedeemCode from './pages/learner/RedeemCode'
 import './App.css'
 
@@ -95,6 +96,9 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
+          
+          {/* Public Trainer Profile */}
+          <Route path="/trainer/:trainerId/profile" element={<PublicTrainerProfile />} />
           
           {/* Seminar Registration Route */}
           <Route path="/seminar/:id/register" element={<SeminarRegistrationForm />} />

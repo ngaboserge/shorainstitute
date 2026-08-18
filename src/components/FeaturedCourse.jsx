@@ -95,10 +95,8 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
   }
 
   const handleAboutTrainer = () => {
-    // For now, scroll to instructor section or show modal
-    // TODO: Create dedicated trainer profile page
-    if (instructor) {
-      alert(`About ${instructor.full_name}\n\n${instructor.bio || instructor.headline || 'Expert instructor with years of experience in financial markets and investment strategies.'}`)
+    if (instructor && instructor.id) {
+      navigate(`/trainer/${instructor.id}/profile`)
     }
   }
 
