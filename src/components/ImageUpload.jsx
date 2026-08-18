@@ -70,6 +70,7 @@ const ImageUpload = ({ currentImage, onImageUploaded, bucket = 'avatars', folder
               width: '100%',
               height: '100%',
               objectFit: 'cover',
+              objectPosition: 'center top',
               borderRadius: '50%',
               border: '3px solid #e5e7eb'
             }}

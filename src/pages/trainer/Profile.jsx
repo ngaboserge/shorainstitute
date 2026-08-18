@@ -38,8 +38,12 @@ const Profile = () => {
     linkedin_url: '',
     twitter_url: '',
     website_url: '',
-    specializations: []
+    specializations: [],
+    languages: [],
+    contact_email: ''
   })
+  
+  const [newLanguage, setNewLanguage] = useState('')
 
   useEffect(() => {
     if (user?.id) {
@@ -62,7 +66,9 @@ const Profile = () => {
         linkedin_url: profile.linkedin_url || '',
         twitter_url: profile.twitter_url || '',
         website_url: profile.website_url || '',
-        specializations: profile.specializations || []
+        specializations: profile.specializations || [],
+        languages: profile.languages || [],
+        contact_email: profile.contact_email || ''
       })
     }
   }, [user?.id, profile])
@@ -117,29 +123,41 @@ const Profile = () => {
     setSaving(true)
     setSuccessMessage('')
     try {
-      const { error } = await supabase
+      console.log('Saving profile data:', formData)
+      
+      const updateData = {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        location: formData.location,
+        bio: formData.bio,
+        title: formData.title,
+        expertise: formData.expertise,
+        headline: formData.headline,
+        profile_photo_url: formData.profile_photo_url,
+        years_experience: formData.years_experience || null,
+        company: formData.company,
+        job_title: formData.job_title,
+        linkedin_url: formData.linkedin_url,
+        twitter_url: formData.twitter_url,
+        website_url: formData.website_url,
+        contact_email: formData.contact_email || null,
+        updated_at: new Date().toISOString()
+      }
+      
+      console.log('Update payload:', updateData)
+      
+      const { data, error } = await supabase
         .from('users')
-        .update({
-          full_name: formData.full_name,
-          phone: formData.phone,
-          location: formData.location,
-          bio: formData.bio,
-          title: formData.title,
-          expertise: formData.expertise,
-          headline: formData.headline,
-          profile_photo_url: formData.profile_photo_url,
-          years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
-          company: formData.company,
-          job_title: formData.job_title,
-          linkedin_url: formData.linkedin_url,
-          twitter_url: formData.twitter_url,
-          website_url: formData.website_url,
-          specializations: formData.specializations,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', user.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Save error details:', error)
+        throw error
+      }
+
+      console.log('Update successful, returned data:', data)
 
       // Refresh profile
       if (refreshProfile) {
@@ -152,10 +170,27 @@ const Profile = () => {
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
       console.error('Error updating profile:', error)
-      alert('Failed to update profile. Please try again.')
+      alert(`Failed to update profile: ${error.message}`)
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleAddLanguage = () => {
+    if (newLanguage.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        languages: [...prev.languages, newLanguage.trim()]
+      }))
+      setNewLanguage('')
+    }
+  }
+
+  const handleRemoveLanguage = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      languages: prev.languages.filter((_, i) => i !== index)
+    }))
   }
 
   // Get credentials from profile.qualifications if available
@@ -228,6 +263,7 @@ const Profile = () => {
                           height: '120px',
                           borderRadius: '50%',
                           objectFit: 'cover',
+                          objectPosition: 'center top',
                           border: '3px solid #e5e7eb'
                         }}
                       />
@@ -278,7 +314,7 @@ const Profile = () => {
                     <p className="profile-subtitle">{formData.expertise}</p>
                     {formData.years_experience && (
                       <p style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
-                        {formData.years_experience}+ years of experience
+                        {formData.years_experience} years of experience
                       </p>
                     )}
                     <div className="profile-badge-row">
@@ -419,7 +455,7 @@ const Profile = () => {
                     <div className="form-group" style={{ marginBottom: '20px' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Years of Experience</label>
                       <input
-                        type="number"
+                        type="text"
                         name="years_experience"
                         value={formData.years_experience}
                         onChange={handleInputChange}
@@ -430,10 +466,10 @@ const Profile = () => {
                           borderRadius: '8px',
                           fontSize: '14px'
                         }}
-                        placeholder="e.g., 15"
-                        min="0"
-                        max="50"
+                        placeholder="e.g., 15 or 24+"
+                        maxLength={10}
                       />
+                      <small style={{ color: '#666', fontSize: '12px' }}>Enter number of years (e.g., 15, 24+, 30+)</small>
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -474,11 +510,11 @@ const Profile = () => {
                       </div>
 
                       <div className="form-group">
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Location</label>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Contact Email (Public)</label>
                         <input
-                          type="text"
-                          name="location"
-                          value={formData.location}
+                          type="email"
+                          name="contact_email"
+                          value={formData.contact_email}
                           onChange={handleInputChange}
                           style={{
                             width: '100%',
@@ -487,9 +523,27 @@ const Profile = () => {
                             borderRadius: '8px',
                             fontSize: '14px'
                           }}
-                          placeholder="City, Country"
+                          placeholder="your.email@example.com"
                         />
                       </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Location</label>
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="City, Country"
+                      />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -652,16 +706,71 @@ const Profile = () => {
                 <div className="profile-section">
                   <div className="section-header">
                     <h3>Languages</h3>
-                    <button className="btn-text">
+                    <button className="btn-text" onClick={() => setIsEditing(true)}>
                       <Edit size={16} />
                       Edit
                     </button>
                   </div>
-                  <div className="languages-list">
-                    <span className="language-badge">English (Native)</span>
-                    <span className="language-badge">Kigali (Fluent)</span>
-                    <span className="language-badge">Swahili (Fluent)</span>
-                  </div>
+                  {isEditing ? (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                        <input
+                          type="text"
+                          value={newLanguage}
+                          onChange={(e) => setNewLanguage(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleAddLanguage()}
+                          placeholder="e.g., English (Native)"
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={handleAddLanguage}
+                          type="button"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      <div className="languages-list">
+                        {formData.languages.map((lang, idx) => (
+                          <span key={idx} className="language-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {lang}
+                            <button
+                              onClick={() => handleRemoveLanguage(idx)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'inherit',
+                                cursor: 'pointer',
+                                padding: '0',
+                                marginLeft: '4px',
+                                fontSize: '18px',
+                                lineHeight: '1'
+                              }}
+                              title="Remove"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="languages-list">
+                      {formData.languages.length === 0 ? (
+                        <p style={{ color: '#999', fontSize: '14px' }}>No languages added yet.</p>
+                      ) : (
+                        formData.languages.map((lang, idx) => (
+                          <span key={idx} className="language-badge">{lang}</span>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Linked Profiles & Links */}

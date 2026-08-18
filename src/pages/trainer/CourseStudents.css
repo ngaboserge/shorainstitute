@@ -1,0 +1,39 @@
+/* Course Students Page Styles */
+
+.students-table {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.students-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.students-table thead {
+  background: #f9fafb;
+}
+
+.students-table tr:hover {
+  background: #f9fafb;
+  transition: background 0.2s;
+}
+
+.students-table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .students-table {
+    font-size: 13px;
+  }
+
+  .students-table td,
+  .students-table th {
+    padding: 12px 8px !important;
+  }
+}

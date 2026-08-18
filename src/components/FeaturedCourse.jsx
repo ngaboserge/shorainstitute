@@ -180,10 +180,6 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
                 <span>5 Weeks</span>
               </div>
               <div className="detail-item-compact">
-                <Users size={14} />
-                <span>{course.enrollment_count || 0} Enrolled</span>
-              </div>
-              <div className="detail-item-compact">
                 <Award size={14} />
                 <span>Certificate</span>
               </div>

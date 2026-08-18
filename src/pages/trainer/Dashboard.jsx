@@ -40,25 +40,39 @@ const Dashboard = () => {
       const courseIds = courses?.map(c => c.id) || []
       
       let totalEnrollments = 0
+      let enrollmentsByCourse = {}
+      
       if (courseIds.length > 0) {
         const { data: enrollments, error: enrollError } = await supabase
           .from('enrollments')
-          .select('course_id')
+          .select('course_id, id')
           .in('course_id', courseIds)
+          .neq('payment_status', 'pending') // Only count paid/approved enrollments
         
         if (!enrollError) {
           totalEnrollments = enrollments?.length || 0
+          
+          // Count enrollments per course
+          enrollments?.forEach(enrollment => {
+            enrollmentsByCourse[enrollment.course_id] = (enrollmentsByCourse[enrollment.course_id] || 0) + 1
+          })
         }
       }
 
+      // Update courses with real enrollment counts
+      const coursesWithEnrollments = courses?.map(course => ({
+        ...course,
+        enrollment_count: enrollmentsByCourse[course.id] || 0
+      })) || []
+
       // Get average completion rate as a proxy for rating
-      // (since we don't have a ratings table yet)
       let avgCompletionRate = 0
       if (courseIds.length > 0) {
         const { data: completions, error: completionError } = await supabase
           .from('enrollments')
           .select('progress_percentage')
           .in('course_id', courseIds)
+          .neq('payment_status', 'pending')
           .not('progress_percentage', 'is', null)
         
         if (!completionError && completions && completions.length > 0) {
@@ -69,16 +83,16 @@ const Dashboard = () => {
       }
 
       // Calculate stats
-      const publishedCourses = courses?.filter(c => c.status === 'published') || []
+      const publishedCourses = coursesWithEnrollments?.filter(c => c.status === 'published') || []
 
       setStats({
-        coursesCount: courses?.length || 0,
+        coursesCount: coursesWithEnrollments?.length || 0,
         totalLearners: totalEnrollments,
         averageRating: avgCompletionRate || '0.0',
         publishedCourses: publishedCourses.length
       })
 
-      setRecentCourses(courses?.slice(0, 3) || [])
+      setRecentCourses(coursesWithEnrollments?.slice(0, 3) || [])
     } catch (error) {
       console.error('Error loading dashboard data:', error)
     } finally {
@@ -255,7 +269,13 @@ const Dashboard = () => {
                                 : `${course.total_lessons || 0} lessons`
                               }
                             </span>
-                            <span>{course.enrollment_count || 0} students</span>
+                            <span 
+                              style={{color: '#0B4F9F', fontWeight: 600, cursor: 'pointer'}}
+                              onClick={() => navigate(`/trainer/courses/${course.id}/students`)}
+                              title="View enrolled students"
+                            >
+                              {course.enrollment_count || 0} students
+                            </span>
                           </div>
                         </div>
                         <button 

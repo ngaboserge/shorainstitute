@@ -68,7 +68,33 @@ const TrainerCourses = () => {
       const { data, error } = await query
 
       if (error) throw error
-      setCourses(data || [])
+      
+      // Get real enrollment counts for each course
+      const courseIds = data?.map(c => c.id) || []
+      let enrollmentsByCourse = {}
+      
+      if (courseIds.length > 0) {
+        const { data: enrollments, error: enrollError } = await supabase
+          .from('enrollments')
+          .select('course_id, id')
+          .in('course_id', courseIds)
+          .neq('payment_status', 'pending') // Only count paid/approved enrollments
+        
+        if (!enrollError) {
+          // Count enrollments per course
+          enrollments?.forEach(enrollment => {
+            enrollmentsByCourse[enrollment.course_id] = (enrollmentsByCourse[enrollment.course_id] || 0) + 1
+          })
+        }
+      }
+      
+      // Update courses with real enrollment counts
+      const coursesWithEnrollments = data?.map(course => ({
+        ...course,
+        enrollment_count: enrollmentsByCourse[course.id] || 0
+      })) || []
+      
+      setCourses(coursesWithEnrollments)
     } catch (error) {
       console.error('Error loading courses:', error)
     } finally {
@@ -328,77 +354,164 @@ const TrainerCourses = () => {
               </button>
             </div>
           ) : (
-            <div className="courses-grid">
+            <div className="courses-grid" style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px'}}>
               {courses.map(course => (
-                <div key={course.id} className="course-card">
-                    <div className="course-thumbnail">
+                <div key={course.id} className="course-card" style={{
+                  background: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                    <div className="course-thumbnail" style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '120px',
+                      overflow: 'hidden',
+                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                      flexShrink: 0
+                    }}>
                       {course.thumbnail_url ? (
-                        <img src={course.thumbnail_url} alt={course.title} />
+                        <img src={course.thumbnail_url} alt={course.title} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                       ) : (
-                        <div className="thumbnail-placeholder">
-                          <PlayCircle size={48} />
+                        <div className="thumbnail-placeholder" style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white'
+                        }}>
+                          <PlayCircle size={40} />
                         </div>
                       )}
-                      <div className="course-status-overlay">
-                        <span className={`status-badge status-${course.status}`}>
+                      <div className="course-status-overlay" style={{position: 'absolute', top: '8px', right: '8px', zIndex: 10}}>
+                        <span className={`status-badge status-${course.status}`} style={{
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          backdropFilter: 'blur(8px)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                          background: course.status === 'published' ? 'rgba(5, 150, 105, 0.95)' : course.status === 'draft' ? 'rgba(107, 114, 128, 0.95)' : 'rgba(239, 68, 68, 0.95)',
+                          color: 'white'
+                        }}>
                           {course.status}
                         </span>
                       </div>
                     </div>
 
-                    <div className="course-content">
-                      <h3>{course.title}</h3>
-                      <p className="course-description">
-                        {course.description?.substring(0, 100)}
-                        {course.description?.length > 100 ? '...' : ''}
+                    <div className="course-content" style={{padding: '14px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1}}>
+                      <h3 style={{
+                        margin: 0,
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: '#1a1a1a',
+                        lineHeight: 1.3,
+                        minHeight: '38px',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>{course.title}</h3>
+                      
+                      <p className="course-description" style={{
+                        margin: 0,
+                        fontSize: '12px',
+                        color: '#6b7280',
+                        lineHeight: 1.4,
+                        minHeight: '33px',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {course.description?.substring(0, 80)}
+                        {course.description?.length > 80 ? '...' : ''}
                       </p>
 
-                      <div className="course-meta">
-                        <div className="meta-item">
-                          <PlayCircle size={16} />
+                      <div className="course-meta" style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '10px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        borderTop: '1px solid #f3f4f6',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280', fontWeight: 500}}>
+                          <PlayCircle size={13} style={{color: '#0B4F9F'}} />
                           <span>{course.total_lessons || 0} lessons</span>
                         </div>
-                        <div className="meta-item">
-                          <Users size={16} />
+                        <div 
+                          style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#0B4F9F', fontWeight: 600, cursor: 'pointer'}}
+                          onClick={() => navigate(`/trainer/courses/${course.id}/students`)}
+                          title="View enrolled students"
+                        >
+                          <Users size={13} style={{color: '#0B4F9F'}} />
                           <span>{course.enrollment_count || 0} students</span>
                         </div>
                         {course.rating > 0 && (
-                          <div className="meta-item">
-                            <span className="rating">⭐ {course.rating.toFixed(1)}</span>
+                          <div style={{display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600, color: '#f59e0b'}}>
+                            <span>⭐ {course.rating.toFixed(1)}</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="course-info">
-                        <div className="course-category">{course.category}</div>
-                        <div className="course-price">
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px'}}>
+                        <div style={{
+                          padding: '3px 8px',
+                          background: '#eff6ff',
+                          color: '#0B4F9F',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          borderRadius: '10px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '60%'
+                        }}>{course.category}</div>
+                        <div style={{fontSize: '14px', fontWeight: 700, color: '#0B4F9F', whiteSpace: 'nowrap'}}>
                           {formatPrice(course.price, course.currency)}
                         </div>
                       </div>
 
-                      <div className="course-footer">
-                        <span className="course-date">
+                      <div style={{paddingTop: '4px', marginTop: 'auto'}}>
+                        <span style={{fontSize: '10px', color: '#9ca3af', fontWeight: 500}}>
                           Created {formatDate(course.created_at)}
                         </span>
                       </div>
                     </div>
 
-                  <div className="course-actions">
+                  <div className="course-actions" style={{display: 'flex', borderTop: '1px solid #e5e7eb', background: '#f9fafb'}}>
                     <button
-                      className="action-btn primary"
                       onClick={() => handleEditCourse(course)}
                       title="Edit course details"
                       style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        padding: '10px 6px',
                         background: '#0B4F9F',
+                        border: 'none',
+                        borderRight: '1px solid rgba(255,255,255,0.2)',
                         color: 'white',
-                        fontWeight: '600'
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
                       }}
                     >
-                      <Settings size={18} />
-                      <span>Edit Course</span>
+                      <Settings size={14} />
+                      <span>Edit</span>
                     </button>
                     <button
-                      className="action-btn"
                       onClick={() => {
                         const route = (course.delivery_type === 'live' || course.delivery_type === 'hybrid')
                           ? `/trainer/courses/${course.id}/manage-sessions`
@@ -406,24 +519,45 @@ const TrainerCourses = () => {
                         navigate(route)
                       }}
                       title={course.delivery_type === 'live' || course.delivery_type === 'hybrid' ? 'Manage sessions' : 'Manage lessons'}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        padding: '10px 6px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRight: '1px solid #e5e7eb',
+                        color: '#6b7280',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
                     >
-                      <Edit2 size={18} />
+                      <Edit2 size={14} />
                       <span>{course.delivery_type === 'live' || course.delivery_type === 'hybrid' ? 'Sessions' : 'Lessons'}</span>
                     </button>
                     <button
-                      className="action-btn"
                       onClick={() => navigate(`/learner/courses/${course.id}/lesson/${course.id}`)}
                       title="Preview course"
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '5px',
+                        padding: '10px 6px',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#6b7280',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
                     >
-                      <Eye size={18} />
+                      <Eye size={14} />
                       <span>Preview</span>
-                    </button>
-                    <button
-                      className="action-btn delete"
-                      onClick={() => handleDeleteCourse(course.id)}
-                      title="Delete course"
-                    >
-                      <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
@@ -694,14 +828,29 @@ const TrainerCourses = () => {
 
               </div>
 
-              <div className="modal-footer" style={{padding: '16px 24px', borderTop: '2px solid #e5e7eb'}}>
-                <button className="btn btn-outline" onClick={() => setShowEditModal(false)}>
-                  Cancel
+              <div className="modal-footer" style={{padding: '16px 24px', borderTop: '2px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <button 
+                  className="btn btn-outline" 
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+                      handleDeleteCourse(editingCourse.id)
+                      setShowEditModal(false)
+                    }
+                  }}
+                  style={{background: '#fee2e2', color: '#dc2626', border: '2px solid #fecaca'}}
+                >
+                  <Trash2 size={18} />
+                  <span>Delete Course</span>
                 </button>
-                <button className="btn btn-primary" onClick={saveEditedCourse} disabled={loading}>
-                  <Save size={18} />
-                  <span>{loading ? 'Saving...' : 'Save Changes'}</span>
-                </button>
+                <div style={{display: 'flex', gap: '12px'}}>
+                  <button className="btn btn-outline" onClick={() => setShowEditModal(false)}>
+                    Cancel
+                  </button>
+                  <button className="btn btn-primary" onClick={saveEditedCourse} disabled={loading}>
+                    <Save size={18} />
+                    <span>{loading ? 'Saving...' : 'Save Changes'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

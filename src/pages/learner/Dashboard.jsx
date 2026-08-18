@@ -120,12 +120,13 @@ const Dashboard = () => {
 
       // Load recommended courses (published courses not enrolled in)
       const enrolledIds = enrollments?.map(e => e.course_id) || []
+      const coursesLimit = enrolledIds.length === 0 ? 6 : 3 // Show more courses if user has no enrollments
       const { data: recommended } = await supabase
         .from('courses')
         .select('*')
         .eq('status', 'published')
         .not('id', 'in', `(${enrolledIds.join(',') || 'null'})`)
-        .limit(3)
+        .limit(coursesLimit)
 
       setRecommendedCourses(recommended || [])
 
@@ -227,7 +228,7 @@ const Dashboard = () => {
                   <div style={{ padding: '40px 20px', textAlign: 'center' }}>
                     <BookOpen size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
                     <h4 style={{ color: '#666', marginBottom: '8px' }}>No courses in progress</h4>
-                    <p style={{ color: '#999', marginBottom: '20px' }}>Start learning by enrolling in a course</p>
+                    <p style={{ color: '#999', marginBottom: '20px' }}>Start your learning journey by enrolling in a course</p>
                     <Link to="/learner/browse" className="btn btn-primary">
                       Browse Courses
                     </Link>
@@ -309,6 +310,87 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* Available Courses - Show when no enrollments */}
+              {inProgressCourses.length === 0 && recommendedCourses.length > 0 && (
+                <div className="card">
+                  <div className="card-header-flex">
+                    <h3>Available Courses</h3>
+                    <Link to="/learner/browse" className="link-text">View All →</Link>
+                  </div>
+                  <div className="recommended-grid">
+                    {recommendedCourses.map((course) => (
+                      <div key={course.id} className="recommended-course-card">
+                        <div className="recommended-image">
+                          {course.thumbnail_url ? (
+                            <img src={course.thumbnail_url} alt={course.title} />
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              height: '150px',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <BookOpen size={32} color="white" />
+                            </div>
+                          )}
+                          {course.level && <div className="level-badge">{course.level}</div>}
+                          {course.is_paid && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '8px',
+                              right: '8px',
+                              padding: '4px 10px',
+                              background: 'rgba(255, 255, 255, 0.95)',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              color: '#0B4F9F'
+                            }}>
+                              {course.currency} {parseFloat(course.price).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="recommended-content">
+                          <h4 className="recommended-title">{course.title}</h4>
+                          <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px', lineHeight: '1.4' }}>
+                            {course.description?.substring(0, 80)}
+                            {course.description?.length > 80 ? '...' : ''}
+                          </p>
+                          <div className="recommended-instructor">
+                            <div style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {course.instructor_name?.charAt(0) || 'T'}
+                            </div>
+                            <span>{course.instructor_name || 'Instructor'}</span>
+                          </div>
+                          <div className="recommended-meta">
+                            <div className="duration-small">
+                              <Clock size={12} />
+                              <span>{formatDuration(course.total_duration_seconds)}</span>
+                            </div>
+                          </div>
+                          <Link to="/learner/browse" className="btn btn-primary btn-sm btn-full">
+                            View Details
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
 
 

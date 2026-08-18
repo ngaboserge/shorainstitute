@@ -56,20 +56,34 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (userId) => {
     try {
-      // Get user data from auth metadata (primary source of truth)
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      // Get user data from database (includes all profile fields)
+      const { data: dbProfile, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
       
-      if (authUser) {
-        // Create profile from auth metadata
-        const profileFromAuth = {
-          id: authUser.id,
-          email: authUser.email,
-          full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-          role: authUser.user_metadata?.role || 'learner',
-          avatar_url: authUser.user_metadata?.avatar_url,
-          created_at: authUser.created_at
+      if (dbError) {
+        console.error('Error fetching profile from DB:', dbError)
+        // Fallback to auth metadata if DB fetch fails
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        
+        if (authUser) {
+          const profileFromAuth = {
+            id: authUser.id,
+            email: authUser.email,
+            full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+            role: authUser.user_metadata?.role || 'learner',
+            avatar_url: authUser.user_metadata?.avatar_url,
+            created_at: authUser.created_at
+          }
+          setProfile(profileFromAuth)
+        } else {
+          setProfile(null)
         }
-        setProfile(profileFromAuth)
+      } else if (dbProfile) {
+        // Use full profile from database (includes all custom fields including contact_email)
+        setProfile(dbProfile)
       } else {
         setProfile(null)
       }

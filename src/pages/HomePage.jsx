@@ -475,55 +475,6 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* 7-Day Sprint */}
-      <section className="sprint">
-        <div className="sprint-wrapper">
-          <div className="sprint-left">
-            <h2 className="sprint-heading">Start Your 7-Day Learning Sprint</h2>
-            <p className="sprint-text">
-              Kickstart your journey with our free 7-Day Financial Foundations Sprint. Short lessons,<br/>
-              daily actions, real results.
-            </p>
-            <div className="sprint-checks">
-              <div className="check-item">
-                <span className="bullet">●</span>
-                <span>7 short daily lessons</span>
-              </div>
-              <div className="check-item">
-                <span className="bullet">●</span>
-                <span>Practical tools & worksheets</span>
-              </div>
-              <div className="check-item">
-                <span className="bullet">●</span>
-                <span>Build confidence with money</span>
-              </div>
-            </div>
-            <Link to="/auth/learner/signup" className="sprint-btn">Start Free Sprint →</Link>
-          </div>
-          <div className="sprint-right">
-            <div className="days-badge">
-              <div className="days-num">7</div>
-              <div className="days-label">DAYS</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Partners */}
-      <section className="partners">
-        <div className="partners-wrapper">
-          <p className="partners-heading">Trusted by forward-thinking organizations</p>
-          <div className="partners-row">
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=Bank+of+Kigali" alt="Bank of Kigali" />
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=RDB" alt="RDB" />
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=FSD+Rwanda" alt="FSD Rwanda" />
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=Rwanda+FinTech" alt="Rwanda FinTech Hub" />
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=KIFC" alt="KIFC" />
-            <img src="https://via.placeholder.com/140x40/E8F0FE/0B4F9F?text=RISA" alt="RISA" />
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="footer">
         <div className="footer-wrapper">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { Award, Briefcase, GraduationCap, Linkedin, Twitter, Globe, ArrowLeft, BookOpen, Users, Star } from 'lucide-react'
+import { Award, Briefcase, GraduationCap, Linkedin, Twitter, Globe, ArrowLeft, BookOpen, Users, Star, Mail } from 'lucide-react'
 import './TrainerProfile.css'
 
 const TrainerProfile = () => {
@@ -17,7 +17,7 @@ const TrainerProfile = () => {
 
   const loadTrainerProfile = async () => {
     try {
-      // Load trainer profile
+      // Load trainer profile with all fields
       const { data: trainerData, error: trainerError } = await supabase
         .from('users')
         .select('*')
@@ -26,6 +26,8 @@ const TrainerProfile = () => {
         .single()
 
       if (trainerError) throw trainerError
+      
+      console.log('Loaded trainer profile:', trainerData)
       setTrainer(trainerData)
 
       // Load trainer's courses
@@ -86,7 +88,14 @@ const TrainerProfile = () => {
           <div className="trainer-hero-content">
             <div className="trainer-avatar-large">
               {trainer.profile_photo_url ? (
-                <img src={trainer.profile_photo_url} alt={trainer.full_name} />
+                <img 
+                  src={trainer.profile_photo_url} 
+                  alt={trainer.full_name}
+                  style={{
+                    objectFit: 'cover',
+                    objectPosition: 'center top'
+                  }}
+                />
               ) : (
                 <div className="trainer-avatar-placeholder-large">
                   {trainer.full_name?.charAt(0) || 'T'}
@@ -112,7 +121,7 @@ const TrainerProfile = () => {
                 {trainer.years_experience && (
                   <div className="trainer-meta-item">
                     <Award size={16} />
-                    <span>{trainer.years_experience}+ Years Experience</span>
+                    <span>{trainer.years_experience} of Experience</span>
                   </div>
                 )}
                 
@@ -122,31 +131,38 @@ const TrainerProfile = () => {
                     <span>{courses.length} Course{courses.length !== 1 ? 's' : ''}</span>
                   </div>
                 )}
+                
+                {trainer.contact_email && (
+                  <div className="trainer-meta-item">
+                    <Mail size={16} />
+                    <a href={`mailto:${trainer.contact_email}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      {trainer.contact_email}
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Social Links */}
-              {(trainer.linkedin_url || trainer.twitter_url || trainer.website_url) && (
-                <div className="trainer-social">
-                  {trainer.linkedin_url && (
-                    <a href={trainer.linkedin_url} target="_blank" rel="noopener noreferrer" className="social-link">
-                      <Linkedin size={20} />
-                      LinkedIn
-                    </a>
-                  )}
-                  {trainer.twitter_url && (
-                    <a href={trainer.twitter_url} target="_blank" rel="noopener noreferrer" className="social-link">
-                      <Twitter size={20} />
-                      Twitter
-                    </a>
-                  )}
-                  {trainer.website_url && (
-                    <a href={trainer.website_url} target="_blank" rel="noopener noreferrer" className="social-link">
-                      <Globe size={20} />
-                      Website
-                    </a>
-                  )}
-                </div>
-              )}
+              <div className="trainer-social">
+                {trainer.linkedin_url && (
+                  <a href={trainer.linkedin_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <Linkedin size={20} />
+                    LinkedIn
+                  </a>
+                )}
+                {trainer.twitter_url && (
+                  <a href={trainer.twitter_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <Twitter size={20} />
+                    Twitter
+                  </a>
+                )}
+                {trainer.website_url && (
+                  <a href={trainer.website_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <Globe size={20} />
+                    Website
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -184,8 +200,22 @@ const TrainerProfile = () => {
             </section>
           )}
 
+          {/* Languages Section */}
+          {trainer.languages && trainer.languages.length > 0 && (
+            <section className="trainer-section">
+              <h2 className="section-title">Languages</h2>
+              <div className="expertise-tags">
+                {trainer.languages.map((lang, idx) => (
+                  <span key={idx} className="expertise-tag">
+                    {lang}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Qualifications Section */}
-          {trainer.qualifications && trainer.qualifications.length > 0 && (
+          {trainer.qualifications && Array.isArray(trainer.qualifications) && trainer.qualifications.length > 0 && (
             <section className="trainer-section">
               <h2 className="section-title">Qualifications & Certifications</h2>
               <div className="qualifications-list">
@@ -235,18 +265,6 @@ const TrainerProfile = () => {
                         {course.description?.substring(0, 100)}
                         {course.description?.length > 100 ? '...' : ''}
                       </p>
-                      <div className="course-stats">
-                        <span>
-                          <Users size={14} />
-                          {course.enrollment_count || 0} enrolled
-                        </span>
-                        {course.rating && (
-                          <span>
-                            <Star size={14} />
-                            {course.rating}
-                          </span>
-                        )}
-                      </div>
                     </div>
                   </Link>
                 ))}
