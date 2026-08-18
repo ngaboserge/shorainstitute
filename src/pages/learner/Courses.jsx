@@ -54,7 +54,8 @@ const Courses = () => {
             instructor_name,
             category,
             total_lessons,
-            total_duration_seconds
+            total_duration_seconds,
+            delivery_type
           )
         `)
         .eq('user_id', user.id)
@@ -94,7 +95,7 @@ const Courses = () => {
             enrollments.map(async (enrollment) => {
               const { data: courseData } = await supabase
                 .from('courses')
-                .select('id, title, thumbnail_url, instructor_name, category, total_lessons, total_duration_seconds')
+                .select('id, title, thumbnail_url, instructor_name, category, total_lessons, total_duration_seconds, delivery_type')
                 .eq('id', enrollment.course_id)
                 .single()
 
@@ -149,18 +150,42 @@ const Courses = () => {
         return
       }
 
-      // 6. For each enrollment, load lessons and calculate progress
+      // 6. For each enrollment, load lessons/sessions and calculate progress
       const enrichedEnrollments = await Promise.all(
         allEnrollments.map(async (enrollment) => {
-          const { data: lessons } = await supabase
-            .from('lessons')
-            .select('id, title, order_number')
-            .eq('course_id', enrollment.course_id)
-            .order('order_number')
+          const deliveryType = enrollment.courses?.delivery_type || 'self_paced'
+          
+          let nextItem = null
+          let totalItems = 0
+          let completedItems = 0
 
-          const totalLessons = lessons?.length || 0
-          const completedLessons = Math.floor((enrollment.progress_percentage / 100) * totalLessons)
-          const nextLesson = lessons?.find(l => l.order_number > completedLessons) || lessons?.[0]
+          if (deliveryType === 'live') {
+            // For live courses, get sessions
+            const { data: sessions } = await supabase
+              .from('course_sessions')
+              .select('id, title, session_date, start_time, end_time, session_number')
+              .eq('course_id', enrollment.course_id)
+              .order('session_number')
+
+            totalItems = sessions?.length || 0
+            // Find next upcoming session
+            const now = new Date()
+            nextItem = sessions?.find(s => new Date(s.session_date) >= now) || sessions?.[0]
+            if (nextItem) {
+              nextItem.isSession = true
+            }
+          } else {
+            // For self-paced courses, get lessons
+            const { data: lessons } = await supabase
+              .from('lessons')
+              .select('id, title, order_number')
+              .eq('course_id', enrollment.course_id)
+              .order('order_number')
+
+            totalItems = lessons?.length || 0
+            completedItems = Math.floor((enrollment.progress_percentage / 100) * totalItems)
+            nextItem = lessons?.find(l => l.order_number > completedItems) || lessons?.[0]
+          }
 
           // Calculate when last accessed
           const lastAccessedDate = new Date(enrollment.last_accessed_at)
@@ -180,12 +205,13 @@ const Courses = () => {
             instructor: enrollment.courses?.instructor_name,
             category: enrollment.courses?.category,
             progress: Math.round(enrollment.progress_percentage || 0),
-            completedLessons: completedLessons,
-            totalLessons: totalLessons,
-            nextLesson: nextLesson,
+            completedLessons: completedItems,
+            totalLessons: totalItems,
+            nextLesson: nextItem,
             lastAccessed: lastAccessedText,
             completedDate: enrollment.completed_at,
             duration: enrollment.courses?.total_duration_seconds,
+            deliveryType: deliveryType,
             
             // Institutional fields
             source: enrollment.source,
@@ -446,8 +472,12 @@ const Courses = () => {
                           </div>
                         </div>
                         <div style={{padding: '16px', background: '#f5f7fa', borderRadius: '10px', marginBottom: '20px'}}>
-                          <div style={{fontSize: '11px', fontWeight: '700', color: '#0B4F9F', letterSpacing: '1px', marginBottom: '6px'}}>NEXT UP:</div>
-                          <div style={{fontSize: '15px', fontWeight: '600', color: '#1a1a1a', marginBottom: course.dueDate ? '8px' : '0'}}>{course.nextLesson?.title || 'Start first lesson'}</div>
+                          <div style={{fontSize: '11px', fontWeight: '700', color: '#0B4F9F', letterSpacing: '1px', marginBottom: '6px'}}>
+                            {course.deliveryType === 'live' ? 'NEXT SESSION:' : 'NEXT UP:'}
+                          </div>
+                          <div style={{fontSize: '15px', fontWeight: '600', color: '#1a1a1a', marginBottom: course.dueDate ? '8px' : '0'}}>
+                            {course.nextLesson?.title || (course.deliveryType === 'live' ? 'Sessions scheduled soon' : 'Start first lesson')}
+                          </div>
                           {course.dueDate && (
                             <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#dc2626', fontWeight: '600'}}>
                               <Clock size={14} />
@@ -456,7 +486,11 @@ const Courses = () => {
                           )}
                         </div>
                         <div className="course-actions-horizontal">
-                          {course.nextLesson?.id ? (
+                          {course.deliveryType === 'live' ? (
+                            <Link to={`/learner/live-courses/${course.id}`} className="btn btn-primary">
+                              View Sessions →
+                            </Link>
+                          ) : course.nextLesson?.id ? (
                             <Link to={`/learner/courses/${course.id}/lesson/${course.nextLesson.id}`} className="btn btn-primary">
                               Continue Learning →
                             </Link>

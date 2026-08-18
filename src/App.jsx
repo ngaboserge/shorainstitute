@@ -60,6 +60,7 @@ import PaymentApprovals from './pages/trainer/PaymentApprovals'
 import LearnerDashboard from './pages/learner/Dashboard'
 import LearnerCourses from './pages/learner/Courses'
 import LearnerBrowse from './pages/learner/BrowseCourses'
+import LiveCourse from './pages/learner/LiveCourse'
 import LearnerSeminars from './pages/learner/Seminars'
 import LearnerAssessments from './pages/learner/Assessments'
 import TakeAssessment from './pages/learner/TakeAssessment'
@@ -177,6 +178,7 @@ function App() {
         <Route path="/learner/dashboard" element={<ProtectedRoute requiredRole="learner"><LearnerDashboard /></ProtectedRoute>} />
         <Route path="/learner/courses" element={<ProtectedRoute requiredRole="learner"><LearnerCourses /></ProtectedRoute>} />
         <Route path="/learner/courses/:id/lesson/:lessonId" element={<ProtectedRoute requiredRole="learner"><CourseLesson /></ProtectedRoute>} />
+        <Route path="/learner/live-courses/:courseId" element={<ProtectedRoute requiredRole="learner"><LiveCourse /></ProtectedRoute>} />
         <Route path="/learner/browse" element={<ProtectedRoute requiredRole="learner"><LearnerBrowse /></ProtectedRoute>} />
         <Route path="/learner/pathway" element={<ProtectedRoute requiredRole="learner"><LearningPathway /></ProtectedRoute>} />
         <Route path="/learner/paths" element={<ProtectedRoute requiredRole="learner"><LearningPaths /></ProtectedRoute>} />
