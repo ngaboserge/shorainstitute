@@ -145,12 +145,15 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(11, 79, 159, 0.9);
+  background: rgba(11, 79, 159, 0.95);
   color: white;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .course-level-badge {
