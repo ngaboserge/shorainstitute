@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Calendar, Users, Clock, Star, TrendingUp, CheckCircle, Award } from 'lucide-react'
+import { Calendar, Users, Clock, Star, Award, DollarSign } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import './FeaturedCourse.css'
@@ -10,7 +10,6 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
   const { user } = useAuth()
   const [course, setCourse] = useState(null)
   const [instructor, setInstructor] = useState(null)
-  const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -19,6 +18,8 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
 
   const loadFeaturedCourse = async () => {
     try {
+      console.log('🔍 Loading featured course...', courseId)
+      
       // Load course with instructor details
       const { data: courseData, error } = await supabase
         .from('courses')
@@ -44,24 +45,42 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
         .eq('status', 'published')
         .single()
 
-      if (error) throw error
+      console.log('📦 Course data:', courseData)
+      console.log('❌ Course error:', error)
 
-      setCourse(courseData)
-      setInstructor(courseData.users)
-
-      // If it's a live course, load sessions
-      if (courseData.delivery_type === 'live') {
-        const { data: sessionsData } = await supabase
-          .from('course_sessions')
+      if (error) {
+        console.error('Error loading featured course:', error)
+        // Don't throw - try to load without instructor join
+        const { data: simpleCourse, error: simpleError } = await supabase
+          .from('courses')
           .select('*')
-          .eq('course_id', courseId)
-          .order('session_number')
-          .limit(3)
-
-        setSessions(sessionsData || [])
+          .eq('id', courseId)
+          .eq('status', 'published')
+          .single()
+        
+        if (simpleError) {
+          console.error('Simple course query also failed:', simpleError)
+          return
+        }
+        
+        setCourse(simpleCourse)
+        
+        // Load instructor separately
+        if (simpleCourse.instructor_id) {
+          const { data: instructorData } = await supabase
+            .from('users')
+            .select('id, full_name, email, bio, headline, profile_photo_url, years_experience, title, company, job_title, linkedin_url, twitter_url, website_url')
+            .eq('id', simpleCourse.instructor_id)
+            .single()
+          
+          setInstructor(instructorData)
+        }
+      } else {
+        setCourse(courseData)
+        setInstructor(courseData.users)
       }
     } catch (error) {
-      console.error('Error loading featured course:', error)
+      console.error('Fatal error loading featured course:', error)
     } finally {
       setLoading(false)
     }
@@ -69,15 +88,35 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
 
   const handleEnrollClick = () => {
     if (!user) {
-      // Redirect to login with return URL
-      navigate(`/learner/login?redirect=/learner/browse`)
+      navigate(`/auth/learner/login?redirect=/learner/browse`)
     } else {
-      // Go to browse page where they can enroll
       navigate('/learner/browse')
     }
   }
 
-  if (loading || !course) return null
+  const handleAboutTrainer = () => {
+    // For now, scroll to instructor section or show modal
+    // TODO: Create dedicated trainer profile page
+    if (instructor) {
+      alert(`About ${instructor.full_name}\n\n${instructor.bio || instructor.headline || 'Expert instructor with years of experience in financial markets and investment strategies.'}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <section className="featured-course-section">
+        <div className="seminars-wrapper">
+          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+            <p>Loading featured course...</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (!course) {
+    return null // Don't show anything if no course
+  }
 
   const formatPrice = () => {
     if (!course.is_paid || parseFloat(course.price) === 0) return 'Free'
@@ -86,124 +125,90 @@ const FeaturedCourse = ({ courseId = '6683447f-8d8f-4557-8bd5-eaa125dcd8c5' }) =
 
   return (
     <section className="featured-course-section">
-      <div className="featured-course-container">
-        <div className="featured-course-header">
-          <span className="featured-badge">
-            <Star size={16} fill="#FDB714" stroke="#FDB714" />
-            FEATURED COURSE
-          </span>
-          <h2 className="featured-section-title">Master Stock Market Investing in 5 Weeks</h2>
-          <p className="featured-section-subtitle">
-            Transform your financial future with expert-led training
-          </p>
+      <div className="seminars-wrapper">
+        <div className="section-top">
+          <h2 className="section-heading">Featured Course</h2>
+          <Link to="/learner/browse" className="link-view">View all courses →</Link>
         </div>
 
-        <div className="featured-course-card">
-          <div className="featured-course-image">
+        <div className="featured-course-card-compact">
+          <span className="tag-featured">⭐ FEATURED COURSE</span>
+          
+          {/* Thumbnail */}
+          <div className="course-thumbnail">
             {course.thumbnail_url ? (
               <img src={course.thumbnail_url} alt={course.title} />
             ) : (
-              <div className="featured-course-placeholder">
-                <TrendingUp size={64} color="white" />
+              <div className="course-thumbnail-placeholder">
+                <Award size={48} strokeWidth={1.5} />
               </div>
             )}
-            <div className="featured-course-badge-overlay">
-              {course.delivery_type === 'live' && (
-                <span className="live-badge">
-                  <span className="live-dot"></span>
-                  LIVE COURSE
-                </span>
-              )}
-              <span className="duration-badge">
-                <Clock size={14} />
-                5 WEEKS
-              </span>
-            </div>
-          </div>
-
-          <div className="featured-course-content">
-            <h3 className="featured-course-title">{course.title}</h3>
             
-            <p className="featured-course-description">
-              {course.description || 'Join our comprehensive 5-week online investing masterclass and gain practical knowledge to help you make informed financial decisions, build wealth, and invest with confidence. Learn from industry experts with real-world experience.'}
-            </p>
-
-            {/* Key Benefits */}
-            <div className="featured-benefits">
-              <div className="benefit-item">
-                <CheckCircle size={18} color="#10b981" />
-                <span>Live Interactive Sessions</span>
-              </div>
-              <div className="benefit-item">
-                <CheckCircle size={18} color="#10b981" />
-                <span>Expert-Led Training</span>
-              </div>
-              <div className="benefit-item">
-                <CheckCircle size={18} color="#10b981" />
-                <span>Practical Case Studies</span>
-              </div>
-              <div className="benefit-item">
-                <CheckCircle size={18} color="#10b981" />
-                <span>Certificate of Completion</span>
-              </div>
+            {/* Price badge */}
+            <div className="price-badge-overlay">
+              <DollarSign size={14} />
+              <span>{formatPrice()}</span>
             </div>
 
-            {/* Instructor Preview */}
+            {/* Trainer profile badge on thumbnail - Coursera style */}
             {instructor && (
-              <div className="featured-instructor">
-                <div className="instructor-avatar">
+              <div className="trainer-badge-overlay">
+                <div className="trainer-avatar-badge">
                   {instructor.profile_photo_url ? (
                     <img src={instructor.profile_photo_url} alt={instructor.full_name} />
                   ) : (
-                    <div className="instructor-avatar-placeholder">
-                      {instructor.full_name?.charAt(0) || 'T'}
-                    </div>
+                    <span>{instructor.full_name?.charAt(0) || 'T'}</span>
                   )}
                 </div>
-                <div className="instructor-info">
-                  <h4 className="instructor-name">{instructor.full_name}</h4>
-                  <p className="instructor-title">
-                    {instructor.headline || instructor.title || 'Expert Instructor'}
-                  </p>
-                  {instructor.years_experience && (
-                    <p className="instructor-experience">
-                      {instructor.years_experience}+ years of experience
-                    </p>
-                  )}
+                <div className="trainer-badge-info">
+                  <div className="trainer-badge-name">{instructor.full_name}</div>
+                  <div className="trainer-badge-role">Instructor</div>
                 </div>
               </div>
             )}
-
-            {/* Course Details */}
-            <div className="featured-course-meta">
-              <div className="meta-item">
-                <Calendar size={16} />
-                <span>{sessions.length > 0 ? `${sessions.length} Sessions` : 'Self-paced'}</span>
+          </div>
+          
+          {/* Content */}
+          <div className="course-content-compact">
+            <h3 className="course-title-compact">{course.title}</h3>
+            <p className="course-desc-compact">
+              {course.description || 'Master the fundamentals of investing with expert guidance and practical strategies.'}
+            </p>
+            
+            {/* Details */}
+            <div className="course-details-compact">
+              <div className="detail-item-compact">
+                <Calendar size={14} />
+                <span>5 Weeks</span>
               </div>
-              <div className="meta-item">
-                <Users size={16} />
+              <div className="detail-item-compact">
+                <Users size={14} />
                 <span>{course.enrollment_count || 0} Enrolled</span>
               </div>
-              <div className="meta-item">
-                <Award size={16} />
-                <span>Certificate Included</span>
+              <div className="detail-item-compact">
+                <Award size={14} />
+                <span>Certificate</span>
               </div>
             </div>
-
-            {/* CTA Section */}
-            <div className="featured-course-cta">
-              <div className="price-section">
-                <span className="price-label">Investment</span>
-                <span className="price-value">{formatPrice()}</span>
-              </div>
-              <button className="btn-enroll-featured" onClick={handleEnrollClick}>
+            
+            {/* Action buttons */}
+            <div className="course-actions">
+              <button 
+                onClick={handleEnrollClick}
+                className="btn-enroll-compact"
+              >
                 Enroll Now →
               </button>
+              
+              {instructor && (
+                <button 
+                  onClick={handleAboutTrainer}
+                  className="btn-about-trainer"
+                >
+                  About Trainer
+                </button>
+              )}
             </div>
-
-            <p className="featured-course-note">
-              Limited spots available • Starts soon • Money-back guarantee
-            </p>
           </div>
         </div>
       </div>
