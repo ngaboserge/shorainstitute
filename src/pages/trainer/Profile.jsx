@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
 import Header from '../../components/Header'
 import RevenueSettingsSection from '../../components/RevenueSettingsSection'
+import ImageUpload from '../../components/ImageUpload'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { Edit, Check, Star, Clock, Globe, Shield, Calendar, MapPin, Phone, Mail, Linkedin, GraduationCap, MoreVertical } from 'lucide-react'
+import { Edit, Check, Star, Clock, Globe, Shield, Calendar, MapPin, Phone, Mail, Linkedin, GraduationCap, MoreVertical, Twitter, Briefcase } from 'lucide-react'
 import './Profile.css'
 
 const Profile = () => {
@@ -28,7 +29,16 @@ const Profile = () => {
     location: '',
     bio: '',
     title: '',
-    expertise: ''
+    expertise: '',
+    headline: '',
+    profile_photo_url: '',
+    years_experience: '',
+    company: '',
+    job_title: '',
+    linkedin_url: '',
+    twitter_url: '',
+    website_url: '',
+    specializations: []
   })
 
   useEffect(() => {
@@ -43,7 +53,16 @@ const Profile = () => {
         location: profile.location || '',
         bio: profile.bio || '',
         title: profile.title || 'Senior Finance & Investment Consultant',
-        expertise: profile.expertise || 'Capital Markets, Corporate Finance, Investment Strategy'
+        expertise: profile.expertise || 'Capital Markets, Corporate Finance, Investment Strategy',
+        headline: profile.headline || '',
+        profile_photo_url: profile.profile_photo_url || '',
+        years_experience: profile.years_experience || '',
+        company: profile.company || '',
+        job_title: profile.job_title || '',
+        linkedin_url: profile.linkedin_url || '',
+        twitter_url: profile.twitter_url || '',
+        website_url: profile.website_url || '',
+        specializations: profile.specializations || []
       })
     }
   }, [user?.id, profile])
@@ -107,6 +126,15 @@ const Profile = () => {
           bio: formData.bio,
           title: formData.title,
           expertise: formData.expertise,
+          headline: formData.headline,
+          profile_photo_url: formData.profile_photo_url,
+          years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
+          company: formData.company,
+          job_title: formData.job_title,
+          linkedin_url: formData.linkedin_url,
+          twitter_url: formData.twitter_url,
+          website_url: formData.website_url,
+          specializations: formData.specializations,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id)
@@ -194,21 +222,35 @@ const Profile = () => {
                 
                 <div className="profile-header-content">
                   <div className="profile-avatar-section">
-                    <div style={{
-                      width: '120px',
-                      height: '120px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '48px',
-                      fontWeight: '600'
-                    }}>
-                      {formData.full_name?.charAt(0) || profile?.full_name?.charAt(0) || 'T'}
-                    </div>
-                    <button className="btn btn-sm btn-secondary edit-photo-btn">
+                    {formData.profile_photo_url ? (
+                      <img
+                        src={formData.profile_photo_url}
+                        alt={formData.full_name}
+                        style={{
+                          width: '120px',
+                          height: '120px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          border: '3px solid #e5e7eb'
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '48px',
+                        fontWeight: '600'
+                      }}>
+                        {formData.full_name?.charAt(0) || profile?.full_name?.charAt(0) || 'T'}
+                      </div>
+                    )}
+                    <button className="btn btn-sm btn-secondary edit-photo-btn" onClick={() => setIsEditing(true)}>
                       <Edit size={16} />
                       Edit Photo
                     </button>
@@ -224,8 +266,24 @@ const Profile = () => {
                         <Edit size={18} />
                       </button>
                     </div>
+                    {formData.headline && (
+                      <p className="profile-title" style={{ fontSize: '16px', fontWeight: 500, color: '#374151', marginBottom: '4px' }}>
+                        {formData.headline}
+                      </p>
+                    )}
                     <p className="profile-title">{formData.title}</p>
+                    {formData.company && formData.job_title && (
+                      <p className="profile-subtitle" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Briefcase size={14} />
+                        {formData.job_title} at {formData.company}
+                      </p>
+                    )}
                     <p className="profile-subtitle">{formData.expertise}</p>
+                    {formData.years_experience && (
+                      <p style={{ fontSize: '14px', color: '#666', marginTop: '4px' }}>
+                        {formData.years_experience}+ years of experience
+                      </p>
+                    )}
                     <div className="profile-badge-row">
                       <span className="profile-badge verified">
                         <Check size={14} />
@@ -258,6 +316,15 @@ const Profile = () => {
                   <div style={{ marginTop: '30px', padding: '20px', background: '#f9fafb', borderRadius: '12px' }}>
                     <h3 style={{ marginBottom: '20px' }}>Edit Profile Information</h3>
                     
+                    {/* Profile Photo Upload */}
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Profile Photo</label>
+                      <ImageUpload
+                        currentImage={formData.profile_photo_url}
+                        onImageUploaded={(url) => setFormData(prev => ({ ...prev, profile_photo_url: url }))}
+                      />
+                    </div>
+
                     <div className="form-group" style={{ marginBottom: '20px' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Full Name</label>
                       <input
@@ -277,6 +344,26 @@ const Profile = () => {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Professional Headline</label>
+                      <input
+                        type="text"
+                        name="headline"
+                        value={formData.headline}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="e.g., Senior Investment Strategist | 15+ Years Experience"
+                        maxLength={150}
+                      />
+                      <small style={{ color: '#666', fontSize: '12px' }}>Max 150 characters - appears below your name</small>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Professional Title</label>
                       <input
                         type="text"
@@ -291,6 +378,64 @@ const Profile = () => {
                           fontSize: '14px'
                         }}
                         placeholder="e.g., Senior Finance Consultant"
+                      />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Current Company</label>
+                        <input
+                          type="text"
+                          name="company"
+                          value={formData.company}
+                          onChange={handleInputChange}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                          placeholder="Company name"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Job Title</label>
+                        <input
+                          type="text"
+                          name="job_title"
+                          value={formData.job_title}
+                          onChange={handleInputChange}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                          placeholder="Your current position"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Years of Experience</label>
+                      <input
+                        type="number"
+                        name="years_experience"
+                        value={formData.years_experience}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="e.g., 15"
+                        min="0"
+                        max="50"
                       />
                     </div>
 
@@ -312,40 +457,42 @@ const Profile = () => {
                       />
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Phone</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                        placeholder="+250 XXX XXX XXX"
-                      />
-                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Phone</label>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                          placeholder="+250 XXX XXX XXX"
+                        />
+                      </div>
 
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Location</label>
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleInputChange}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                        placeholder="City, Country"
-                      />
+                      <div className="form-group">
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Location</label>
+                        <input
+                          type="text"
+                          name="location"
+                          value={formData.location}
+                          onChange={handleInputChange}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            fontSize: '14px'
+                          }}
+                          placeholder="City, Country"
+                        />
+                      </div>
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>
@@ -363,11 +510,77 @@ const Profile = () => {
                           fontSize: '14px',
                           resize: 'vertical'
                         }}
-                        placeholder="Share your professional background and teaching philosophy..."
+                        placeholder="Share your professional background, teaching philosophy, and what makes you passionate about educating others..."
+                      />
+                      <small style={{ color: '#666', fontSize: '12px' }}>This will appear on your public profile and course pages</small>
+                    </div>
+
+                    <h4 style={{ marginBottom: '16px', marginTop: '24px' }}>Social Media & Links</h4>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                        <Linkedin size={16} style={{ display: 'inline', marginRight: '6px' }} />
+                        LinkedIn Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        name="linkedin_url"
+                        value={formData.linkedin_url}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="https://linkedin.com/in/yourprofile"
                       />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                        <Twitter size={16} style={{ display: 'inline', marginRight: '6px' }} />
+                        Twitter/X Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        name="twitter_url"
+                        value={formData.twitter_url}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="https://twitter.com/yourhandle"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                        <Globe size={16} style={{ display: 'inline', marginRight: '6px' }} />
+                        Personal Website
+                      </label>
+                      <input
+                        type="url"
+                        name="website_url"
+                        value={formData.website_url}
+                        onChange={handleInputChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                        placeholder="https://yourwebsite.com"
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                       <button 
                         className="btn btn-primary"
                         onClick={handleSaveProfile}
@@ -454,28 +667,40 @@ const Profile = () => {
                 <div className="profile-section">
                   <div className="section-header">
                     <h3>Linked Profiles & Links</h3>
-                    <button className="btn-text">
+                    <button className="btn-text" onClick={() => setIsEditing(true)}>
                       <Edit size={16} />
                       Edit
                     </button>
                   </div>
-                  <div className="social-links">
-                    <a href="#" className="social-link">
-                      <Linkedin size={18} />
-                      linkedin.com/in/alexntale
-                      <span className="external-icon">↗</span>
-                    </a>
-                    <a href="#" className="social-link">
-                      <Globe size={18} />
-                      www.ntalecfo.com
-                      <span className="external-icon">↗</span>
-                    </a>
-                    <a href="#" className="social-link">
-                      <span>@</span>
-                      @alex_ntale
-                      <span className="external-icon">↗</span>
-                    </a>
-                  </div>
+                  {(formData.linkedin_url || formData.twitter_url || formData.website_url) ? (
+                    <div className="social-links">
+                      {formData.linkedin_url && (
+                        <a href={formData.linkedin_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                          <Linkedin size={18} />
+                          {formData.linkedin_url.replace('https://', '').substring(0, 40)}
+                          <span className="external-icon">↗</span>
+                        </a>
+                      )}
+                      {formData.website_url && (
+                        <a href={formData.website_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                          <Globe size={18} />
+                          {formData.website_url.replace('https://', '').replace('http://', '').substring(0, 40)}
+                          <span className="external-icon">↗</span>
+                        </a>
+                      )}
+                      {formData.twitter_url && (
+                        <a href={formData.twitter_url} target="_blank" rel="noopener noreferrer" className="social-link">
+                          <Twitter size={18} />
+                          {formData.twitter_url.replace('https://', '').substring(0, 40)}
+                          <span className="external-icon">↗</span>
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ color: '#999', fontSize: '14px', padding: '16px 0' }}>
+                      No social links added yet. Click Edit to add your professional profiles.
+                    </p>
+                  )}
                 </div>
               </div>
 

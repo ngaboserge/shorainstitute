@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Users, GraduationCap, Building2, BookOpen, Radio, ClipboardCheck, TrendingUp, Award, UserPlus, Clock, MapPin, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import shoraLogo from '../assets/shora-logo.png'
+import FeaturedCourse from '../components/FeaturedCourse'
 import './HomePage.css'
 
 const HomePage = () => {
@@ -362,6 +363,9 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Featured Course */}
+      <FeaturedCourse />
 
       {/* Upcoming Seminars */}
       <section className="seminars" id="upcoming-seminars">
