@@ -56,7 +56,7 @@ const ManageSessions = () => {
 
       setCourse(courseData)
 
-      // Load sessions
+      // Load sessions with all fields
       const { data: sessionsData, error: sessionsError } = await supabase
         .from('course_sessions')
         .select('*')
@@ -64,6 +64,8 @@ const ManageSessions = () => {
         .order('session_number', { ascending: true })
 
       if (sessionsError) throw sessionsError
+      
+      console.log('Loaded sessions:', sessionsData) // Debug log
       setSessions(sessionsData || [])
 
       // Load enrollments
@@ -354,7 +356,9 @@ const ManageSessions = () => {
               </div>
             ) : (
               <div className="sessions-list">
-                {sessions.map((session) => (
+                {sessions.map((session) => {
+                  console.log('Rendering session:', session) // Debug log
+                  return (
                   <div key={session.id} className="session-item">
                     <div className="session-number">
                       Session {session.session_number}
@@ -365,25 +369,44 @@ const ManageSessions = () => {
                         <p className="session-description">{session.description}</p>
                       )}
                       <div className="session-meta">
-                        <div className="meta-item">
-                          <Calendar size={16} />
-                          {new Date(session.session_date).toLocaleDateString('en-US', { 
-                            weekday: 'long',
-                            month: 'long', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
+                        <div className="meta-item" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <Calendar size={18} style={{color: '#0B4F9F', flexShrink: 0}} />
+                          <span style={{color: '#374151', fontSize: '15px', fontWeight: 500}}>
+                            {session.session_date 
+                              ? new Date(session.session_date).toLocaleDateString('en-US', { 
+                                  weekday: 'short',
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  year: 'numeric' 
+                                })
+                              : 'Date not set'
+                            }
+                          </span>
                         </div>
-                        <div className="meta-item">
-                          <Clock size={16} />
-                          {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
+                        <div className="meta-item" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <Clock size={18} style={{color: '#0B4F9F', flexShrink: 0}} />
+                          <span style={{color: '#374151', fontSize: '15px', fontWeight: 500}}>
+                            {session.start_time && session.end_time
+                              ? `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`
+                              : 'Time not set'
+                            }
+                          </span>
                         </div>
-                        {session.meeting_link && (
-                          <div className="meta-item">
-                            <Video size={16} />
-                            {session.meeting_platform}
-                          </div>
-                        )}
+                        <div className="meta-item" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                          <Video size={18} style={{color: '#0B4F9F', flexShrink: 0}} />
+                          {session.meeting_link ? (
+                            <a 
+                              href={session.meeting_link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#0B4F9F', textDecoration: 'none', fontWeight: 600, fontSize: '15px' }}
+                            >
+                              {session.meeting_platform || 'Meeting'} Link →
+                            </a>
+                          ) : (
+                            <span style={{ color: '#9ca3af', fontSize: '15px' }}>No meeting link</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="session-actions">
@@ -403,7 +426,7 @@ const ManageSessions = () => {
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
