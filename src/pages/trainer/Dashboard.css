@@ -549,12 +549,16 @@
   overflow: hidden;
   flex-shrink: 0;
   background: #e0e0e0;
+  max-width: 120px !important;
+  max-height: 80px !important;
 }
 
 .course-thumbnail-small img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  max-width: 120px;
+  max-height: 80px;
 }
 
 .course-info-simple {
