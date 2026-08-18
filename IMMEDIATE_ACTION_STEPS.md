@@ -80,17 +80,34 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = 5242880,
   allowed_mime_types = ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Trainers can manage trainer photos" ON storage.objects;
+
 -- Set up storage policies for the avatars bucket
-CREATE POLICY IF NOT EXISTS "Public Access"
+CREATE POLICY "Public Access"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'avatars');
 
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload avatars"
+CREATE POLICY "Authenticated users can upload avatars"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'avatars');
 
-CREATE POLICY IF NOT EXISTS "Trainers can manage trainer photos"
+CREATE POLICY "Users can update own avatars"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can delete own avatars"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Trainers can manage trainer photos"
 ON storage.objects FOR ALL
 TO authenticated
 USING (

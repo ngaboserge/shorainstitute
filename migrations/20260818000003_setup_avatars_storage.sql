@@ -17,32 +17,39 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = 5242880,
   allowed_mime_types = ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Trainers can manage trainer photos" ON storage.objects;
+
 -- Set up storage policies for the avatars bucket
 -- Policy 1: Anyone can view/download avatars (public read)
-CREATE POLICY IF NOT EXISTS "Public Access"
+CREATE POLICY "Public Access"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'avatars');
 
 -- Policy 2: Authenticated users can upload avatars
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload avatars"
+CREATE POLICY "Authenticated users can upload avatars"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'avatars');
 
 -- Policy 3: Users can update their own avatars
-CREATE POLICY IF NOT EXISTS "Users can update own avatars"
+CREATE POLICY "Users can update own avatars"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
 
 -- Policy 4: Users can delete their own avatars
-CREATE POLICY IF NOT EXISTS "Users can delete own avatars"
+CREATE POLICY "Users can delete own avatars"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
 
--- Alternative: Allow trainers to manage trainer folder
-CREATE POLICY IF NOT EXISTS "Trainers can manage trainer photos"
+-- Policy 5: Allow trainers to manage trainer folder
+CREATE POLICY "Trainers can manage trainer photos"
 ON storage.objects FOR ALL
 TO authenticated
 USING (
@@ -54,5 +61,3 @@ USING (
     AND role = 'trainer'
   )
 );
-
-COMMENT ON TABLE storage.buckets IS 'Storage buckets including avatars for user profile photos';
