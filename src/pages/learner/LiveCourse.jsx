@@ -183,7 +183,24 @@ const LiveCourse = () => {
             <div className="course-meta">
               <div className="meta-item">
                 <Users size={18} />
-                <span>{course.instructor_name}</span>
+                <span 
+                  onClick={() => navigate(`/trainer/${course.instructor_id}/profile`)}
+                  style={{ 
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    textUnderlineOffset: '3px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.textDecorationStyle = 'solid'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.textDecorationStyle = 'dotted'
+                  }}
+                  title="View trainer profile"
+                >
+                  {course.instructor_name}
+                </span>
               </div>
               <div className="meta-item">
                 <Calendar size={18} />
