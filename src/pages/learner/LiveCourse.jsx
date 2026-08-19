@@ -200,22 +200,13 @@ const LiveCourse = () => {
               <>
                 <p 
                   className={`course-description ${isDescriptionExpanded ? 'expanded' : 'collapsed'}`}
-                  style={{ 
-                    marginBottom: '12px',
-                    border: isDescriptionExpanded ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                    padding: isDescriptionExpanded ? '8px' : '0',
-                    borderRadius: isDescriptionExpanded ? '8px' : '0'
-                  }}
                 >
                   {course.description}
                 </p>
                 {course.description.length > 300 && (
                   <button 
                     onClick={() => {
-                      console.log('Button clicked! Current state:', isDescriptionExpanded)
-                      console.log('Description length:', course.description.length)
                       setIsDescriptionExpanded(!isDescriptionExpanded)
-                      console.log('New state should be:', !isDescriptionExpanded)
                     }}
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
@@ -226,7 +217,7 @@ const LiveCourse = () => {
                       fontSize: '14px',
                       fontWeight: '600',
                       cursor: 'pointer',
-                      marginTop: '0',
+                      marginTop: '12px',
                       transition: 'all 0.2s',
                       display: 'inline-block'
                     }}
@@ -239,11 +230,6 @@ const LiveCourse = () => {
                   >
                     {isDescriptionExpanded ? '▲ Show Less' : '▼ View Full Description'}
                   </button>
-                )}
-                {course.description.length > 300 && (
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
-                    Debug: State is {isDescriptionExpanded ? 'EXPANDED' : 'COLLAPSED'}
-                  </div>
                 )}
               </>
             )}

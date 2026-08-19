@@ -34,6 +34,8 @@
   margin-bottom: 32px;
   box-shadow: 0 4px 12px rgba(11, 79, 159, 0.15);
   min-height: auto;
+  height: auto;
+  overflow: visible;
 }
 
 .course-header-content h1 {
@@ -79,15 +81,18 @@
 }
 
 .course-description.collapsed {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 4 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
 }
 
 .course-description.expanded {
-  display: block;
-  overflow: visible;
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 .sessions-list h2 {
