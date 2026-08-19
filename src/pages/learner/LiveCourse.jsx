@@ -267,95 +267,6 @@ const LiveCourse = () => {
           </div>
         </div>
 
-        <div className="sessions-list">
-          <h2>Course Sessions</h2>
-          
-          {sessions.length === 0 ? (
-            <div className="empty-state">
-              <Calendar size={64} color="#ccc" />
-              <h3>No sessions scheduled yet</h3>
-              <p>The instructor will add sessions soon. Check back later!</p>
-            </div>
-          ) : (
-            <div className="sessions-grid">
-              {sessions.map((session) => {
-                const status = getSessionStatus(session)
-                const StatusIcon = status.icon
-
-                return (
-                  <div key={session.id} className="session-card">
-                    <div className="session-header">
-                      <div className="session-number">
-                        Session {session.session_number}
-                      </div>
-                      <div className="session-status" style={{ color: status.color }}>
-                        <StatusIcon size={16} />
-                        <span>{status.label}</span>
-                      </div>
-                    </div>
-
-                    <h3 className="session-title">{session.title}</h3>
-                    
-                    {session.description && (
-                      <p className="session-description">{session.description}</p>
-                    )}
-
-                    <div className="session-details">
-                      <div className="detail-row">
-                        <Calendar size={16} />
-                        <span>{formatDate(session.session_date)}</span>
-                      </div>
-                      
-                      <div className="detail-row">
-                        <Clock size={16} />
-                        <span>
-                          {formatTime(session.start_time)} - {formatTime(session.end_time)} ({getTimezoneAbbr(session.time_zone || 'Africa/Kigali')})
-                        </span>
-                      </div>
-
-                      {session.location && (
-                        <div className="detail-row">
-                          <MapPin size={16} />
-                          <span>{session.location}</span>
-                        </div>
-                      )}
-
-                      <div className="detail-row">
-                        <Video size={16} />
-                        {session.meeting_link ? (
-                          <a 
-                            href={session.meeting_link} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="meeting-link"
-                          >
-                            Join {session.meeting_platform || 'Virtual Meeting'}
-                          </a>
-                        ) : (
-                          <span style={{ fontSize: '14px', color: '#6b7280', fontStyle: 'italic' }}>
-                            Meeting link will be sent privately via email
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {session.materials_link && (
-                      <a 
-                        href={session.materials_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-outline btn-full"
-                      >
-                        View Materials
-                      </a>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
         {/* Trainer Card */}
         {trainerProfile && (
           <div className="trainer-card-section">
@@ -470,6 +381,95 @@ const LiveCourse = () => {
             </div>
           </div>
         )}
+
+        <div className="sessions-list">
+          <h2>Course Sessions</h2>
+          
+          {sessions.length === 0 ? (
+            <div className="empty-state">
+              <Calendar size={64} color="#ccc" />
+              <h3>No sessions scheduled yet</h3>
+              <p>The instructor will add sessions soon. Check back later!</p>
+            </div>
+          ) : (
+            <div className="sessions-grid">
+              {sessions.map((session) => {
+                const status = getSessionStatus(session)
+                const StatusIcon = status.icon
+
+                return (
+                  <div key={session.id} className="session-card">
+                    <div className="session-header">
+                      <div className="session-number">
+                        Session {session.session_number}
+                      </div>
+                      <div className="session-status" style={{ color: status.color }}>
+                        <StatusIcon size={16} />
+                        <span>{status.label}</span>
+                      </div>
+                    </div>
+
+                    <h3 className="session-title">{session.title}</h3>
+                    
+                    {session.description && (
+                      <p className="session-description">{session.description}</p>
+                    )}
+
+                    <div className="session-details">
+                      <div className="detail-row">
+                        <Calendar size={16} />
+                        <span>{formatDate(session.session_date)}</span>
+                      </div>
+                      
+                      <div className="detail-row">
+                        <Clock size={16} />
+                        <span>
+                          {formatTime(session.start_time)} - {formatTime(session.end_time)} ({getTimezoneAbbr(session.time_zone || 'Africa/Kigali')})
+                        </span>
+                      </div>
+
+                      {session.location && (
+                        <div className="detail-row">
+                          <MapPin size={16} />
+                          <span>{session.location}</span>
+                        </div>
+                      )}
+
+                      <div className="detail-row">
+                        <Video size={16} />
+                        {session.meeting_link ? (
+                          <a 
+                            href={session.meeting_link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="meeting-link"
+                          >
+                            Join {session.meeting_platform || 'Virtual Meeting'}
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: '14px', color: '#6b7280', fontStyle: 'italic' }}>
+                            Meeting link will be sent privately via email
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {session.materials_link && (
+                      <a 
+                        href={session.materials_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-outline btn-full"
+                      >
+                        View Materials
+                      </a>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </ResponsiveLayout>
   )

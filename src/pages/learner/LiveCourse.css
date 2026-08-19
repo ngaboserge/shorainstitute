@@ -216,7 +216,8 @@
 }
 
 .trainer-card-section {
-  margin-top: 40px;
+  margin-top: 32px;
+  margin-bottom: 32px;
 }
 
 .trainer-card-section h2 {
@@ -226,7 +227,11 @@
   margin-bottom: 20px;
 }
 
-@media (max-width: 768px) {
+.sessions-list {
+  margin-top: 0;
+}
+
+.sessions-list h2 {
   .live-course-container {
     padding: 16px;
   }
