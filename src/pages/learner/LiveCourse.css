@@ -73,8 +73,31 @@
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.95) !important;
   margin-top: 16px;
-  white-space: normal;
+  white-space: pre-wrap;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  transition: max-height 0.3s ease;
+}
+
+.course-description.collapsed {
+  max-height: 120px;
+  overflow: hidden;
+  position: relative;
+}
+
+.course-description.collapsed::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, #083d7a);
+  pointer-events: none;
+}
+
+.course-description.expanded {
+  max-height: none;
 }
 
 .sessions-list h2 {

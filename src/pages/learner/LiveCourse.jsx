@@ -15,6 +15,7 @@ const LiveCourse = () => {
   const [sessions, setSessions] = useState([])
   const [enrollment, setEnrollment] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
   // Helper function to get timezone abbreviation
   const getTimezoneAbbr = (timezone) => {
@@ -196,7 +197,36 @@ const LiveCourse = () => {
               )}
             </div>
             {course.description && (
-              <p className="course-description">{course.description}</p>
+              <>
+                <p className={`course-description ${isDescriptionExpanded ? 'expanded' : 'collapsed'}`}>
+                  {course.description}
+                </p>
+                {course.description.length > 300 && (
+                  <button 
+                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      color: 'white',
+                      padding: '8px 20px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      marginTop: '12px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = 'rgba(255, 255, 255, 0.2)'
+                    }}
+                  >
+                    {isDescriptionExpanded ? 'Show Less' : 'View Full Description'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
