@@ -203,7 +203,10 @@ const LiveCourse = () => {
                 </p>
                 {course.description.length > 300 && (
                   <button 
-                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                    onClick={() => {
+                      console.log('Toggling description. Current state:', isDescriptionExpanded)
+                      setIsDescriptionExpanded(!isDescriptionExpanded)
+                    }}
                     style={{
                       background: 'rgba(255, 255, 255, 0.2)',
                       border: '1px solid rgba(255, 255, 255, 0.3)',
