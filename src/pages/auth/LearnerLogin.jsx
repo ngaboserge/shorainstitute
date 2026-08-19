@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, AlertCircle, Eye, EyeOff, ArrowLeft, Home } from 'lucide-react'
 import './Auth.css'
 
 const LearnerLogin = () => {
@@ -98,6 +98,42 @@ const LearnerLogin = () => {
   return (
     <div className="auth-page">
       <div className="auth-container">
+        {/* Back to Homepage Button */}
+        <button 
+          onClick={() => navigate('/')}
+          style={{
+            position: 'absolute',
+            top: '20px',
+            left: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 18px',
+            background: '#0B4F9F',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: '0 2px 4px rgba(11, 79, 159, 0.2)'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#083d7a'
+            e.target.style.transform = 'translateY(-1px)'
+            e.target.style.boxShadow = '0 4px 8px rgba(11, 79, 159, 0.3)'
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = '#0B4F9F'
+            e.target.style.transform = 'translateY(0)'
+            e.target.style.boxShadow = '0 2px 4px rgba(11, 79, 159, 0.2)'
+          }}
+        >
+          <ArrowLeft size={18} />
+          Back to Homepage
+        </button>
+
         {/* Role Switcher at Top */}
         <div className="role-switcher">
           <Link to="/auth/learner/login" className="role-btn active">
