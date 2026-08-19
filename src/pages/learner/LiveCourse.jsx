@@ -192,8 +192,105 @@ const LiveCourse = () => {
         </button>
 
         <div className="course-header-card">
+          {/* Top row with title and trainer badge */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ flex: 1 }}>
+              <h1>{course.title}</h1>
+            </div>
+            
+            {/* Compact Trainer Badge - Top Right */}
+            {trainerProfile && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(`/trainer/${trainerProfile.id}/profile`)
+                }}
+                style={{
+                  padding: '12px 16px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  backdropFilter: 'blur(10px)',
+                  marginLeft: '20px',
+                  flexShrink: 0
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                {/* Small Profile Photo */}
+                <div style={{
+                  width: '45px',
+                  height: '45px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  background: 'white',
+                  border: '2px solid rgba(255, 255, 255, 0.5)'
+                }}>
+                  {trainerProfile.profile_photo_url ? (
+                    <img 
+                      src={trainerProfile.profile_photo_url} 
+                      alt={trainerProfile.full_name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center top'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '18px',
+                      fontWeight: '700'
+                    }}>
+                      {trainerProfile.full_name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Trainer Name */}
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: 'white',
+                    marginBottom: '2px',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {trainerProfile.full_name}
+                  </div>
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'rgba(255, 255, 255, 0.85)',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    Instructor →
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="course-header-content">
-            <h1>{course.title}</h1>
             <div className="course-meta">
               <div className="meta-item">
                 <Users size={18} />
@@ -263,94 +360,6 @@ const LiveCourse = () => {
                   </button>
                 )}
               </>
-            )}
-
-            {/* Compact Trainer Badge inside blue card */}
-            {trainerProfile && (
-              <div 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigate(`/trainer/${trainerProfile.id}/profile`)
-                }}
-                style={{
-                  marginTop: '24px',
-                  padding: '16px 20px',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.25)',
-                  borderRadius: '12px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  backdropFilter: 'blur(10px)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)'
-                  e.currentTarget.style.transform = 'translateY(-2px)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'
-                  e.currentTarget.style.transform = 'translateY(0)'
-                }}
-              >
-                {/* Small Profile Photo */}
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  background: 'white',
-                  border: '2px solid rgba(255, 255, 255, 0.5)'
-                }}>
-                  {trainerProfile.profile_photo_url ? (
-                    <img 
-                      src={trainerProfile.profile_photo_url} 
-                      alt={trainerProfile.full_name}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center top'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '20px',
-                      fontWeight: '700'
-                    }}>
-                      {trainerProfile.full_name?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                {/* Trainer Name and Title */}
-                <div>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    color: 'white',
-                    marginBottom: '2px'
-                  }}>
-                    {trainerProfile.full_name}
-                  </div>
-                  <div style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.85)',
-                    fontWeight: '500'
-                  }}>
-                    Your Instructor • View Profile →
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         </div>
