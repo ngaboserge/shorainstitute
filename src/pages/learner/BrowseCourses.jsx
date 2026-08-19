@@ -372,20 +372,29 @@ const BrowseCourses = () => {
                       </div>
                     </div>
                     
-                    <div className="course-stats-row">
-                      <div className="stat-item-small">
-                        <Clock size={14} />
-                        <span>{formatDuration(course.total_duration_seconds)}</span>
+                    {/* Stats row - only show if data exists */}
+                    {(course.total_lessons > 0 || course.total_duration_seconds > 0 || course.enrollment_count > 0) && (
+                      <div className="course-stats-row">
+                        {course.total_duration_seconds > 0 && (
+                          <div className="stat-item-small">
+                            <Clock size={14} />
+                            <span>{formatDuration(course.total_duration_seconds)}</span>
+                          </div>
+                        )}
+                        {course.total_lessons > 0 && (
+                          <div className="stat-item-small">
+                            <BookOpen size={14} />
+                            <span>{course.total_lessons} lessons</span>
+                          </div>
+                        )}
+                        {course.enrollment_count > 0 && (
+                          <div className="stat-item-small">
+                            <Users size={14} />
+                            <span>{course.enrollment_count.toLocaleString()} enrolled</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="stat-item-small">
-                        <BookOpen size={14} />
-                        <span>{course.total_lessons || 0} lessons</span>
-                      </div>
-                      <div className="stat-item-small">
-                        <Users size={14} />
-                        <span>{(course.enrollment_count || 0).toLocaleString()} enrolled</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                   
                   <div className="course-card-footer">
