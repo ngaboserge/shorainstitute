@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/send-enrollment-emails",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}

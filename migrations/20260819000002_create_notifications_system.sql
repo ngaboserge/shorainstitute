@@ -41,7 +41,10 @@ RETURNS TRIGGER AS $$
 DECLARE
   v_course_title TEXT;
   v_learner_name TEXT;
+  v_learner_email TEXT;
   v_instructor_id UUID;
+  v_amount DECIMAL;
+  v_payment_method TEXT;
 BEGIN
   -- Only notify when payment status changes to 'approved'
   IF (TG_OP = 'UPDATE' AND NEW.payment_status = 'approved' AND OLD.payment_status != 'approved')
@@ -52,10 +55,14 @@ BEGIN
     FROM courses
     WHERE id = NEW.course_id;
     
-    -- Get learner name
-    SELECT full_name INTO v_learner_name
+    -- Get learner details
+    SELECT full_name, email INTO v_learner_name, v_learner_email
     FROM users
     WHERE id = NEW.user_id;
+    
+    -- Get payment details
+    v_amount := NEW.amount_paid;
+    v_payment_method := NEW.payment_method;
     
     -- Create notification for the instructor
     IF v_instructor_id IS NOT NULL THEN
@@ -77,6 +84,50 @@ BEGIN
         FALSE
       );
     END IF;
+    
+    -- Send email notifications to both addresses
+    -- Note: This requires net extension and proper SMTP configuration
+    PERFORM net.http_post(
+      url := 'https://api.resend.com/emails',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || current_setting('app.settings.resend_api_key', true)
+      ),
+      body := jsonb_build_object(
+        'from', 'Shora Institute <notifications@shorainstitute.com>',
+        'to', ARRAY['aderemibanjoko@yahoo.co.uk', 'info@shorainstitute.com'],
+        'subject', '🎓 New Course Enrollment - ' || COALESCE(v_course_title, 'Course'),
+        'html', 
+          '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">' ||
+          '<div style="background: linear-gradient(135deg, #0B4F9F 0%, #0d3a70 100%); padding: 30px; text-align: center;">' ||
+          '<h1 style="color: white; margin: 0; font-size: 24px;">New Student Enrolled!</h1>' ||
+          '</div>' ||
+          '<div style="padding: 30px; background: #f9fafb;">' ||
+          '<div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">' ||
+          '<h2 style="color: #1a1a1a; margin-top: 0;">📚 Course Details</h2>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Course:</strong> ' || COALESCE(v_course_title, 'N/A') || '</p>' ||
+          '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">' ||
+          '<h2 style="color: #1a1a1a;">👤 Student Information</h2>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Name:</strong> ' || COALESCE(v_learner_name, 'N/A') || '</p>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Email:</strong> ' || COALESCE(v_learner_email, 'N/A') || '</p>' ||
+          '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">' ||
+          '<h2 style="color: #1a1a1a;">💳 Payment Details</h2>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Amount:</strong> $' || COALESCE(v_amount::TEXT, '0') || '</p>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Method:</strong> ' || COALESCE(v_payment_method, 'N/A') || '</p>' ||
+          '<p style="font-size: 16px; color: #374151; margin: 8px 0;"><strong>Status:</strong> <span style="color: #10b981; font-weight: 600;">✓ Paid</span></p>' ||
+          '</div>' ||
+          '<div style="text-align: center; margin-top: 24px;">' ||
+          '<a href="https://www.shorainstitute.com/trainer/courses/' || NEW.course_id || '/students" style="display: inline-block; background: #0B4F9F; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">View All Students</a>' ||
+          '</div>' ||
+          '</div>' ||
+          '<div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">' ||
+          '<p>Shora Institute - Empowering Minds. Building Wealth.</p>' ||
+          '<p style="margin-top: 8px;">Visit us at <a href="https://www.shorainstitute.com" style="color: #0B4F9F;">www.shorainstitute.com</a></p>' ||
+          '</div>' ||
+          '</div>'
+      )::jsonb
+    );
+    
   END IF;
   
   RETURN NEW;
