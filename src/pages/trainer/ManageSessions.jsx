@@ -21,6 +21,27 @@ const ManageSessions = () => {
   const [editingSession, setEditingSession] = useState(null)
   const [activeTab, setActiveTab] = useState('sessions') // sessions, enrollments
 
+  // Helper function to get timezone abbreviation
+  const getTimezoneAbbr = (timezone) => {
+    const timezoneMap = {
+      'Africa/Kigali': 'CAT',
+      'Africa/Nairobi': 'EAT',
+      'Africa/Lagos': 'WAT',
+      'Africa/Johannesburg': 'SAST',
+      'Europe/London': 'GMT',
+      'Europe/Paris': 'CET',
+      'America/New_York': 'ET',
+      'America/Chicago': 'CT',
+      'America/Los_Angeles': 'PT',
+      'Asia/Dubai': 'GST',
+      'Asia/Kolkata': 'IST',
+      'Asia/Singapore': 'SGT',
+      'Asia/Tokyo': 'JST',
+      'Australia/Sydney': 'AET'
+    }
+    return timezoneMap[timezone] || 'CAT'
+  }
+
   const [sessionForm, setSessionForm] = useState({
     session_number: 1,
     title: '',
@@ -29,7 +50,8 @@ const ManageSessions = () => {
     start_time: '14:00',
     end_time: '16:00',
     meeting_platform: 'Zoom',
-    meeting_link: ''
+    meeting_link: '',
+    time_zone: 'Africa/Kigali'
   })
 
   useEffect(() => {
@@ -100,7 +122,8 @@ const ManageSessions = () => {
       start_time: '14:00',
       end_time: '16:00',
       meeting_platform: 'Zoom',
-      meeting_link: ''
+      meeting_link: '',
+      time_zone: 'Africa/Kigali'
     })
     setEditingSession(null)
     setShowAddForm(true)
@@ -115,7 +138,8 @@ const ManageSessions = () => {
       start_time: session.start_time,
       end_time: session.end_time,
       meeting_platform: session.meeting_platform,
-      meeting_link: session.meeting_link || ''
+      meeting_link: session.meeting_link || '',
+      time_zone: session.time_zone || 'Africa/Kigali'
     })
     setEditingSession(session)
     setShowAddForm(true)
@@ -141,7 +165,8 @@ const ManageSessions = () => {
             start_time: sessionForm.start_time,
             end_time: sessionForm.end_time,
             meeting_platform: sessionForm.meeting_platform,
-            meeting_link: sessionForm.meeting_link
+            meeting_link: sessionForm.meeting_link,
+            time_zone: sessionForm.time_zone
           })
           .eq('id', editingSession.id)
 
@@ -160,6 +185,7 @@ const ManageSessions = () => {
             end_time: sessionForm.end_time,
             meeting_platform: sessionForm.meeting_platform,
             meeting_link: sessionForm.meeting_link,
+            time_zone: sessionForm.time_zone,
             status: 'scheduled'
           })
 
@@ -387,7 +413,7 @@ const ManageSessions = () => {
                           <Clock size={18} style={{color: '#0B4F9F', flexShrink: 0}} />
                           <span style={{color: '#374151', fontSize: '15px', fontWeight: 500}}>
                             {session.start_time && session.end_time
-                              ? `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`
+                              ? `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)} (${getTimezoneAbbr(session.time_zone || 'Africa/Kigali')})`
                               : 'Time not set'
                             }
                           </span>
@@ -699,6 +725,30 @@ const ManageSessions = () => {
                       onChange={(e) => setSessionForm({ ...sessionForm, end_time: e.target.value })}
                     />
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Time Zone</label>
+                  <select
+                    value={sessionForm.time_zone}
+                    onChange={(e) => setSessionForm({ ...sessionForm, time_zone: e.target.value })}
+                  >
+                    <option value="Africa/Kigali">🇷🇼 Central Africa Time (CAT / GMT+2) - Kigali</option>
+                    <option value="Africa/Nairobi">🇰🇪 East Africa Time (EAT / GMT+3) - Nairobi</option>
+                    <option value="Africa/Lagos">🇳🇬 West Africa Time (WAT / GMT+1) - Lagos</option>
+                    <option value="Africa/Johannesburg">🇿🇦 South Africa Time (SAST / GMT+2) - Johannesburg</option>
+                    <option value="Europe/London">🇬🇧 Greenwich Mean Time (GMT / UTC+0) - London</option>
+                    <option value="Europe/Paris">🇫🇷 Central European Time (CET / GMT+1) - Paris</option>
+                    <option value="America/New_York">🇺🇸 Eastern Time (ET / GMT-5) - New York</option>
+                    <option value="America/Chicago">🇺🇸 Central Time (CT / GMT-6) - Chicago</option>
+                    <option value="America/Los_Angeles">🇺🇸 Pacific Time (PT / GMT-8) - Los Angeles</option>
+                    <option value="Asia/Dubai">🇦🇪 Gulf Standard Time (GST / GMT+4) - Dubai</option>
+                    <option value="Asia/Kolkata">🇮🇳 India Standard Time (IST / GMT+5:30) - Mumbai</option>
+                    <option value="Asia/Singapore">🇸🇬 Singapore Time (SGT / GMT+8) - Singapore</option>
+                    <option value="Asia/Tokyo">🇯🇵 Japan Standard Time (JST / GMT+9) - Tokyo</option>
+                    <option value="Australia/Sydney">🇦🇺 Australian Eastern Time (AET / GMT+10) - Sydney</option>
+                  </select>
+                  <p className="help-text">Select the timezone for this session</p>
                 </div>
 
                 <div className="form-group">

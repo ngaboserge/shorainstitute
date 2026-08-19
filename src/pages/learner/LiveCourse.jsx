@@ -16,6 +16,27 @@ const LiveCourse = () => {
   const [enrollment, setEnrollment] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // Helper function to get timezone abbreviation
+  const getTimezoneAbbr = (timezone) => {
+    const timezoneMap = {
+      'Africa/Kigali': 'CAT',
+      'Africa/Nairobi': 'EAT',
+      'Africa/Lagos': 'WAT',
+      'Africa/Johannesburg': 'SAST',
+      'Europe/London': 'GMT',
+      'Europe/Paris': 'CET',
+      'America/New_York': 'ET',
+      'America/Chicago': 'CT',
+      'America/Los_Angeles': 'PT',
+      'Asia/Dubai': 'GST',
+      'Asia/Kolkata': 'IST',
+      'Asia/Singapore': 'SGT',
+      'Asia/Tokyo': 'JST',
+      'Australia/Sydney': 'AET'
+    }
+    return timezoneMap[timezone] || 'CAT'
+  }
+
   useEffect(() => {
     if (user && courseId) {
       loadCourseData()
@@ -222,7 +243,7 @@ const LiveCourse = () => {
                       <div className="detail-row">
                         <Clock size={16} />
                         <span>
-                          {formatTime(session.start_time)} - {formatTime(session.end_time)}
+                          {formatTime(session.start_time)} - {formatTime(session.end_time)} ({getTimezoneAbbr(session.time_zone || 'Africa/Kigali')})
                         </span>
                       </div>
 
