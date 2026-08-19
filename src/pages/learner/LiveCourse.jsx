@@ -254,19 +254,23 @@ const LiveCourse = () => {
                         </div>
                       )}
 
-                      {session.meeting_link && (
-                        <div className="detail-row">
-                          <Video size={16} />
+                      <div className="detail-row">
+                        <Video size={16} />
+                        {session.meeting_link ? (
                           <a 
                             href={session.meeting_link} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="meeting-link"
                           >
-                            Join Virtual Meeting
+                            Join {session.meeting_platform || 'Virtual Meeting'}
                           </a>
-                        </div>
-                      )}
+                        ) : (
+                          <span style={{ fontSize: '14px', color: '#6b7280', fontStyle: 'italic' }}>
+                            Meeting link will be sent privately via email
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {session.materials_link && (
