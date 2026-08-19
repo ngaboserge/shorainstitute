@@ -215,6 +215,17 @@
   color: #999;
 }
 
+.trainer-card-section {
+  margin-top: 40px;
+}
+
+.trainer-card-section h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+}
+
 @media (max-width: 768px) {
   .live-course-container {
     padding: 16px;
