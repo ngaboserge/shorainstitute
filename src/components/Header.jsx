@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Search, Bell, HelpCircle, ChevronDown, User } from 'lucide-react'
+import NotificationDropdown from './NotificationDropdown'
 import './Header.css'
 
 const Header = ({ title, subtitle, actions }) => {
@@ -45,10 +46,8 @@ const Header = ({ title, subtitle, actions }) => {
           <span>Help</span>
         </button>
         
-        <button className="header-icon-btn notification-btn">
-          <Bell size={20} />
-          <span className="notification-badge">3</span>
-        </button>
+        {/* Only show notifications for trainers */}
+        {profile?.role === 'trainer' && <NotificationDropdown />}
         
         <div className="user-menu" onClick={handleProfileClick} style={{ cursor: 'pointer' }}>
           {profile?.avatar_url ? (
