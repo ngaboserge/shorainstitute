@@ -363,38 +363,6 @@ const BrowseCourses = () => {
                         <div className="instructor-role-small">SHORA Institute</div>
                       </div>
                     </div>
-                    
-                    <div className="course-meta-row">
-                      <div className="rating-display">
-                        <Star size={14} fill="#FDB714" stroke="#FDB714" />
-                        <span className="rating-number">{course.rating || 0}</span>
-                        <span className="rating-reviews">({course.review_count || 0})</span>
-                      </div>
-                    </div>
-                    
-                    {/* Stats row - only show if data exists */}
-                    {(course.total_lessons > 0 || course.total_duration_seconds > 0 || course.enrollment_count > 0) && (
-                      <div className="course-stats-row">
-                        {course.total_duration_seconds > 0 && (
-                          <div className="stat-item-small">
-                            <Clock size={14} />
-                            <span>{formatDuration(course.total_duration_seconds)}</span>
-                          </div>
-                        )}
-                        {course.total_lessons > 0 && (
-                          <div className="stat-item-small">
-                            <BookOpen size={14} />
-                            <span>{course.total_lessons} lessons</span>
-                          </div>
-                        )}
-                        {course.enrollment_count > 0 && (
-                          <div className="stat-item-small">
-                            <Users size={14} />
-                            <span>{course.enrollment_count.toLocaleString()} enrolled</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                   
                   <div className="course-card-footer">
