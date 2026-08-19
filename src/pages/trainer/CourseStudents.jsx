@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Mail, Calendar, TrendingUp, Download, Search, Filter } from 'lucide-react'
+import { ArrowLeft, Users, Mail, Calendar, TrendingUp, Download, Search, Filter, Trash2, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import Header from '../../components/Header'
@@ -18,6 +18,8 @@ const CourseStudents = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all') // all, active, completed, not-started
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { student: {...}, show: true }
+  const [deleting, setDeleting] = useState(false)
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -172,6 +174,30 @@ const CourseStudents = () => {
     link.download = `${course?.title || 'course'}-students-${new Date().toISOString().split('T')[0]}.csv`
     link.click()
     window.URL.revokeObjectURL(url)
+  }
+
+  const handleDeleteStudent = async () => {
+    if (!deleteConfirm?.student) return
+
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('enrollments')
+        .delete()
+        .eq('id', deleteConfirm.student.id)
+
+      if (error) throw error
+
+      // Reload data to refresh the list
+      await loadData()
+      setDeleteConfirm(null)
+      alert('Student removed successfully')
+    } catch (error) {
+      console.error('Error removing student:', error)
+      alert('Failed to remove student. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -329,6 +355,7 @@ const CourseStudents = () => {
                       <th style={{ textAlign: 'left', padding: '12px', fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>Enrolled</th>
                       <th style={{ textAlign: 'left', padding: '12px', fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>Last Accessed</th>
                       <th style={{ textAlign: 'left', padding: '12px', fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>Status</th>
+                      <th style={{ textAlign: 'center', padding: '12px', fontSize: '13px', fontWeight: 600, color: '#6b7280' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -406,6 +433,37 @@ const CourseStudents = () => {
                             {student.progress === 100 ? 'Completed' : student.progress > 0 ? 'Active' : 'Not Started'}
                           </span>
                         </td>
+                        <td style={{ padding: '16px 12px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => setDeleteConfirm({ student, show: true })}
+                            style={{
+                              padding: '8px 12px',
+                              background: '#fef2f2',
+                              border: '1px solid #fecaca',
+                              borderRadius: '6px',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = '#fee2e2'
+                              e.target.style.borderColor = '#fca5a5'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = '#fef2f2'
+                              e.target.style.borderColor = '#fecaca'
+                            }}
+                            title="Remove student from course"
+                          >
+                            <Trash2 size={14} />
+                            Remove
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -414,6 +472,181 @@ const CourseStudents = () => {
             )}
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm?.show && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }} onClick={() => !deleting && setDeleteConfirm(null)}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }} onClick={(e) => e.stopPropagation()}>
+              
+              {/* Icon and Header */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: '#fef2f2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <AlertTriangle size={24} color="#dc2626" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1a1a1a' }}>
+                    Remove Student from Course
+                  </h3>
+                  <p style={{ margin: '8px 0 0', fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+                    Are you sure you want to remove <strong>{deleteConfirm.student?.name}</strong> from this course?
+                  </p>
+                </div>
+              </div>
+
+              {/* Warning Message */}
+              <div style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                marginBottom: '24px'
+              }}>
+                <p style={{ margin: 0, fontSize: '13px', color: '#991b1b', lineHeight: 1.5 }}>
+                  ⚠️ This action cannot be undone. The student's progress and enrollment data will be permanently deleted.
+                </p>
+              </div>
+
+              {/* Student Info */}
+              <div style={{
+                background: '#f9fafb',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '24px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: deleteConfirm.student?.avatar ? 'transparent' : '#e3f2fd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                  }}>
+                    {deleteConfirm.student?.avatar ? (
+                      <img src={deleteConfirm.student.avatar} alt={deleteConfirm.student.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: '#0B4F9F' }}>
+                        {deleteConfirm.student?.name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                      {deleteConfirm.student?.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                      {deleteConfirm.student?.email}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
+                  <div>
+                    <span style={{ color: '#6b7280' }}>Progress:</span>{' '}
+                    <strong style={{ color: '#1a1a1a' }}>{deleteConfirm.student?.progress}%</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#6b7280' }}>Enrolled:</span>{' '}
+                    <strong style={{ color: '#1a1a1a' }}>{formatDate(deleteConfirm.student?.enrolledAt)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'white',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#6b7280',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    opacity: deleting ? 0.5 : 1
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteStudent}
+                  disabled={deleting}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#dc2626',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: 'white',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    opacity: deleting ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {deleting ? (
+                    <>
+                      <span style={{ 
+                        width: '14px', 
+                        height: '14px', 
+                        border: '2px solid white', 
+                        borderTop: '2px solid transparent', 
+                        borderRadius: '50%',
+                        animation: 'spin 0.6s linear infinite'
+                      }} />
+                      Removing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Remove Student
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     </div>
   )
