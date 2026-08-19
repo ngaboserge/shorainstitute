@@ -26,17 +26,36 @@ This creates:
 - `enrollment_email_queue` table (queue for sending emails)
 - Automatic triggers that queue emails when enrollments are approved
 
-### 2. Set Up Resend Email Service
+### 2. Configure cPanel SMTP Settings
 
-1. Go to [Resend.com](https://resend.com) and create a free account
-2. Verify your sending domain (or use their test domain for development)
-3. Generate an API key from: https://resend.com/api-keys
-4. Add to your `.env` file:
+You'll use your existing cPanel email to send notifications. Add these to your `.env` file:
 
 ```env
-RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+# SMTP Configuration (cPanel)
+SMTP_HOST=mail.shorainstitute.com
+SMTP_PORT=465
+SMTP_USER=info@shorainstitute.com
+SMTP_PASS=your_email_password_here
 EMAIL_CRON_SECRET=your_random_secret_here_xyz123
 ```
+
+**How to get these values:**
+
+1. **SMTP_HOST:** Usually `mail.yourdomain.com` for cPanel
+   - For you: `mail.shorainstitute.com`
+
+2. **SMTP_PORT:** 
+   - Use `465` for SSL (recommended)
+   - Or `587` for TLS
+
+3. **SMTP_USER:** Your cPanel email address
+   - For you: `info@shorainstitute.com`
+
+4. **SMTP_PASS:** The password for your cPanel email
+   - Same password you use to login to webmail
+
+5. **EMAIL_CRON_SECRET:** A random secure string
+   - Generate one: Use a password generator or random string
 
 ### 3. Configure Email Recipients
 

@@ -12,10 +12,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
-// Email service configuration (using a free service like Resend or SMTP)
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = 'Shora Institute <info@shorainstitute.com>';
+// SMTP Configuration for cPanel email
+const SMTP_HOST = process.env.SMTP_HOST || 'mail.shorainstitute.com';
+const SMTP_PORT = process.env.SMTP_PORT || 465; // 465 for SSL, 587 for TLS
+const SMTP_USER = process.env.SMTP_USER; // e.g., info@shorainstitute.com
+const SMTP_PASS = process.env.SMTP_PASS; // Your email password
+const FROM_EMAIL = process.env.SMTP_USER || 'Shora Institute <info@shorainstitute.com>';
 
 // Initialize Supabase client with service role
 function getSupabaseAdmin() {
@@ -30,35 +34,46 @@ function getSupabaseAdmin() {
     return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Send email using Resend API
+// Create SMTP transporter
+function createMailTransporter() {
+    if (!SMTP_USER || !SMTP_PASS) {
+        console.error('Missing SMTP credentials');
+        return null;
+    }
+
+    return nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT == 465, // true for 465, false for other ports
+        auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS
+        },
+        tls: {
+            // Do not fail on invalid certificates (useful for self-signed certs)
+            rejectUnauthorized: false
+        }
+    });
+}
+
+// Send email using cPanel SMTP
 async function sendEmail(to, subject, html) {
-    if (!RESEND_API_KEY) {
-        console.warn('RESEND_API_KEY not configured, skipping email send');
+    const transporter = createMailTransporter();
+    
+    if (!transporter) {
         return { success: false, error: 'Email service not configured' };
     }
 
     try {
-        const response = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${RESEND_API_KEY}`
-            },
-            body: JSON.stringify({
-                from: FROM_EMAIL,
-                to: Array.isArray(to) ? to : [to],
-                subject: subject,
-                html: html
-            })
+        const info = await transporter.sendMail({
+            from: FROM_EMAIL,
+            to: Array.isArray(to) ? to.join(', ') : to,
+            subject: subject,
+            html: html
         });
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.message || 'Email send failed');
-        }
-
-        return { success: true, data };
+        console.log('Email sent:', info.messageId);
+        return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('Email send error:', error);
         return { success: false, error: error.message };
