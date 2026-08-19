@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Email service configuration (using a free service like Resend or SMTP)
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = 'Shora Institute <notifications@shorainstitute.com>';
+const FROM_EMAIL = 'Shora Institute <info@shorainstitute.com>';
 
 // Initialize Supabase client with service role
 function getSupabaseAdmin() {
